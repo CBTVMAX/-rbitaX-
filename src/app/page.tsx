@@ -91,10 +91,9 @@ export default async function LandingPage() {
             <div className="mb-5 flex flex-wrap items-center gap-3">
               <Link
                 href="/criar-conta"
-                className="flex items-center gap-3 rounded-full bg-orbit-gradient py-3 pl-7 pr-2 text-sm font-semibold text-white shadow-glow transition hover:opacity-90"
+                className="rounded-full bg-orbit-gradient px-7 py-3 text-sm font-semibold text-white shadow-glow transition hover:opacity-90"
               >
                 Criar uma conta
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">→</span>
               </Link>
               <Link
                 href="/entrar"
