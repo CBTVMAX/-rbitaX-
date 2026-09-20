@@ -174,8 +174,15 @@ export default async function SobrePage() {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-white/10 bg-space-card">
-          <div className="flex flex-col items-start justify-between gap-6 p-6 sm:flex-row sm:items-center sm:p-8">
+        <section
+          className="relative overflow-hidden rounded-2xl border border-white/10 bg-cover bg-center"
+          style={{ backgroundImage: "url(/sobre-cta-bg.webp)" }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(90deg, rgba(5,6,15,0.9) 0%, rgba(5,6,15,0.75) 45%, rgba(5,6,15,0.55) 100%)" }}
+          />
+          <div className="relative flex flex-col items-start justify-between gap-6 p-6 sm:flex-row sm:items-center sm:p-8">
             <div className="flex items-center gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-space-bg">
                 <OrbitLogo size={32} />
