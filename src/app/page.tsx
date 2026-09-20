@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { OrbitLogo, OrbitLockup } from "@/components/orbit-logo";
+import { OrbitLogo } from "@/components/orbit-logo";
 import { LandingAuthRow } from "@/components/landing-auth-row";
-import { Compass, MessageCircle, Sparkles, Users } from "lucide-react";
+import { Compass, MessageCircle, PlayCircle, Sparkles, Users } from "lucide-react";
 
 const HIGHLIGHTS = [
-  { icon: Users, title: "Conecte", subtitle: "Pessoas reais" },
-  { icon: Compass, title: "Explore", subtitle: "Novos interesses" },
-  { icon: MessageCircle, title: "Compartilhe", subtitle: "Seus momentos" },
-  { icon: Users, title: "Participe", subtitle: "Comunidades" },
-  { icon: Sparkles, title: "Descubra", subtitle: "Mais de você" },
+  { icon: Users, title: "Conecte", subtitle: "Pessoas reais", color: "text-orbit-blue" },
+  { icon: Compass, title: "Explore", subtitle: "Novos interesses", color: "text-orbit-purple" },
+  { icon: PlayCircle, title: "Compartilhe", subtitle: "Seus momentos", color: "text-orbit-pink" },
+  { icon: Users, title: "Participe", subtitle: "Comunidades", color: "text-orbit-cyan" },
+  { icon: Sparkles, title: "Descubra", subtitle: "Mais de você", color: "text-orbit-pink" },
 ];
 
 export default async function LandingPage() {
@@ -61,24 +61,43 @@ export default async function LandingPage() {
         </div>
       </header>
 
-      <main id="inicio" className="relative z-10 mx-auto grid max-w-7xl items-center gap-12 px-6 py-12 md:grid-cols-2 md:py-16">
-        <div>
+      <main id="inicio" className="relative z-10 mx-auto max-w-7xl px-6 pb-12 pt-6 md:pb-24 md:pt-10">
+        {/* Earth photo bleeds past the right edge of the viewport, no frame */}
+        <div className="pointer-events-none absolute -right-[8%] -top-10 hidden h-[42rem] w-[62%] md:block lg:h-[46rem]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/hero-earth.webp" alt="" className="h-full w-full object-cover object-right" />
+          <div className="absolute inset-0 bg-gradient-to-r from-space-bg via-transparent to-transparent" />
+        </div>
+        <p className="absolute right-6 top-24 hidden max-w-[8rem] text-right text-xs font-medium uppercase leading-tight tracking-[0.2em] text-white/60 md:block">
+          Um lugar onde você pertence
+        </p>
+
+        <div className="relative max-w-xl">
           <div className="mb-8 border-l-2 border-orbit-cyan pl-3 text-xs uppercase leading-6 tracking-[0.2em] text-white/50">
             Pessoas<br />Ideias<br />Conteúdos<br />Em órbita
           </div>
 
-          <OrbitLockup className="mb-6 h-auto w-full max-w-md" />
+          <div className="mb-2 flex items-center gap-3">
+            <OrbitLogo size={72} />
+            <h1 className="font-display text-6xl font-bold leading-none orbit-text-gradient md:text-7xl">
+              ÓRBITAX
+            </h1>
+          </div>
+          <p className="mb-6 pl-1 text-sm uppercase tracking-[0.2em] text-white/50">
+            Seu universo em conexão
+          </p>
           <p className="mb-8 max-w-md text-white/70">
             Um lugar para pessoas reais, interesses verdadeiros e conteúdos que fazem sentido
             para você.
           </p>
 
-          <div className="mb-5 flex flex-wrap gap-4">
+          <div className="mb-5 flex flex-wrap items-center gap-3">
             <Link
               href="/criar-conta"
-              className="rounded-full bg-orbit-gradient px-7 py-3 text-sm font-semibold text-white shadow-glow transition hover:opacity-90"
+              className="flex items-center gap-3 rounded-full bg-orbit-gradient py-3 pl-7 pr-2 text-sm font-semibold text-white shadow-glow transition hover:opacity-90"
             >
-              Criar uma conta →
+              Criar uma conta
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">→</span>
             </Link>
             <Link
               href="/entrar"
@@ -104,27 +123,13 @@ export default async function LandingPage() {
             <a href="/privacidade" className="underline hover:text-white/70">Política de Privacidade</a>.
           </p>
         </div>
-
-        <div className="relative hidden md:block">
-          <div className="absolute inset-0 rounded-full bg-orbit-gradient opacity-10 blur-3xl" />
-          <div className="relative mx-auto aspect-square w-full max-w-lg overflow-hidden rounded-full border border-white/10 shadow-2xl">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/hero-earth.webp" alt="" className="h-full w-full object-cover" />
-            <div className="absolute inset-0 rounded-full border-2 border-orbit-purple/30 animate-orbit-spin" />
-          </div>
-          <p className="absolute right-0 top-6 max-w-[7rem] text-right text-[11px] font-medium uppercase leading-tight tracking-[0.15em] text-white/50">
-            Um lugar onde você pertence
-          </p>
-        </div>
       </main>
 
       <section id="explorar" className="relative z-10 border-t border-white/10 bg-space-surface/60 backdrop-blur">
         <div className="mx-auto grid max-w-7xl grid-cols-2 gap-6 px-6 py-10 md:grid-cols-5">
-          {HIGHLIGHTS.map(({ icon: Icon, title, subtitle }) => (
+          {HIGHLIGHTS.map(({ icon: Icon, title, subtitle, color }) => (
             <div key={title} className="flex flex-col items-center gap-2 text-center">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-orbit-blue/20 via-orbit-purple/20 to-orbit-pink/20">
-                <Icon className="h-5 w-5 text-orbit-cyan" />
-              </div>
+              <Icon className={`h-7 w-7 ${color}`} />
               <span className="text-sm font-semibold text-white">{title}</span>
               <span className="text-xs text-white/50">{subtitle}</span>
             </div>
