@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
-import { OrbitLogo, OrbitWordmark } from "@/components/orbit-logo";
+import { OrbitLogo, OrbitWordmarkImage } from "@/components/orbit-logo";
 import {
   Bell,
   Compass,
@@ -70,7 +70,7 @@ export function AppSidebar({
     <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r border-white/10 bg-space-surface/90 backdrop-blur md:flex">
       <Link href="/feed" className="flex items-center gap-2 px-6 py-6">
         <OrbitLogo size={30} />
-        <OrbitWordmark className="text-base" />
+        <OrbitWordmarkImage className="h-7 w-auto" />
       </Link>
 
       <nav className="orbit-scrollbar flex-1 space-y-1 overflow-y-auto px-3">

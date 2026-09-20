@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { OrbitLogo, OrbitWordmark } from "@/components/orbit-logo";
+import { OrbitLogo, OrbitWordmarkImage } from "@/components/orbit-logo";
 
 export function AuthShell({
   children,
@@ -18,7 +18,7 @@ export function AuthShell({
         <div className="hidden flex-col justify-between bg-gradient-to-br from-orbit-blue/20 via-orbit-purple/20 to-orbit-pink/20 p-10 md:flex">
           <Link href="/" className="flex items-center gap-2">
             <OrbitLogo size={36} />
-            <OrbitWordmark className="text-lg" />
+            <OrbitWordmarkImage className="h-9 w-auto" />
           </Link>
           <div>
             <h2 className="mb-3 font-display text-2xl font-semibold text-white">
@@ -38,7 +38,7 @@ export function AuthShell({
         <div className="flex flex-col justify-center p-8 md:p-10">
           <div className="mb-6 flex items-center gap-2 md:hidden">
             <OrbitLogo size={28} />
-            <OrbitWordmark className="text-base" />
+            <OrbitWordmarkImage className="h-7 w-auto" />
           </div>
           <h1 className="mb-1 font-display text-2xl font-bold text-white">{title}</h1>
           <p className="mb-6 text-sm text-white/50">{subtitle}</p>

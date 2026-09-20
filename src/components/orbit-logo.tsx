@@ -20,6 +20,17 @@ export function OrbitWordmark({ className }: { className?: string }) {
   );
 }
 
+export function OrbitWordmarkImage({ className }: { className?: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/orbit-wordmark.webp"
+      alt="ÓrbitaX — Seu universo em conexão"
+      className={clsx("object-contain", className)}
+    />
+  );
+}
+
 export function OrbitLockup({ className }: { className?: string }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
