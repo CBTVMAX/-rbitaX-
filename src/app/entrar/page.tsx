@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AuthShell } from "@/components/auth-shell";
-import { ArrowRight, ChevronRight, Eye, EyeOff, Lock, Mail, Phone } from "lucide-react";
+import { ArrowRight, ChevronRight, Eye, EyeOff, Lock, Mail, Phone, ShieldCheck } from "lucide-react";
 import { clsx } from "clsx";
 
 function GoogleIcon({ className }: { className?: string }) {
@@ -41,6 +41,12 @@ function EntrarForm() {
   const [error, setError] = useState<string | null>(null);
   const [resetStatus, setResetStatus] = useState<string | null>(null);
 
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [phoneLoading, setPhoneLoading] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -62,6 +68,46 @@ function EntrarForm() {
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
+  }
+
+  function normalizePhone(value: string) {
+    const digits = value.replace(/[^\d+]/g, "");
+    if (digits.startsWith("+")) return digits;
+    return `+55${digits}`;
+  }
+
+  async function handleSendOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setPhoneError(null);
+    setPhoneLoading(true);
+    const { error: otpError } = await supabase.auth.signInWithOtp({ phone: normalizePhone(phone) });
+    setPhoneLoading(false);
+
+    if (otpError) {
+      setPhoneError(otpError.message);
+      return;
+    }
+    setOtpSent(true);
+  }
+
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setPhoneError(null);
+    setPhoneLoading(true);
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      phone: normalizePhone(phone),
+      token: otp,
+      type: "sms",
+    });
+    setPhoneLoading(false);
+
+    if (verifyError) {
+      setPhoneError(verifyError.message);
+      return;
+    }
+
+    router.push(params.get("redirect") || "/feed");
+    router.refresh();
   }
 
   async function handleForgotPassword() {
@@ -94,9 +140,8 @@ function EntrarForm() {
 
       <button
         type="button"
-        disabled
-        title="Em breve"
-        className="mb-4 flex w-full cursor-not-allowed items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white/40"
+        onClick={() => setMode("celular")}
+        className="mb-4 flex w-full items-center justify-between rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
       >
         <span className="flex items-center gap-2">
           <Phone className="h-4 w-4" /> Entrar com o número de celular
@@ -148,9 +193,79 @@ function EntrarForm() {
       </div>
 
       {mode === "celular" ? (
-        <p className="rounded-xl border border-dashed border-white/10 p-6 text-center text-sm text-white/40">
-          Entrar com número de celular em breve. Use seu e-mail por enquanto.
-        </p>
+        !otpSent ? (
+          <form onSubmit={handleSendOtp} className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs text-white/50">Número de celular</label>
+              <div className="relative">
+                <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+                <input
+                  required
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+55 (11) 91234-5678"
+                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
+                />
+              </div>
+            </div>
+
+            {phoneError && <p className="text-xs text-red-400">{phoneError}</p>}
+
+            <button
+              type="submit"
+              disabled={phoneLoading}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-orbit-gradient py-2.5 text-sm font-semibold text-white shadow-glow transition hover:opacity-90 disabled:opacity-50"
+            >
+              {phoneLoading ? "Enviando código..." : (
+                <>
+                  Enviar código <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleVerifyOtp} className="space-y-3">
+            <p className="text-xs text-white/50">
+              Enviamos um código de verificação por SMS para <span className="text-white">{normalizePhone(phone)}</span>.
+            </p>
+            <div>
+              <label className="mb-1 block text-xs text-white/50">Código de verificação</label>
+              <div className="relative">
+                <ShieldCheck className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+                <input
+                  required
+                  inputMode="numeric"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  placeholder="000000"
+                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm tracking-[0.3em] text-white outline-none focus:border-orbit-purple"
+                />
+              </div>
+            </div>
+
+            {phoneError && <p className="text-xs text-red-400">{phoneError}</p>}
+
+            <button
+              type="submit"
+              disabled={phoneLoading}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-orbit-gradient py-2.5 text-sm font-semibold text-white shadow-glow transition hover:opacity-90 disabled:opacity-50"
+            >
+              {phoneLoading ? "Verificando..." : (
+                <>
+                  Verificar código <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setOtpSent(false); setOtp(""); setPhoneError(null); }}
+              className="w-full text-center text-xs text-white/40 hover:text-white/70"
+            >
+              Trocar número ou reenviar código
+            </button>
+          </form>
+        )
       ) : (
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
