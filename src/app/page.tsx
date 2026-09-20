@@ -61,77 +61,86 @@ export default async function LandingPage() {
         </div>
       </header>
 
-      <main id="inicio" className="relative z-10 mx-auto grid max-w-7xl gap-8 overflow-hidden px-6 pb-12 pt-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:gap-0 md:overflow-visible md:pb-0 md:pt-10">
-        <div className="relative min-w-0">
-          <div className="mb-8 border-l-2 border-orbit-cyan pl-3 text-xs uppercase leading-6 tracking-[0.2em] text-white/50">
-            Pessoas<br />Ideias<br />Conteúdos<br />Em órbita
-          </div>
+      <section
+        id="inicio"
+        className="relative min-h-[85vh] overflow-hidden bg-cover bg-no-repeat md:min-h-[80vh]"
+        style={{ backgroundImage: "url('/hero-earth.webp')", backgroundPosition: "center right" }}
+      >
+        {/* dark fade so the text stays legible without hiding the Earth */}
+        <div
+          className="absolute inset-0 md:hidden"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(5,6,15,0.55) 0%, rgba(5,6,15,0.88) 55%, rgba(5,6,15,0.97) 100%)",
+          }}
+        />
+        <div
+          className="absolute inset-0 hidden md:block"
+          style={{
+            background:
+              "linear-gradient(90deg, rgba(5,6,15,0.9) 0%, rgba(5,6,15,0.55) 40%, rgba(5,6,15,0.05) 75%)",
+          }}
+        />
 
-          <div className="mb-2 flex items-center gap-3">
-            <OrbitLogo size={64} />
-            <h1 className="font-display text-4xl font-bold leading-none orbit-text-gradient sm:text-5xl lg:text-6xl xl:text-7xl">
-              ÓRBITAX
-            </h1>
-          </div>
-          <p className="mb-6 pl-1 text-sm uppercase tracking-[0.2em] text-white/50">
-            Seu universo em conexão
-          </p>
-          <p className="mb-8 max-w-md text-white/70">
-            Um lugar para pessoas reais, interesses verdadeiros e conteúdos que fazem sentido
-            para você.
-          </p>
+        <p className="absolute right-6 top-8 z-10 hidden max-w-[8rem] text-right text-xs font-medium uppercase leading-tight tracking-[0.2em] text-white/60 md:block">
+          Um lugar onde você pertence
+        </p>
 
-          <div className="mb-5 flex flex-wrap items-center gap-3">
-            <Link
-              href="/criar-conta"
-              className="flex items-center gap-3 rounded-full bg-orbit-gradient py-3 pl-7 pr-2 text-sm font-semibold text-white shadow-glow transition hover:opacity-90"
-            >
-              Criar uma conta
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">→</span>
-            </Link>
-            <Link
-              href="/entrar"
-              className="rounded-full border border-white/15 px-7 py-3 text-sm font-semibold text-white/90 transition hover:bg-white/5"
-            >
-              Entrar
-            </Link>
-          </div>
+        <div className="relative z-10 mx-auto max-w-7xl px-6 py-12 md:py-20">
+          <div className="max-w-xl">
+            <div className="mb-8 border-l-2 border-orbit-cyan pl-3 text-xs uppercase leading-6 tracking-[0.2em] text-white/50">
+              Pessoas<br />Ideias<br />Conteúdos<br />Em órbita
+            </div>
 
-          <div className="mb-5 flex max-w-md items-center gap-3 text-xs text-white/30">
-            <div className="h-px flex-1 bg-white/10" />
-            OU
-            <div className="h-px flex-1 bg-white/10" />
-          </div>
+            <div className="mb-2 flex items-center gap-2 sm:gap-3">
+              <OrbitLogo size={48} className="sm:hidden" />
+              <OrbitLogo size={64} className="hidden sm:block" />
+              <h1 className="font-display text-3xl font-bold leading-none orbit-text-gradient sm:text-5xl lg:text-6xl xl:text-7xl">
+                ÓRBITAX
+              </h1>
+            </div>
+            <p className="mb-6 pl-1 text-sm uppercase tracking-[0.2em] text-white/50">
+              Seu universo em conexão
+            </p>
+            <p className="mb-8 max-w-md text-white/70">
+              Um lugar para pessoas reais, interesses verdadeiros e conteúdos que fazem sentido
+              para você.
+            </p>
 
-          <div className="max-w-md">
-            <LandingAuthRow />
-          </div>
+            <div className="mb-5 flex flex-wrap items-center gap-3">
+              <Link
+                href="/criar-conta"
+                className="flex items-center gap-3 rounded-full bg-orbit-gradient py-3 pl-7 pr-2 text-sm font-semibold text-white shadow-glow transition hover:opacity-90"
+              >
+                Criar uma conta
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">→</span>
+              </Link>
+              <Link
+                href="/entrar"
+                className="rounded-full border border-white/15 px-7 py-3 text-sm font-semibold text-white/90 transition hover:bg-white/5"
+              >
+                Entrar
+              </Link>
+            </div>
 
-          <p className="max-w-md text-xs text-white/40">
-            Ao continuar, você concorda com os{" "}
-            <a href="/termos" className="underline hover:text-white/70">Termos de Uso</a> e a{" "}
-            <a href="/privacidade" className="underline hover:text-white/70">Política de Privacidade</a>.
-          </p>
+            <div className="mb-5 flex max-w-md items-center gap-3 text-xs text-white/30">
+              <div className="h-px flex-1 bg-white/10" />
+              OU
+              <div className="h-px flex-1 bg-white/10" />
+            </div>
+
+            <div className="max-w-md">
+              <LandingAuthRow />
+            </div>
+
+            <p className="max-w-md text-xs text-white/40">
+              Ao continuar, você concorda com os{" "}
+              <a href="/termos" className="underline hover:text-white/70">Termos de Uso</a> e a{" "}
+              <a href="/privacidade" className="underline hover:text-white/70">Política de Privacidade</a>.
+            </p>
+          </div>
         </div>
-
-        <div className="relative hidden min-h-[30rem] self-stretch md:block">
-          <div className="absolute inset-y-0 -right-6 left-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/hero-earth.webp"
-              alt=""
-              className="h-full w-full object-cover object-right"
-              style={{
-                maskImage: "linear-gradient(to right, transparent 0%, black 35%)",
-                WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 35%)",
-              }}
-            />
-          </div>
-          <p className="absolute right-2 top-8 max-w-[8rem] text-right text-xs font-medium uppercase leading-tight tracking-[0.2em] text-white/60">
-            Um lugar onde você pertence
-          </p>
-        </div>
-      </main>
+      </section>
 
       <section id="explorar" className="relative z-10 border-t border-white/10 bg-space-surface/60 backdrop-blur">
         <div className="mx-auto grid max-w-7xl grid-cols-2 gap-6 px-6 py-10 md:grid-cols-5">
