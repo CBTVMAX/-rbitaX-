@@ -27,59 +27,49 @@ export default async function LandingPage() {
     <div className="relative min-h-screen overflow-hidden bg-space-bg bg-stars">
       <div className="pointer-events-none absolute inset-0 bg-orbit-radial" />
 
-      <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
-        <div className="flex items-center gap-2">
-          <OrbitLogo size={36} />
-          <div className="leading-none">
-            <div className="font-display text-lg font-bold orbit-text-gradient">
+      <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-5 sm:px-6 sm:py-6">
+        <div className="flex min-w-0 items-center gap-2">
+          <OrbitLogo size={32} />
+          <div className="min-w-0 leading-none">
+            <div className="font-display text-base font-bold orbit-text-gradient sm:text-lg">
               ÓRBITA<span className="text-white">X</span>
             </div>
-            <div className="text-[9px] uppercase tracking-[0.25em] text-white/40">
+            <div className="hidden text-[9px] uppercase tracking-[0.25em] text-white/40 sm:block">
               Seu universo em conexão
             </div>
           </div>
         </div>
-        <nav className="hidden items-center gap-8 text-sm text-white/70 md:flex">
+        <nav className="hidden items-center gap-8 text-sm text-white/70 lg:flex">
           <a href="#inicio" className="hover:text-white">Início</a>
           <a href="#explorar" className="hover:text-white">Explorar</a>
           <a href="#comunidades" className="hover:text-white">Comunidades</a>
           <a href="#sobre" className="hover:text-white">Sobre</a>
         </nav>
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <Link
             href="/entrar"
-            className="rounded-full border border-white/15 px-5 py-2 text-sm font-medium text-white/90 transition hover:bg-white/5"
+            className="hidden rounded-full border border-white/15 px-5 py-2 text-sm font-medium text-white/90 transition hover:bg-white/5 sm:inline-flex"
           >
             Entrar
           </Link>
           <Link
             href="/criar-conta"
-            className="rounded-full bg-orbit-gradient px-5 py-2 text-sm font-semibold text-white shadow-glow transition hover:opacity-90"
+            className="rounded-full bg-orbit-gradient px-4 py-2 text-xs font-semibold text-white shadow-glow transition hover:opacity-90 sm:px-5 sm:text-sm"
           >
             Criar uma conta →
           </Link>
         </div>
       </header>
 
-      <main id="inicio" className="relative z-10 mx-auto max-w-7xl px-6 pb-12 pt-6 md:pb-24 md:pt-10">
-        {/* Earth photo bleeds past the right edge of the viewport, no frame */}
-        <div className="pointer-events-none absolute -right-[8%] -top-10 hidden h-[42rem] w-[62%] md:block lg:h-[46rem]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/hero-earth.webp" alt="" className="h-full w-full object-cover object-right" />
-          <div className="absolute inset-0 bg-gradient-to-r from-space-bg via-transparent to-transparent" />
-        </div>
-        <p className="absolute right-6 top-24 hidden max-w-[8rem] text-right text-xs font-medium uppercase leading-tight tracking-[0.2em] text-white/60 md:block">
-          Um lugar onde você pertence
-        </p>
-
-        <div className="relative max-w-xl">
+      <main id="inicio" className="relative z-10 mx-auto grid max-w-7xl gap-8 overflow-hidden px-6 pb-12 pt-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:gap-0 md:overflow-visible md:pb-0 md:pt-10">
+        <div className="relative min-w-0">
           <div className="mb-8 border-l-2 border-orbit-cyan pl-3 text-xs uppercase leading-6 tracking-[0.2em] text-white/50">
             Pessoas<br />Ideias<br />Conteúdos<br />Em órbita
           </div>
 
           <div className="mb-2 flex items-center gap-3">
-            <OrbitLogo size={72} />
-            <h1 className="font-display text-6xl font-bold leading-none orbit-text-gradient md:text-7xl">
+            <OrbitLogo size={64} />
+            <h1 className="font-display text-4xl font-bold leading-none orbit-text-gradient sm:text-5xl lg:text-6xl xl:text-7xl">
               ÓRBITAX
             </h1>
           </div>
@@ -121,6 +111,17 @@ export default async function LandingPage() {
             Ao continuar, você concorda com os{" "}
             <a href="/termos" className="underline hover:text-white/70">Termos de Uso</a> e a{" "}
             <a href="/privacidade" className="underline hover:text-white/70">Política de Privacidade</a>.
+          </p>
+        </div>
+
+        <div className="relative hidden min-h-[30rem] self-stretch md:block">
+          <div className="absolute inset-y-0 -right-6 left-6 overflow-hidden rounded-3xl md:left-10 lg:left-16">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/hero-earth.webp" alt="" className="h-full w-full object-cover object-right" />
+            <div className="absolute inset-0 bg-gradient-to-r from-space-bg via-transparent to-transparent" />
+          </div>
+          <p className="absolute right-2 top-8 max-w-[8rem] text-right text-xs font-medium uppercase leading-tight tracking-[0.2em] text-white/60">
+            Um lugar onde você pertence
           </p>
         </div>
       </main>
