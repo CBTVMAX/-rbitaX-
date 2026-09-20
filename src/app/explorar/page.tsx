@@ -192,90 +192,109 @@ export default async function ExplorarPage({
 
   const hero = HERO[tab];
 
+  const heroImg = HERO_ILLUSTRATION[tab];
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-space-bg bg-stars">
       <div className="pointer-events-none absolute inset-0 bg-orbit-radial" />
 
-      <PublicHeader authed={!!user} />
-
-      <section className="relative z-10 mx-auto max-w-6xl px-4 pb-6 pt-4 sm:px-6">
-        {tab !== "para-voce" && (
-          <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-white/30">
-            Explorar <span className="text-white/20">›</span>{" "}
-            <span className="text-orbit-cyan">{TABS.find((t) => t.id === tab)?.label}</span>
-          </p>
+      <section
+        className="relative overflow-hidden bg-cover bg-no-repeat"
+        style={heroImg ? { backgroundImage: `url(${heroImg})`, backgroundPosition: "right center" } : undefined}
+      >
+        {heroImg && (
+          <>
+            <div
+              className="absolute inset-0 lg:hidden"
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(5,6,15,0.75) 0%, rgba(5,6,15,0.93) 60%, rgba(5,6,15,0.98) 100%)",
+              }}
+            />
+            <div
+              className="absolute inset-0 hidden lg:block"
+              style={{
+                background:
+                  "linear-gradient(90deg, rgba(5,6,15,0.96) 0%, rgba(5,6,15,0.8) 35%, rgba(5,6,15,0.25) 65%, rgba(5,6,15,0.05) 85%)",
+              }}
+            />
+          </>
         )}
 
-        <div className="relative">
-          {HERO_ILLUSTRATION[tab] && (
-            <div className="pointer-events-none absolute -right-4 -top-2 hidden max-w-lg overflow-hidden lg:block xl:-right-6 xl:max-w-2xl">
-              <img src={HERO_ILLUSTRATION[tab]} alt="" className="block w-full" />
-              <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-space-bg" />
-              <div className="absolute inset-0 bg-gradient-to-t from-space-bg via-transparent to-transparent" />
-            </div>
-          )}
-          {tab === "publicacoes" && (
-            <p className="pointer-events-none absolute right-0 top-2 hidden max-w-[12rem] text-right text-sm italic text-white/30 lg:block">
-              &ldquo;Grandes histórias começam com uma primeira publicação.&rdquo;
-            </p>
-          )}
+        <div className="relative z-10">
+          <PublicHeader authed={!!user} />
 
-          <div className={clsx(tab === "publicacoes" ? "text-center" : "max-w-xl text-left", "relative z-10")}>
-            {(tab === "para-voce" || tab === "pessoas") && (
-              <div className="mb-6 hidden text-left text-xs font-semibold uppercase leading-6 tracking-[0.2em] text-white/30 sm:block">
-                <span className="border-l-2 border-orbit-cyan pl-3">
-                  Pessoas · Ideias · Comunidades
-                  <br />
-                  Música · Um só lugar
-                </span>
-              </div>
+          <div className={clsx("mx-auto max-w-6xl px-4 sm:px-6", heroImg ? "pb-12 pt-2 lg:pb-16" : "pb-6 pt-4")}>
+            {tab !== "para-voce" && (
+              <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-white/30">
+                Explorar <span className="text-white/20">›</span>{" "}
+                <span className="text-orbit-cyan">{TABS.find((t) => t.id === tab)?.label}</span>
+              </p>
             )}
 
-            <h1 className={clsx("font-display text-3xl font-bold text-white sm:text-4xl", (tab === "publicacoes") && "mx-auto")}>
-              {hero.title}
-            </h1>
-            <p className={clsx("mt-2 max-w-xl text-sm text-white/50 sm:text-base", (tab === "publicacoes") && "mx-auto")}>
-              {hero.subtitle}
-            </p>
+            {tab === "publicacoes" && (
+              <p className="pointer-events-none mb-3 hidden max-w-[16rem] text-right text-sm italic text-white/30 lg:float-right lg:block">
+                &ldquo;Grandes histórias começam com uma primeira publicação.&rdquo;
+              </p>
+            )}
 
-            <form action="/explorar" method="GET" className={clsx("mt-6 max-w-2xl", (tab === "publicacoes") && "mx-auto")}>
-              <input type="hidden" name="tab" value={tab} />
-              <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-space-card px-4 py-3">
-                <Search className="h-4 w-4 shrink-0 text-white/40" />
-                <input
-                  name="q"
-                  defaultValue={q}
-                  placeholder={hero.placeholder}
-                  className="w-full bg-transparent text-sm text-white placeholder:text-white/30 outline-none"
-                />
-                <button
-                  type="submit"
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/5 text-white/50 transition hover:bg-white/10 hover:text-white"
-                >
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                </button>
+            <div className={clsx(tab === "publicacoes" ? "text-center" : "max-w-xl text-left")}>
+              {(tab === "para-voce" || tab === "pessoas") && (
+                <div className="mb-6 hidden text-left text-xs font-semibold uppercase leading-6 tracking-[0.2em] text-white/30 sm:block">
+                  <span className="border-l-2 border-orbit-cyan pl-3">
+                    Pessoas · Ideias · Comunidades
+                    <br />
+                    Música · Um só lugar
+                  </span>
+                </div>
+              )}
+
+              <h1 className={clsx("font-display text-3xl font-bold text-white sm:text-4xl", tab === "publicacoes" && "mx-auto")}>
+                {hero.title}
+              </h1>
+              <p className={clsx("mt-2 max-w-xl text-sm text-white/60 sm:text-base", tab === "publicacoes" && "mx-auto")}>
+                {hero.subtitle}
+              </p>
+
+              <form action="/explorar" method="GET" className={clsx("mt-6 max-w-2xl", tab === "publicacoes" && "mx-auto")}>
+                <input type="hidden" name="tab" value={tab} />
+                <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-space-card/90 px-4 py-3 backdrop-blur">
+                  <Search className="h-4 w-4 shrink-0 text-white/40" />
+                  <input
+                    name="q"
+                    defaultValue={q}
+                    placeholder={hero.placeholder}
+                    className="w-full bg-transparent text-sm text-white placeholder:text-white/30 outline-none"
+                  />
+                  <button
+                    type="submit"
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/5 text-white/50 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </form>
+
+              <div className={clsx("mt-5 flex flex-wrap items-center gap-2", tab === "publicacoes" && "justify-center")}>
+                {TABS.map(({ id, label }) => (
+                  <Link
+                    key={id}
+                    href={tabHref(id)}
+                    className={clsx(
+                      "rounded-full px-4 py-1.5 text-sm font-medium transition",
+                      tab === id ? "bg-orbit-gradient text-white shadow-glow" : "border border-white/10 text-white/60 hover:bg-white/5 hover:bg-space-card/60"
+                    )}
+                  >
+                    {label}
+                  </Link>
+                ))}
               </div>
-            </form>
-
-            <div className={clsx("mt-5 flex flex-wrap items-center gap-2", (tab === "publicacoes") && "justify-center")}>
-              {TABS.map(({ id, label }) => (
-                <Link
-                  key={id}
-                  href={tabHref(id)}
-                  className={clsx(
-                    "rounded-full px-4 py-1.5 text-sm font-medium transition",
-                    tab === id ? "bg-orbit-gradient text-white shadow-glow" : "border border-white/10 text-white/60 hover:bg-white/5"
-                  )}
-                >
-                  {label}
-                </Link>
-              ))}
             </div>
           </div>
         </div>
       </section>
 
-      <main className="relative z-10 mx-auto max-w-6xl px-4 pb-24 sm:px-6">
+      <main className="relative z-10 mx-auto max-w-6xl px-4 pb-24 pt-8 sm:px-6">
         {tab === "para-voce" && (
           <div className="space-y-12">
             <SectionHeader emoji="🔥" title="Em alta no ÓrbitaX" subtitle="Veja os assuntos que estão movimentando a comunidade." seeAllHref={tabHref("comunidades")} />
