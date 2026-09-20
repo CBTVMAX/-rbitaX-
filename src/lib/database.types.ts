@@ -200,6 +200,7 @@ export type Database = {
           authorAvatarUrl: string | null;
           likeCount: number;
           commentCount: number;
+          imageUrl: string | null;
         }[];
       };
     };

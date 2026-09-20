@@ -68,6 +68,7 @@ type PublicPost = {
   authorAvatarUrl: string | null;
   likeCount: number;
   commentCount: number;
+  imageUrl: string | null;
 };
 type CommunityCard = { id: string; name: string; slug: string; description: string | null; category: string | null; avatarUrl: string | null; coverUrl: string | null; memberCount: number };
 
@@ -832,6 +833,10 @@ function PostTile({ post }: { post: PublicPost }) {
         </div>
       </Link>
       <p className="mb-3 line-clamp-4 text-sm text-white/70">{post.content}</p>
+      {post.imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={post.imageUrl} alt="" className="mb-3 h-24 w-full rounded-xl object-cover" />
+      )}
       <div className="flex items-center gap-4 text-xs text-white/40">
         <span className="flex items-center gap-1">
           <Heart className="h-3.5 w-3.5" /> {post.likeCount}
