@@ -48,7 +48,7 @@ export default async function LandingPage() {
             href="/criar-conta"
             className="rounded-full bg-orbit-gradient px-4 py-2 text-xs font-semibold text-white shadow-glow transition hover:opacity-90 sm:px-5 sm:text-sm"
           >
-            Criar uma conta →
+            Criar uma conta
           </Link>
         </div>
       </header>
