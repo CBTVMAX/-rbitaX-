@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #05060f;
+  color: #e5e7f5;
+}
+
+.bg-stars {
+  background-image:
+    radial-gradient(circle at 10% 20%, rgba(255,255,255,0.9) 0.5px, transparent 0.5px),
+    radial-gradient(circle at 80% 10%, rgba(255,255,255,0.6) 0.6px, transparent 0.6px),
+    radial-gradient(circle at 40% 70%, rgba(255,255,255,0.7) 0.5px, transparent 0.5px),
+    radial-gradient(circle at 60% 40%, rgba(255,255,255,0.5) 0.5px, transparent 0.5px),
+    radial-gradient(circle at 90% 80%, rgba(255,255,255,0.8) 0.6px, transparent 0.6px);
+  background-size: 220px 220px;
+  background-repeat: repeat;
+}
+
+.orbit-text-gradient {
+  background: linear-gradient(135deg, #4f8bff 0%, #a855f7 55%, #f472b6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.orbit-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.orbit-scrollbar::-webkit-scrollbar-thumb {
+  background: #262c4d;
+  border-radius: 999px;
+}
+
+@keyframes orbit-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-orbit-spin {
+  animation: orbit-spin 40s linear infinite;
+}
