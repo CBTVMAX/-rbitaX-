@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { OrbitLogo } from "@/components/orbit-logo";
+import { OrbitLogo, OrbitLockup } from "@/components/orbit-logo";
 import { LandingAuthRow } from "@/components/landing-auth-row";
-import { Compass, MessageCircle, Sparkles, Users, Music2 } from "lucide-react";
+import { Compass, MessageCircle, Sparkles, Users } from "lucide-react";
 
 const HIGHLIGHTS = [
   { icon: Users, title: "Conecte", subtitle: "Pessoas reais" },
@@ -67,15 +67,7 @@ export default async function LandingPage() {
             Pessoas<br />Ideias<br />Conteúdos<br />Em órbita
           </div>
 
-          <div className="mb-2 flex items-center gap-4">
-            <OrbitLogo size={64} />
-            <h1 className="font-display text-5xl font-bold leading-none orbit-text-gradient md:text-6xl">
-              ÓRBITAX
-            </h1>
-          </div>
-          <p className="mb-4 pl-1 text-sm uppercase tracking-[0.15em] text-white/50">
-            Seu universo em conexão
-          </p>
+          <OrbitLockup className="mb-6 h-auto w-full max-w-md" />
           <p className="mb-8 max-w-md text-white/70">
             Um lugar para pessoas reais, interesses verdadeiros e conteúdos que fazem sentido
             para você.
