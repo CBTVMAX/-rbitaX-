@@ -115,10 +115,17 @@ export default async function LandingPage() {
         </div>
 
         <div className="relative hidden min-h-[30rem] self-stretch md:block">
-          <div className="absolute inset-y-0 -right-6 left-6 overflow-hidden rounded-3xl md:left-10 lg:left-16">
+          <div className="absolute inset-y-0 -right-6 left-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/hero-earth.webp" alt="" className="h-full w-full object-cover object-right" />
-            <div className="absolute inset-0 bg-gradient-to-r from-space-bg via-transparent to-transparent" />
+            <img
+              src="/hero-earth.webp"
+              alt=""
+              className="h-full w-full object-cover object-right"
+              style={{
+                maskImage: "linear-gradient(to right, transparent 0%, black 35%)",
+                WebkitMaskImage: "linear-gradient(to right, transparent 0%, black 35%)",
+              }}
+            />
           </div>
           <p className="absolute right-2 top-8 max-w-[8rem] text-right text-xs font-medium uppercase leading-tight tracking-[0.2em] text-white/60">
             Um lugar onde você pertence
