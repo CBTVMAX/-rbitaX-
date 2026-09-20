@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { OrbitLogo } from "@/components/orbit-logo";
+import { OrbitLogo, OrbitLockup } from "@/components/orbit-logo";
 import { LandingAuthRow } from "@/components/landing-auth-row";
 import { Compass, MessageCircle, PlayCircle, Sparkles, Users } from "lucide-react";
 
@@ -92,20 +92,7 @@ export default async function LandingPage() {
               Pessoas<br />Ideias<br />Conteúdos<br />Em órbita
             </div>
 
-            <div className="mb-2 flex items-center gap-2 sm:gap-3">
-              <OrbitLogo size={48} className="sm:hidden" />
-              <OrbitLogo size={64} className="hidden sm:block" />
-              <h1 className="font-display text-3xl font-bold leading-none orbit-text-gradient sm:text-5xl lg:text-6xl xl:text-7xl">
-                ÓRBITAX
-              </h1>
-            </div>
-            <p className="mb-6 pl-1 text-sm uppercase tracking-[0.2em] text-white/50">
-              Seu universo em conexão
-            </p>
-            <p className="mb-8 max-w-md text-white/70">
-              Um lugar para pessoas reais, interesses verdadeiros e conteúdos que fazem sentido
-              para você.
-            </p>
+            <OrbitLockup className="mb-8 h-auto w-full max-w-sm sm:max-w-md" />
 
             <div className="mb-5 flex flex-wrap items-center gap-3">
               <Link
