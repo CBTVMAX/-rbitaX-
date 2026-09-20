@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PublicHeader } from "@/components/public-header";
-import { FollowButton } from "@/components/follow-button";
 import { NotifyMeButton } from "@/components/notify-me-button";
 import { Avatar } from "@/components/post-card";
 import { COMMUNITY_CATEGORIES, categoryLabel } from "@/lib/community-categories";
@@ -57,7 +56,6 @@ const GENRES: { label: string; icon: LucideIcon }[] = [
   { label: "Mais gêneros", icon: MoreHorizontal },
 ];
 
-type Profile = { id: string; name: string; username: string; avatarUrl: string | null; bio: string | null; isVerified: boolean };
 type PublicPost = {
   id: string;
   content: string;
@@ -79,14 +77,6 @@ const HERO_ILLUSTRATION: Partial<Record<Tab, string>> = {
   musica: "/explore-hero.webp",
 };
 
-const CATEGORY_PHOTOS: Partial<Record<string, string>> = {
-  tecnologia: "/cat-tecnologia.webp",
-  games: "/cat-games.webp",
-  musica: "/cat-musica.webp",
-  "arte-design": "/cat-arte-design.webp",
-  "cinema-series": "/cat-cinema-series.webp",
-};
-
 export default async function ExplorarPage({
   searchParams,
 }: {
@@ -104,38 +94,10 @@ export default async function ExplorarPage({
     ? (searchParams.tab as Tab)
     : "para-voce";
 
-  let profiles: Profile[] = [];
   let posts: PublicPost[] = [];
-  let communities: CommunityCard[] = [];
-  let categoryCounts: { slug: string; label: string; icon: (typeof COMMUNITY_CATEGORIES)[number]["icon"]; count: number }[] = [];
   let officialCommunity: CommunityCard | null = null;
 
-  if (tab === "para-voce") {
-    const [{ data: p }, { data: allComms }, { data: members }, { data: pubPosts }] = await Promise.all([
-      supabase.rpc("discoverable_profiles", { limit_count: 6 }),
-      supabase.from("Community").select("id, name, slug, description, category, avatarUrl, coverUrl"),
-      supabase.from("CommunityMember").select("communityId"),
-      supabase.rpc("public_posts", { limit_count: 3 }),
-    ]);
-    profiles = (p as Profile[]) ?? [];
-    posts = (pubPosts as PublicPost[]) ?? [];
-
-    const countByCommunity = new Map<string, number>();
-    (members ?? []).forEach((m) => countByCommunity.set(m.communityId, (countByCommunity.get(m.communityId) ?? 0) + 1));
-    communities = (allComms ?? [])
-      .map((c) => ({ ...c, memberCount: countByCommunity.get(c.id) ?? 0 }))
-      .sort((a, b) => b.memberCount - a.memberCount)
-      .slice(0, 6);
-
-    const byCategory = new Map<string, number>();
-    (allComms ?? []).forEach((c) => {
-      if (c.category) byCategory.set(c.category, (byCategory.get(c.category) ?? 0) + 1);
-    });
-    categoryCounts = COMMUNITY_CATEGORIES.filter((c) => (byCategory.get(c.slug) ?? 0) > 0)
-      .map((c) => ({ ...c, count: byCategory.get(c.slug) ?? 0 }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 6);
-  } else if (tab === "comunidades") {
+  if (tab === "para-voce" || tab === "comunidades") {
     const [{ data: official }, { data: officialMembers }] = await Promise.all([
       supabase.from("Community").select("id, name, slug, description, category, avatarUrl, coverUrl").eq("slug", "orbitax-oficial").maybeSingle(),
       supabase.from("CommunityMember").select("userId").eq("communityId", "orbitax-oficial"),
@@ -145,11 +107,20 @@ export default async function ExplorarPage({
     }
   }
 
+  if (tab === "para-voce") {
+    const { data: pubPosts } = await supabase.rpc("public_posts", { limit_count: 10, search_query: null });
+    posts = ((pubPosts as PublicPost[]) ?? []).filter((p) => p.authorUsername === "orbitax").slice(0, 1);
+  }
+
   const tabHref = (id: Tab) => `/explorar?tab=${id}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
 
   const HERO: Record<Tab, { title: React.ReactNode; subtitle: string; placeholder: string }> = {
     "para-voce": {
-      title: "Explorar",
+      title: (
+        <>
+          Explore o seu <span className="orbit-text-gradient">universo</span>
+        </>
+      ),
       subtitle: "Descubra pessoas, publicações, comunidades e interesses dentro do ÓrbitaX.",
       placeholder: "Buscar pessoas, publicações, comunidades, músicas...",
     },
@@ -298,92 +269,46 @@ export default async function ExplorarPage({
       <main className="relative z-10 mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6">
         {tab === "para-voce" && (
           <div className="space-y-12">
-            <SectionHeader emoji="🔥" title="Em alta no ÓrbitaX" subtitle="Veja os assuntos que estão movimentando a comunidade." seeAllHref={tabHref("comunidades")} />
-            {categoryCounts.length === 0 ? (
-              <EmptyState text="Ainda não há categorias com atividade. Seja a primeira comunidade!" />
-            ) : (
+            <div>
+              <SectionHeader emoji="🔥" title="Em alta no ÓrbitaX" subtitle="Explore os principais assuntos da comunidade." seeAllHref="/comunidades" />
               <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                {categoryCounts.map(({ slug, label, icon: Icon, count }) => {
-                  const photo = CATEGORY_PHOTOS[slug];
-                  return (
-                    <Link
-                      key={slug}
-                      href={`/comunidades?categoria=${slug}`}
-                      className={clsx(
-                        "relative overflow-hidden rounded-2xl border border-white/10 p-4 transition hover:border-white/20",
-                        !photo && "bg-space-card"
-                      )}
-                      style={photo ? { backgroundImage: `url(${photo})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
-                    >
-                      {photo && <div className="absolute inset-0 bg-gradient-to-t from-space-bg via-space-bg/70 to-transparent" />}
-                      <div className="relative">
-                        <Icon className="mb-3 h-5 w-5 text-orbit-cyan" />
-                        <p className="text-sm font-semibold text-white">{label}</p>
-                        <p className="text-xs text-white/60">{count} {count === 1 ? "comunidade" : "comunidades"}</p>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-
-            <div>
-              <SectionHeader emoji="👥" title="Pessoas para conhecer" subtitle="Encontre pessoas incríveis e expanda seu universo." seeAllHref={tabHref("pessoas")} />
-              {profiles.length === 0 ? (
-                <EmptyState text="Ainda não há pessoas para descobrir por aqui. Crie sua conta e seja uma das primeiras!" />
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                  {profiles.map((p) => (
-                    <ProfileCard key={p.id} profile={p} currentUserId={user?.id ?? null} />
-                  ))}
-                  {!user && (
-                    <Link
-                      href="/criar-conta"
-                      className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 bg-space-card/50 p-4 text-center transition hover:border-white/30"
-                    >
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-orbit-gradient text-white">
-                        <Users className="h-4 w-4" />
-                      </span>
-                      <span className="text-sm font-semibold text-white">Venha se conectar!</span>
-                      <span className="text-xs text-white/50">Crie sua conta e faça parte do ÓrbitaX.</span>
-                    </Link>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <SectionHeader emoji="🧭" title="Descubra comunidades" subtitle="Participe de comunidades e encontre pessoas com os mesmos interesses." seeAllHref={tabHref("comunidades")} />
-              {communities.length === 0 ? (
-                <EmptyState text="Nenhuma comunidade criada ainda. Seja a primeira pessoa a criar uma!" />
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                  {communities.map((c) => (
-                    <CommunityTile key={c.id} community={c} />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div>
-              <SectionHeader emoji="✨" title="Publicações em destaque" subtitle="Veja o que a comunidade está compartilhando." seeAllHref={tabHref("publicacoes")} />
-              {posts.length === 0 ? (
-                <EmptyState text="Ainda não há publicações públicas por aqui." />
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  {posts.map((post) => (
-                    <PostTile key={post.id} post={post} />
-                  ))}
+                {COMMUNITY_CATEGORIES.slice(0, 6).map(({ slug, label, icon: Icon }) => (
                   <Link
-                    href="/criar-conta"
-                    className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 bg-space-card/50 p-4 text-center transition hover:border-white/30"
+                    key={slug}
+                    href={`/comunidades?categoria=${slug}`}
+                    className="rounded-2xl border border-white/10 bg-space-card p-4 transition hover:border-white/20"
                   >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-orbit-gradient text-lg text-white">+</span>
-                    <span className="text-sm font-semibold text-white">Faça parte dessa conversa!</span>
-                    <span className="text-xs text-white/50">Crie sua conta e comece a compartilhar.</span>
+                    <Icon className="mb-3 h-5 w-5 text-orbit-cyan" />
+                    <p className="text-sm font-semibold text-white">{label}</p>
                   </Link>
-                </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <SectionHeader emoji="👥" title="Pessoas para conhecer" subtitle="A comunidade está começando." seeAllHref={tabHref("pessoas")} />
+              <ComingSoonCard
+                icon={Users}
+                eyebrow="Pessoas no ÓrbitaX"
+                heading="Ainda estamos começando."
+                text="Quando novas pessoas entrarem no ÓrbitaX, você poderá descobrir novos perfis e fazer conexões."
+                illustration="/explore-card-pessoas.webp"
+                illustrationSide="right"
+              />
+            </div>
+
+            <div>
+              <SectionHeader emoji="⭐" title="Publicações em destaque" subtitle="Acompanhe as novidades e conteúdos da comunidade." seeAllHref="" hideSeeAll />
+              {posts.length > 0 ? (
+                <FeaturedPostCard post={posts[0]} />
+              ) : (
+                <EmptyState text="Ainda não há publicações por aqui." />
               )}
+            </div>
+
+            <div>
+              <SectionHeader emoji="👥" title="Descubra comunidades" subtitle="Participe de comunidades e encontre pessoas com os mesmos interesses." seeAllHref="" hideSeeAll />
+              <OfficialCommunitySection officialCommunity={officialCommunity} user={user} />
             </div>
 
             <div>
@@ -465,66 +390,7 @@ export default async function ExplorarPage({
           <div className="space-y-10">
             <div>
               <SectionHeader emoji="⭐" title="Comunidades em destaque" subtitle="Conheça comunidades incríveis e faça parte dessas conversas." seeAllHref="/comunidades" hideSeeAll />
-              <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-                {officialCommunity ? (
-                  <div className="overflow-hidden rounded-2xl border border-white/10 bg-space-card">
-                    <div className="h-24 bg-[url('/hero-earth.webp')] bg-cover bg-center" />
-                    <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start">
-                      <div className="-mt-12 h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-4 border-space-card bg-space-bg shadow-lg">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={officialCommunity.avatarUrl ?? "/orbit-mark.webp"} alt={officialCommunity.name} className="h-full w-full object-cover" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="flex items-center gap-1 text-lg font-bold text-white">
-                            {officialCommunity.name}
-                            <BadgeCheck className="h-4 w-4 text-orbit-cyan" />
-                          </h3>
-                          <span className="rounded-full bg-orbit-gradient px-2.5 py-0.5 text-[10px] font-semibold uppercase text-white">Oficial</span>
-                        </div>
-                        <p className="mt-1 text-sm text-white/60">{officialCommunity.description}</p>
-                        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-white/40">
-                          <span className="flex items-center gap-1">
-                            <Users className="h-3.5 w-3.5" /> {officialCommunity.memberCount} {officialCommunity.memberCount === 1 ? "membro" : "membros"}
-                          </span>
-                          {officialCommunity.category && <span>{categoryLabel(officialCommunity.category)}</span>}
-                          <span>Rede Social</span>
-                        </div>
-                        <div className="mt-4 flex gap-2">
-                          <Link
-                            href={`/comunidades/${officialCommunity.slug}`}
-                            className="rounded-full border border-white/15 px-4 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/5"
-                          >
-                            Ver comunidade
-                          </Link>
-                          {user ? (
-                            <Link href={`/comunidades/${officialCommunity.slug}`} className="rounded-full bg-orbit-gradient px-4 py-1.5 text-xs font-semibold text-white shadow-glow">
-                              Participar
-                            </Link>
-                          ) : (
-                            <Link href="/entrar" className="rounded-full bg-orbit-gradient px-4 py-1.5 text-xs font-semibold text-white shadow-glow">
-                              Participar
-                            </Link>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <EmptyState text="Nenhuma comunidade em destaque no momento." />
-                )}
-
-                <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 bg-space-card/50 p-6 text-center">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/5 text-orbit-cyan">
-                    <Users className="h-6 w-6" />
-                  </span>
-                  <p className="text-sm font-semibold text-white">Muitas outras comunidades estão por vir!</p>
-                  <p className="text-xs text-white/50">À medida que mais pessoas entrarem, novas comunidades aparecerão aqui.</p>
-                  <Link href="/comunidades" className="rounded-full border border-white/15 px-4 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/5">
-                    Explorar categorias
-                  </Link>
-                </div>
-              </div>
+              <OfficialCommunitySection officialCommunity={officialCommunity} user={user} />
             </div>
 
             <div>
@@ -658,6 +524,117 @@ function EmptyState({ text }: { text: string }) {
   );
 }
 
+function OfficialCommunitySection({
+  officialCommunity,
+  user,
+}: {
+  officialCommunity: CommunityCard | null;
+  user: { id: string } | null;
+}) {
+  return (
+    <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+      {officialCommunity ? (
+        <div className="overflow-hidden rounded-2xl border border-white/10 bg-space-card">
+          <div className="h-24 bg-[url('/hero-earth.webp')] bg-cover bg-center" />
+          <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start">
+            <div className="-mt-12 h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-4 border-space-card bg-space-bg shadow-lg">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={officialCommunity.avatarUrl ?? "/orbit-mark.webp"} alt={officialCommunity.name} className="h-full w-full object-cover" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="flex items-center gap-1 text-lg font-bold text-white">
+                  {officialCommunity.name}
+                  <BadgeCheck className="h-4 w-4 text-orbit-cyan" />
+                </h3>
+                <span className="rounded-full bg-orbit-gradient px-2.5 py-0.5 text-[10px] font-semibold uppercase text-white">Oficial</span>
+              </div>
+              <p className="mt-1 text-sm text-white/60">{officialCommunity.description}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-white/40">
+                <span className="flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5" /> {officialCommunity.memberCount} {officialCommunity.memberCount === 1 ? "membro" : "membros"}
+                </span>
+                {officialCommunity.category && <span>{categoryLabel(officialCommunity.category)}</span>}
+                <span>Rede Social</span>
+              </div>
+              <div className="mt-4 flex gap-2">
+                <Link
+                  href={`/comunidades/${officialCommunity.slug}`}
+                  className="rounded-full border border-white/15 px-4 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/5"
+                >
+                  Ver comunidade
+                </Link>
+                {user ? (
+                  <Link href={`/comunidades/${officialCommunity.slug}`} className="rounded-full bg-orbit-gradient px-4 py-1.5 text-xs font-semibold text-white shadow-glow">
+                    Participar
+                  </Link>
+                ) : (
+                  <Link href="/entrar" className="rounded-full bg-orbit-gradient px-4 py-1.5 text-xs font-semibold text-white shadow-glow">
+                    Participar
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <EmptyState text="Nenhuma comunidade em destaque no momento." />
+      )}
+
+      <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 bg-space-card/50 p-6 text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/5 text-orbit-cyan">
+          <Users className="h-6 w-6" />
+        </span>
+        <p className="text-sm font-semibold text-white">Muitas outras comunidades estão por vir!</p>
+        <p className="text-xs text-white/50">À medida que mais pessoas entrarem, novas comunidades aparecerão aqui.</p>
+        <Link href="/comunidades" className="rounded-full border border-white/15 px-4 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/5">
+          Explorar categorias
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function FeaturedPostCard({ post }: { post: PublicPost }) {
+  const lines = post.content.split("\n").filter(Boolean);
+  const [firstLine, ...rest] = lines;
+  return (
+    <div className="grid overflow-hidden rounded-2xl border border-white/10 bg-space-card sm:grid-cols-[1.3fr_1fr]">
+      <div className="p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <Avatar name={post.authorName} url={post.authorAvatarUrl} size={36} />
+          <div className="min-w-0 flex-1">
+            <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-white">
+              {post.authorName}
+              <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-orbit-cyan" />
+              <span className="rounded-full bg-orbit-gradient px-2 py-0.5 text-[9px] font-semibold uppercase text-white">Oficial</span>
+            </p>
+            <p className="text-xs text-white/40">
+              @{post.authorUsername} · {timeAgo(post.createdAt)}
+            </p>
+          </div>
+        </div>
+        <p className="mb-2 font-semibold text-white">{firstLine}</p>
+        {rest.length > 0 && <p className="mb-4 text-sm text-white/70">{rest.join(" ")}</p>}
+        <div className="flex items-center gap-4 text-xs text-white/40">
+          <span className="flex items-center gap-1">
+            <Heart className="h-3.5 w-3.5" /> {post.likeCount}
+          </span>
+          <span className="flex items-center gap-1">
+            <MessageCircle className="h-3.5 w-3.5" /> {post.commentCount}
+          </span>
+        </div>
+      </div>
+      {post.imageUrl && (
+        <div className="relative min-h-[180px]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={post.imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ComingSoonCard({
   icon: Icon,
   eyebrow,
@@ -774,77 +751,3 @@ function BottomBanner({
   );
 }
 
-function ProfileCard({ profile, currentUserId }: { profile: Profile; currentUserId: string | null }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-space-card p-4 text-center transition hover:border-white/20">
-      <Link href={`/perfil/${profile.username}`} className="mb-3 flex justify-center">
-        <Avatar name={profile.name} url={profile.avatarUrl} size={56} />
-      </Link>
-      <Link href={`/perfil/${profile.username}`} className="flex items-center justify-center gap-1 truncate text-sm font-semibold text-white hover:underline">
-        {profile.name}
-        {profile.isVerified && <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-orbit-cyan" />}
-      </Link>
-      <p className="truncate text-xs text-white/40">@{profile.username}</p>
-      {profile.bio && <p className="mt-1 line-clamp-2 text-xs text-white/50">{profile.bio}</p>}
-      <div className="mt-3">
-        <FollowButton targetUserId={profile.id} currentUserId={currentUserId} className="w-full" />
-      </div>
-    </div>
-  );
-}
-
-function CommunityTile({ community }: { community: CommunityCard }) {
-  return (
-    <Link
-      href={`/comunidades/${community.slug}`}
-      className="block rounded-2xl border border-white/10 bg-space-card p-4 transition hover:border-white/20"
-    >
-      <div
-        className={clsx(
-          "mb-3 h-16 rounded-xl bg-cover bg-center",
-          !community.coverUrl && "bg-gradient-to-br from-orbit-blue/40 via-orbit-purple/40 to-orbit-pink/40"
-        )}
-        style={community.coverUrl ? { backgroundImage: `url(${community.coverUrl})` } : undefined}
-      />
-      {community.category && (
-        <span className="mb-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white/50">
-          {categoryLabel(community.category)}
-        </span>
-      )}
-      <h3 className="truncate text-sm font-semibold text-white">{community.name}</h3>
-      <p className="mb-1 flex items-center gap-1 text-xs text-white/40">
-        <Users className="h-3 w-3" /> {community.memberCount} membros
-      </p>
-      {community.description && <p className="line-clamp-2 text-xs text-white/50">{community.description}</p>}
-    </Link>
-  );
-}
-
-function PostTile({ post }: { post: PublicPost }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-space-card p-4 transition hover:border-white/20">
-      <Link href={`/perfil/${post.authorUsername}`} className="mb-2 flex items-center gap-2">
-        <Avatar name={post.authorName} url={post.authorAvatarUrl} size={28} />
-        <div className="min-w-0">
-          <p className="truncate text-xs font-semibold text-white">{post.authorName}</p>
-          <p className="truncate text-[11px] text-white/40">
-            @{post.authorUsername} · {timeAgo(post.createdAt)}
-          </p>
-        </div>
-      </Link>
-      <p className="mb-3 line-clamp-4 text-sm text-white/70">{post.content}</p>
-      {post.imageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={post.imageUrl} alt="" className="mb-3 h-24 w-full rounded-xl object-cover" />
-      )}
-      <div className="flex items-center gap-4 text-xs text-white/40">
-        <span className="flex items-center gap-1">
-          <Heart className="h-3.5 w-3.5" /> {post.likeCount}
-        </span>
-        <span className="flex items-center gap-1">
-          <MessageCircle className="h-3.5 w-3.5" /> {post.commentCount}
-        </span>
-      </div>
-    </div>
-  );
-}
