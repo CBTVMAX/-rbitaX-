@@ -20,7 +20,11 @@ export function AuthShell({
   subtitle: string;
 }) {
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center gap-4 overflow-hidden bg-space-bg bg-stars px-4 py-6">
+    <div
+      className="relative flex min-h-screen flex-col items-center justify-center gap-4 overflow-hidden bg-space-bg bg-cover bg-center px-4 py-6"
+      style={{ backgroundImage: "url(/sobre-cta-bg.webp)" }}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-space-bg/50" />
       <div className="pointer-events-none absolute inset-0 bg-orbit-radial" />
 
       <span className="absolute right-6 top-6 z-10 hidden items-center gap-1.5 text-sm text-white/50 sm:flex">
