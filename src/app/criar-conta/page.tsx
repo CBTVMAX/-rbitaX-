@@ -1,11 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AuthShell } from "@/components/auth-shell";
 import { Check, Loader2, X } from "lucide-react";
+
+const MONTHS = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
+function daysInMonth(month: number, year: number) {
+  if (!month) return 31;
+  return new Date(year || 2000, month, 0).getDate();
+}
 
 function slugifyUsername(value: string) {
   return value
@@ -23,12 +33,19 @@ export default function CriarContaPage() {
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
-  const [birthDate, setBirthDate] = useState("");
+  const [birthDay, setBirthDay] = useState("");
+  const [birthMonth, setBirthMonth] = useState("");
+  const [birthYear, setBirthYear] = useState("");
   const [password, setPassword] = useState("");
   const [agree, setAgree] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<"idle" | "checking" | "free" | "taken">("idle");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const max = daysInMonth(Number(birthMonth), Number(birthYear));
+    if (birthDay && Number(birthDay) > max) setBirthDay(String(max));
+  }, [birthMonth, birthYear, birthDay]);
 
   async function checkUsername(value: string) {
     const clean = slugifyUsername(value);
@@ -65,13 +82,18 @@ export default function CriarContaPage() {
       return;
     }
 
+    const birthDate =
+      birthDay && birthMonth && birthYear
+        ? `${birthYear}-${birthMonth.padStart(2, "0")}-${birthDay.padStart(2, "0")}`
+        : null;
+
     setLoading(true);
     const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
-        data: { name, username, birthDate: birthDate || null },
+        data: { name, username, birthDate },
       },
     });
     setLoading(false);
@@ -155,28 +177,53 @@ export default function CriarContaPage() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="mb-1 block text-xs text-white/50">Data de nascimento</label>
-            <input
-              type="date"
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-space-card px-3 py-2 text-sm text-white outline-none focus:border-orbit-purple [color-scheme:dark]"
-            />
+        <div>
+          <label className="mb-1 block text-xs text-white/50">Data de nascimento</label>
+          <div className="grid grid-cols-3 gap-2">
+            <select
+              value={birthDay}
+              onChange={(e) => setBirthDay(e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-space-card px-2 py-2 text-sm text-white outline-none focus:border-orbit-purple"
+            >
+              <option value="">Dia</option>
+              {Array.from({ length: daysInMonth(Number(birthMonth), Number(birthYear)) }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+            <select
+              value={birthMonth}
+              onChange={(e) => setBirthMonth(e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-space-card px-2 py-2 text-sm text-white outline-none focus:border-orbit-purple"
+            >
+              <option value="">Mês</option>
+              {MONTHS.map((label, i) => (
+                <option key={label} value={i + 1}>{label}</option>
+              ))}
+            </select>
+            <select
+              value={birthYear}
+              onChange={(e) => setBirthYear(e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-space-card px-2 py-2 text-sm text-white outline-none focus:border-orbit-purple"
+            >
+              <option value="">Ano</option>
+              {Array.from({ length: 88 }, (_, i) => new Date().getFullYear() - 13 - i).map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
           </div>
-          <div>
-            <label className="mb-1 block text-xs text-white/50">Senha</label>
-            <input
-              required
-              type="password"
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mín. 8 caracteres"
-              className="w-full rounded-lg border border-white/10 bg-space-card px-3 py-2 text-sm text-white outline-none focus:border-orbit-purple"
-            />
-          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs text-white/50">Senha</label>
+          <input
+            required
+            type="password"
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Mín. 8 caracteres"
+            className="w-full rounded-lg border border-white/10 bg-space-card px-3 py-2 text-sm text-white outline-none focus:border-orbit-purple"
+          />
         </div>
 
         <label className="flex items-start gap-2 text-xs text-white/50">
