@@ -22,8 +22,8 @@ type CommentRow = { content: string; createdAt: string; id: string; postId: stri
 type CommentInsert = { content: string; createdAt?: string; id: string; postId: string; updatedAt: string; userId: string };
 type CommentUpdate = Partial<CommentInsert>;
 
-type CommunityRow = { avatarUrl: string | null; coverUrl: string | null; createdAt: string; description: string | null; id: string; isPrivate: boolean; name: string; slug: string };
-type CommunityInsert = { avatarUrl?: string | null; coverUrl?: string | null; createdAt?: string; description?: string | null; id: string; isPrivate?: boolean; name: string; slug: string };
+type CommunityRow = { avatarUrl: string | null; category: string | null; coverUrl: string | null; createdAt: string; description: string | null; id: string; isPrivate: boolean; name: string; slug: string };
+type CommunityInsert = { avatarUrl?: string | null; category?: string | null; coverUrl?: string | null; createdAt?: string; description?: string | null; id: string; isPrivate?: boolean; name: string; slug: string };
 type CommunityUpdate = Partial<CommunityInsert>;
 
 type CommunityMemberRow = { communityId: string; createdAt: string; id: string; role: string; userId: string };
@@ -178,6 +178,23 @@ export type Database = {
       compute_zodiac: { Args: { birth: string }; Returns: string };
       username_available: { Args: { check_username: string }; Returns: boolean };
       get_or_create_dm: { Args: { other_user_id: string }; Returns: string };
+      discoverable_profiles: {
+        Args: { limit_count?: number; search_query?: string | null };
+        Returns: { id: string; name: string; username: string; avatarUrl: string | null; bio: string | null; isVerified: boolean }[];
+      };
+      public_posts: {
+        Args: { limit_count?: number; search_query?: string | null };
+        Returns: {
+          id: string;
+          content: string;
+          createdAt: string;
+          kind: string;
+          authorId: string;
+          authorName: string;
+          authorUsername: string;
+          authorAvatarUrl: string | null;
+        }[];
+      };
     };
     Enums: { [_ in never]: never };
     CompositeTypes: { [_ in never]: never };

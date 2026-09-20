@@ -4,7 +4,6 @@ import { NextResponse, type NextRequest } from "next/server";
 const PROTECTED_PREFIXES = [
   "/feed",
   "/mensagens",
-  "/comunidades",
   "/musica",
   "/videos",
   "/perfil",

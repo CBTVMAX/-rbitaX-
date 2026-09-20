@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { OrbitLockup, OrbitWordmarkImage } from "@/components/orbit-logo";
+import { OrbitLockup } from "@/components/orbit-logo";
 import { LandingAuthRow } from "@/components/landing-auth-row";
-import { Compass, MessageCircle, PlayCircle, Sparkles, Users } from "lucide-react";
+import { PublicHeader } from "@/components/public-header";
+import { Compass, PlayCircle, Sparkles, Users } from "lucide-react";
 
 const HIGHLIGHTS = [
   { icon: Users, title: "Conecte", subtitle: "Pessoas reais", color: "text-orbit-blue" },
@@ -27,34 +28,9 @@ export default async function LandingPage() {
     <div className="relative min-h-screen overflow-hidden bg-space-bg bg-stars">
       <div className="pointer-events-none absolute inset-0 bg-orbit-radial" />
 
-      <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-5 sm:px-6 sm:py-6">
-        <div className="flex min-w-0 items-center">
-          <OrbitWordmarkImage className="h-10 w-auto sm:h-14" />
-        </div>
-        <nav className="hidden items-center gap-8 text-sm text-white/70 lg:flex">
-          <a href="#inicio" className="hover:text-white">Início</a>
-          <a href="#explorar" className="hover:text-white">Explorar</a>
-          <a href="#comunidades" className="hover:text-white">Comunidades</a>
-          <a href="#sobre" className="hover:text-white">Sobre</a>
-        </nav>
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <Link
-            href="/entrar"
-            className="hidden rounded-full border border-white/15 px-5 py-2 text-sm font-medium text-white/90 transition hover:bg-white/5 sm:inline-flex"
-          >
-            Entrar
-          </Link>
-          <Link
-            href="/criar-conta"
-            className="rounded-full bg-orbit-gradient px-4 py-2 text-xs font-semibold text-white shadow-glow transition hover:opacity-90 sm:px-5 sm:text-sm"
-          >
-            Criar uma conta
-          </Link>
-        </div>
-      </header>
+      <PublicHeader />
 
       <section
-        id="inicio"
         className="relative min-h-[85vh] overflow-hidden bg-cover bg-no-repeat md:min-h-[80vh]"
         style={{ backgroundImage: "url('/hero-earth.webp')", backgroundPosition: "center right" }}
       >
@@ -122,7 +98,7 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section id="explorar" className="relative z-10 border-t border-white/10 bg-space-surface/60 backdrop-blur">
+      <section className="relative z-10 border-t border-white/10 bg-space-surface/60 backdrop-blur">
         <div className="mx-auto grid max-w-7xl grid-cols-2 gap-6 px-6 py-10 md:grid-cols-5">
           {HIGHLIGHTS.map(({ icon: Icon, title, subtitle, color }) => (
             <div key={title} className="flex flex-col items-center gap-2 text-center">
@@ -133,9 +109,6 @@ export default async function LandingPage() {
           ))}
         </div>
       </section>
-
-      <section id="comunidades" className="sr-only" aria-hidden />
-      <section id="sobre" className="sr-only" aria-hidden />
     </div>
   );
 }

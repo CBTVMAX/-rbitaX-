@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { COMMUNITY_CATEGORIES } from "@/lib/community-categories";
 import { Plus, X } from "lucide-react";
 
 function slugify(v: string) {
@@ -21,6 +22,7 @@ export function CreateCommunityDialog({ userId }: { userId: string }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -38,6 +40,7 @@ export function CreateCommunityDialog({ userId }: { userId: string }) {
       name: name.trim(),
       slug,
       description: description.trim() || null,
+      category: category || null,
     });
 
     if (createError) {
@@ -57,6 +60,7 @@ export function CreateCommunityDialog({ userId }: { userId: string }) {
     setOpen(false);
     setName("");
     setDescription("");
+    setCategory("");
     router.push(`/comunidades/${slug}`);
     router.refresh();
   }
@@ -97,6 +101,21 @@ export function CreateCommunityDialog({ userId }: { userId: string }) {
                   rows={3}
                   className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-orbit-purple"
                 />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-white/50">Categoria</label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-orbit-purple"
+                >
+                  <option value="" className="bg-space-card">Sem categoria</option>
+                  {COMMUNITY_CATEGORIES.map((c) => (
+                    <option key={c.slug} value={c.slug} className="bg-space-card">
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
               </div>
               {error && <p className="text-xs text-red-400">{error}</p>}
               <button
