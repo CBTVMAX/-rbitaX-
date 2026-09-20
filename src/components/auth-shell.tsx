@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Compass, Globe, Infinity as InfinityIcon, Users, UsersRound } from "lucide-react";
+import { ChevronDown, Compass, Globe, Infinity as InfinityIcon, Users, UsersRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { OrbitLogo, OrbitWordmarkImage } from "@/components/orbit-logo";
 
@@ -24,13 +24,13 @@ export function AuthShell({
       <div className="pointer-events-none absolute inset-0 bg-orbit-radial" />
 
       <span className="absolute right-6 top-6 z-10 hidden items-center gap-1.5 text-sm text-white/50 sm:flex">
-        <Globe className="h-4 w-4" /> Português
+        <Globe className="h-4 w-4" /> Português <ChevronDown className="h-3.5 w-3.5" />
       </span>
 
       <div className="relative z-10 grid w-full max-w-6xl overflow-hidden rounded-3xl border border-white/10 bg-space-surface/80 shadow-2xl backdrop-blur md:grid-cols-[1.15fr_1fr]">
         <div
           className="relative hidden flex-col justify-between overflow-hidden bg-cover p-10 md:flex"
-          style={{ backgroundImage: "url(/entrar-hero.webp)", backgroundPosition: "right center" }}
+          style={{ backgroundImage: "url(/entrar-hero.webp)", backgroundPosition: "center center" }}
         >
           <div
             className="absolute inset-0"

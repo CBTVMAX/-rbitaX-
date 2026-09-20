@@ -110,26 +110,40 @@ function EntrarForm() {
         <div className="h-px flex-1 bg-white/10" />
       </div>
 
-      <div className="mb-4 flex rounded-full border border-white/10 bg-space-card p-1 text-sm">
+      <div className="mb-4 flex gap-2 text-sm">
         <button
           type="button"
           onClick={() => setMode("email")}
           className={clsx(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-full py-1.5 font-medium transition",
-            mode === "email" ? "bg-orbit-gradient text-white" : "text-white/50 hover:text-white"
+            "flex-1 rounded-full transition",
+            mode === "email" ? "bg-orbit-gradient p-[1.5px]" : "p-[1.5px]"
           )}
         >
-          <Mail className="h-3.5 w-3.5" /> E-mail
+          <span
+            className={clsx(
+              "flex items-center justify-center gap-1.5 rounded-full py-1.5 font-medium",
+              mode === "email" ? "bg-space-card text-white" : "border border-white/10 bg-space-card text-white/50 hover:text-white"
+            )}
+          >
+            <Mail className="h-3.5 w-3.5" /> E-mail
+          </span>
         </button>
         <button
           type="button"
           onClick={() => setMode("celular")}
           className={clsx(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-full py-1.5 font-medium transition",
-            mode === "celular" ? "bg-orbit-gradient text-white" : "text-white/50 hover:text-white"
+            "flex-1 rounded-full transition",
+            mode === "celular" ? "bg-orbit-gradient p-[1.5px]" : "p-[1.5px]"
           )}
         >
-          <Phone className="h-3.5 w-3.5" /> Celular
+          <span
+            className={clsx(
+              "flex items-center justify-center gap-1.5 rounded-full py-1.5 font-medium",
+              mode === "celular" ? "bg-space-card text-white" : "border border-white/10 bg-space-card text-white/50 hover:text-white"
+            )}
+          >
+            <Phone className="h-3.5 w-3.5" /> Celular
+          </span>
         </button>
       </div>
 
