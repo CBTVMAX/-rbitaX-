@@ -224,7 +224,7 @@ export default async function ExplorarPage({
         <div className="relative z-10">
           <PublicHeader authed={!!user} />
 
-          <div className={clsx("mx-auto max-w-6xl px-4 sm:px-6", heroImg ? "pb-12 pt-2 lg:pb-16" : "pb-6 pt-4")}>
+          <div className={clsx("mx-auto max-w-6xl px-4 pb-6 sm:px-6", heroImg ? "pt-2" : "pt-4")}>
             {tab !== "para-voce" && (
               <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-white/30">
                 Explorar <span className="text-white/20">›</span>{" "}
@@ -294,7 +294,7 @@ export default async function ExplorarPage({
         </div>
       </section>
 
-      <main className="relative z-10 mx-auto max-w-6xl px-4 pb-24 pt-8 sm:px-6">
+      <main className="relative z-10 mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6">
         {tab === "para-voce" && (
           <div className="space-y-12">
             <SectionHeader emoji="🔥" title="Em alta no ÓrbitaX" subtitle="Veja os assuntos que estão movimentando a comunidade." seeAllHref={tabHref("comunidades")} />
@@ -343,8 +343,8 @@ export default async function ExplorarPage({
                       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-orbit-gradient text-white">
                         <Users className="h-4 w-4" />
                       </span>
-                      <span className="text-sm font-semibold text-white">Faça parte do ÓrbitaX!</span>
-                      <span className="text-xs text-white/50">Crie sua conta e comece a conectar.</span>
+                      <span className="text-sm font-semibold text-white">Venha se conectar!</span>
+                      <span className="text-xs text-white/50">Crie sua conta e faça parte do ÓrbitaX.</span>
                     </Link>
                   )}
                 </div>
