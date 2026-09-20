@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { OrbitLogo, OrbitLockup, OrbitWordmarkImage } from "@/components/orbit-logo";
+import { OrbitLockup, OrbitWordmarkImage } from "@/components/orbit-logo";
 import { LandingAuthRow } from "@/components/landing-auth-row";
 import { Compass, MessageCircle, PlayCircle, Sparkles, Users } from "lucide-react";
 
@@ -28,9 +28,8 @@ export default async function LandingPage() {
       <div className="pointer-events-none absolute inset-0 bg-orbit-radial" />
 
       <header className="relative z-10 mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-5 sm:px-6 sm:py-6">
-        <div className="flex min-w-0 items-center gap-2">
-          <OrbitLogo size={32} />
-          <OrbitWordmarkImage className="h-8 w-auto sm:h-9" />
+        <div className="flex min-w-0 items-center">
+          <OrbitWordmarkImage className="h-10 w-auto sm:h-14" />
         </div>
         <nav className="hidden items-center gap-8 text-sm text-white/70 lg:flex">
           <a href="#inicio" className="hover:text-white">Início</a>
