@@ -72,10 +72,10 @@ type PublicPost = {
 type CommunityCard = { id: string; name: string; slug: string; description: string | null; category: string | null; avatarUrl: string | null; coverUrl: string | null; memberCount: number };
 
 const HERO_ILLUSTRATION: Partial<Record<Tab, string>> = {
-  "para-voce": "/explore-hero-paravoce.webp",
-  pessoas: "/explore-hero-pessoas.webp",
-  comunidades: "/explore-hero-comunidades.webp",
-  musica: "/explore-hero-musica.webp",
+  "para-voce": "/explore-hero.webp",
+  pessoas: "/explore-hero.webp",
+  comunidades: "/explore-hero.webp",
+  musica: "/explore-hero.webp",
 };
 
 const CATEGORY_PHOTOS: Partial<Record<string, string>> = {
@@ -208,7 +208,7 @@ export default async function ExplorarPage({
 
         <div className="relative">
           {HERO_ILLUSTRATION[tab] && (
-            <div className="pointer-events-none absolute -right-4 -top-2 hidden max-w-md overflow-hidden lg:block xl:-right-6 xl:max-w-lg">
+            <div className="pointer-events-none absolute -right-4 -top-2 hidden max-w-lg overflow-hidden lg:block xl:-right-6 xl:max-w-2xl">
               <img src={HERO_ILLUSTRATION[tab]} alt="" className="block w-full" />
               <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-space-bg" />
               <div className="absolute inset-0 bg-gradient-to-t from-space-bg via-transparent to-transparent" />
