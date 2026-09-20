@@ -25,6 +25,7 @@ const config: Config = {
       fontFamily: {
         display: ["var(--font-space-grotesk)", "sans-serif"],
         sans: ["var(--font-inter)", "sans-serif"],
+        script: ["var(--font-caveat)", "cursive"],
       },
       boxShadow: {
         glow: "0 0 40px rgba(139,92,246,0.35)",

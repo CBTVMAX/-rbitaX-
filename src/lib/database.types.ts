@@ -94,6 +94,10 @@ type UserRow = { accountStatus: string; avatarUrl: string | null; bio: string | 
 type UserInsert = { accountStatus?: string; avatarUrl?: string | null; bio?: string | null; coverUrl?: string | null; createdAt?: string; discoverable?: boolean; email?: string | null; emailVerifiedAt?: string | null; googleId?: string | null; id: string; isPrivate?: boolean; isVerified?: boolean; lastSeenAt?: string | null; name: string; passwordHash?: string | null; phone?: string | null; phoneVerifiedAt?: string | null; role?: string; updatedAt?: string; username: string; whoCanComment?: string; whoCanMention?: string; whoCanMessage?: string; whoCanSeeMoments?: string };
 type UserUpdate = Partial<UserInsert>;
 
+type WaitlistRow = { id: string; email: string; source: string | null; createdAt: string };
+type WaitlistInsert = { id: string; email: string; source?: string | null; createdAt?: string };
+type WaitlistUpdate = Partial<WaitlistInsert>;
+
 export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5";
@@ -172,6 +176,7 @@ export type Database = {
         { foreignKeyName: "Track_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
       ] };
       User: { Row: UserRow; Insert: UserInsert; Update: UserUpdate; Relationships: [] };
+      Waitlist: { Row: WaitlistRow; Insert: WaitlistInsert; Update: WaitlistUpdate; Relationships: [] };
     };
     Views: { [_ in never]: never };
     Functions: {
