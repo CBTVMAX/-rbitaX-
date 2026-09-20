@@ -71,6 +71,13 @@ type PublicPost = {
 };
 type CommunityCard = { id: string; name: string; slug: string; description: string | null; category: string | null; avatarUrl: string | null; coverUrl: string | null; memberCount: number };
 
+const HERO_ILLUSTRATION: Partial<Record<Tab, string>> = {
+  "para-voce": "/explore-hero-paravoce.webp",
+  pessoas: "/explore-hero-pessoas.webp",
+  comunidades: "/explore-hero-comunidades.webp",
+  musica: "/explore-hero-musica.webp",
+};
+
 const CATEGORY_PHOTOS: Partial<Record<string, string>> = {
   tecnologia: "/cat-tecnologia.webp",
   games: "/cat-games.webp",
@@ -200,33 +207,12 @@ export default async function ExplorarPage({
         )}
 
         <div className="relative">
-          {tab === "para-voce" && (
-            <img
-              src="/explore-hero-paravoce.webp"
-              alt=""
-              className="pointer-events-none absolute right-0 top-0 hidden max-w-sm lg:block xl:max-w-md"
-            />
-          )}
-          {tab === "pessoas" && (
-            <img
-              src="/explore-hero-pessoas.webp"
-              alt=""
-              className="pointer-events-none absolute right-0 top-0 hidden max-w-sm lg:block xl:max-w-md"
-            />
-          )}
-          {tab === "comunidades" && (
-            <img
-              src="/explore-hero-comunidades.webp"
-              alt=""
-              className="pointer-events-none absolute right-0 top-0 hidden max-w-sm lg:block xl:max-w-md"
-            />
-          )}
-          {tab === "musica" && (
-            <img
-              src="/explore-hero-musica.webp"
-              alt=""
-              className="pointer-events-none absolute right-0 top-0 hidden max-w-sm lg:block xl:max-w-md"
-            />
+          {HERO_ILLUSTRATION[tab] && (
+            <div className="pointer-events-none absolute -right-4 -top-2 hidden max-w-md overflow-hidden lg:block xl:-right-6 xl:max-w-lg">
+              <img src={HERO_ILLUSTRATION[tab]} alt="" className="block w-full" />
+              <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-space-bg" />
+              <div className="absolute inset-0 bg-gradient-to-t from-space-bg via-transparent to-transparent" />
+            </div>
           )}
           {tab === "publicacoes" && (
             <p className="pointer-events-none absolute right-0 top-2 hidden max-w-[12rem] text-right text-sm italic text-white/30 lg:block">
@@ -330,6 +316,18 @@ export default async function ExplorarPage({
                   {profiles.map((p) => (
                     <ProfileCard key={p.id} profile={p} currentUserId={user?.id ?? null} />
                   ))}
+                  {!user && (
+                    <Link
+                      href="/criar-conta"
+                      className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 bg-space-card/50 p-4 text-center transition hover:border-white/30"
+                    >
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-orbit-gradient text-white">
+                        <Users className="h-4 w-4" />
+                      </span>
+                      <span className="text-sm font-semibold text-white">Faça parte do ÓrbitaX!</span>
+                      <span className="text-xs text-white/50">Crie sua conta e comece a conectar.</span>
+                    </Link>
+                  )}
                 </div>
               )}
             </div>
