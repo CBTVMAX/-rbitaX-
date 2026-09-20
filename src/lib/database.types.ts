@@ -193,6 +193,8 @@ export type Database = {
           authorName: string;
           authorUsername: string;
           authorAvatarUrl: string | null;
+          likeCount: number;
+          commentCount: number;
         }[];
       };
     };
