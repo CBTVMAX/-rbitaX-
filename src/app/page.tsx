@@ -82,14 +82,16 @@ export default async function LandingPage() {
           }}
         />
 
-        <p className="absolute right-6 top-8 z-10 hidden max-w-[8rem] text-right text-xs font-medium uppercase leading-tight tracking-[0.2em] text-white/60 md:block">
+        <p className="absolute right-6 top-8 z-10 hidden max-w-[9rem] rounded-xl border border-white/10 bg-space-bg/70 px-3 py-2 text-right text-xs font-semibold uppercase leading-tight tracking-[0.2em] text-white shadow-lg backdrop-blur-sm md:block">
           Um lugar onde você pertence
         </p>
 
         <div className="relative z-10 mx-auto max-w-7xl px-6 py-12 md:py-20">
           <div className="max-w-xl">
-            <div className="mb-8 border-l-2 border-orbit-cyan pl-3 text-xs uppercase leading-6 tracking-[0.2em] text-white/50">
-              Pessoas<br />Ideias<br />Conteúdos<br />Em órbita
+            <div className="mb-8 inline-block rounded-xl border border-orbit-cyan/40 bg-space-bg/70 py-2 pl-4 pr-5 text-xs font-semibold uppercase leading-6 tracking-[0.2em] text-white shadow-lg backdrop-blur-sm">
+              <span className="border-l-2 border-orbit-cyan pl-3">
+                Pessoas<br />Ideias<br />Conteúdos<br />Em órbita
+              </span>
             </div>
 
             <OrbitLockup className="mb-8 h-auto w-full max-w-sm sm:max-w-md" />
