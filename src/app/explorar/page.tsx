@@ -69,7 +69,15 @@ type PublicPost = {
   likeCount: number;
   commentCount: number;
 };
-type CommunityCard = { id: string; name: string; slug: string; description: string | null; category: string | null; avatarUrl: string | null; memberCount: number };
+type CommunityCard = { id: string; name: string; slug: string; description: string | null; category: string | null; avatarUrl: string | null; coverUrl: string | null; memberCount: number };
+
+const CATEGORY_PHOTOS: Partial<Record<string, string>> = {
+  tecnologia: "/cat-tecnologia.webp",
+  games: "/cat-games.webp",
+  musica: "/cat-musica.webp",
+  "arte-design": "/cat-arte-design.webp",
+  "cinema-series": "/cat-cinema-series.webp",
+};
 
 export default async function ExplorarPage({
   searchParams,
@@ -97,7 +105,7 @@ export default async function ExplorarPage({
   if (tab === "para-voce") {
     const [{ data: p }, { data: allComms }, { data: members }, { data: pubPosts }] = await Promise.all([
       supabase.rpc("discoverable_profiles", { limit_count: 6 }),
-      supabase.from("Community").select("id, name, slug, description, category, avatarUrl"),
+      supabase.from("Community").select("id, name, slug, description, category, avatarUrl, coverUrl"),
       supabase.from("CommunityMember").select("communityId"),
       supabase.rpc("public_posts", { limit_count: 3 }),
     ]);
@@ -121,7 +129,7 @@ export default async function ExplorarPage({
       .slice(0, 6);
   } else if (tab === "comunidades") {
     const [{ data: official }, { data: officialMembers }] = await Promise.all([
-      supabase.from("Community").select("id, name, slug, description, category, avatarUrl").eq("slug", "orbitax-oficial").maybeSingle(),
+      supabase.from("Community").select("id, name, slug, description, category, avatarUrl, coverUrl").eq("slug", "orbitax-oficial").maybeSingle(),
       supabase.from("CommunityMember").select("userId").eq("communityId", "orbitax-oficial"),
     ]);
     if (official) {
@@ -133,11 +141,7 @@ export default async function ExplorarPage({
 
   const HERO: Record<Tab, { title: React.ReactNode; subtitle: string; placeholder: string }> = {
     "para-voce": {
-      title: (
-        <>
-          Explore o seu <span className="orbit-text-gradient">universo</span>
-        </>
-      ),
+      title: "Explorar",
       subtitle: "Descubra pessoas, publicações, comunidades e interesses dentro do ÓrbitaX.",
       placeholder: "Buscar pessoas, publicações, comunidades, músicas...",
     },
@@ -196,6 +200,13 @@ export default async function ExplorarPage({
         )}
 
         <div className="relative">
+          {tab === "para-voce" && (
+            <img
+              src="/explore-hero-paravoce.webp"
+              alt=""
+              className="pointer-events-none absolute right-0 top-0 hidden max-w-sm lg:block xl:max-w-md"
+            />
+          )}
           {tab === "pessoas" && (
             <img
               src="/explore-hero-pessoas.webp"
@@ -223,7 +234,7 @@ export default async function ExplorarPage({
             </p>
           )}
 
-          <div className={clsx(tab === "para-voce" || tab === "publicacoes" ? "text-center" : "max-w-xl text-left", "relative z-10")}>
+          <div className={clsx(tab === "publicacoes" ? "text-center" : "max-w-xl text-left", "relative z-10")}>
             {(tab === "para-voce" || tab === "pessoas") && (
               <div className="mb-6 hidden text-left text-xs font-semibold uppercase leading-6 tracking-[0.2em] text-white/30 sm:block">
                 <span className="border-l-2 border-orbit-cyan pl-3">
@@ -234,14 +245,14 @@ export default async function ExplorarPage({
               </div>
             )}
 
-            <h1 className={clsx("font-display text-3xl font-bold text-white sm:text-4xl", (tab === "para-voce" || tab === "publicacoes") && "mx-auto")}>
+            <h1 className={clsx("font-display text-3xl font-bold text-white sm:text-4xl", (tab === "publicacoes") && "mx-auto")}>
               {hero.title}
             </h1>
-            <p className={clsx("mt-2 max-w-xl text-sm text-white/50 sm:text-base", (tab === "para-voce" || tab === "publicacoes") && "mx-auto")}>
+            <p className={clsx("mt-2 max-w-xl text-sm text-white/50 sm:text-base", (tab === "publicacoes") && "mx-auto")}>
               {hero.subtitle}
             </p>
 
-            <form action="/explorar" method="GET" className={clsx("mt-6 max-w-2xl", (tab === "para-voce" || tab === "publicacoes") && "mx-auto")}>
+            <form action="/explorar" method="GET" className={clsx("mt-6 max-w-2xl", (tab === "publicacoes") && "mx-auto")}>
               <input type="hidden" name="tab" value={tab} />
               <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-space-card px-4 py-3">
                 <Search className="h-4 w-4 shrink-0 text-white/40" />
@@ -260,7 +271,7 @@ export default async function ExplorarPage({
               </div>
             </form>
 
-            <div className={clsx("mt-5 flex flex-wrap items-center gap-2", (tab === "para-voce" || tab === "publicacoes") && "justify-center")}>
+            <div className={clsx("mt-5 flex flex-wrap items-center gap-2", (tab === "publicacoes") && "justify-center")}>
               {TABS.map(({ id, label }) => (
                 <Link
                   key={id}
@@ -286,17 +297,27 @@ export default async function ExplorarPage({
               <EmptyState text="Ainda não há categorias com atividade. Seja a primeira comunidade!" />
             ) : (
               <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                {categoryCounts.map(({ slug, label, icon: Icon, count }) => (
-                  <Link
-                    key={slug}
-                    href={`/comunidades?categoria=${slug}`}
-                    className="rounded-2xl border border-white/10 bg-space-card p-4 transition hover:border-white/20"
-                  >
-                    <Icon className="mb-3 h-5 w-5 text-orbit-cyan" />
-                    <p className="text-sm font-semibold text-white">{label}</p>
-                    <p className="text-xs text-white/40">{count} {count === 1 ? "comunidade" : "comunidades"}</p>
-                  </Link>
-                ))}
+                {categoryCounts.map(({ slug, label, icon: Icon, count }) => {
+                  const photo = CATEGORY_PHOTOS[slug];
+                  return (
+                    <Link
+                      key={slug}
+                      href={`/comunidades?categoria=${slug}`}
+                      className={clsx(
+                        "relative overflow-hidden rounded-2xl border border-white/10 p-4 transition hover:border-white/20",
+                        !photo && "bg-space-card"
+                      )}
+                      style={photo ? { backgroundImage: `url(${photo})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+                    >
+                      {photo && <div className="absolute inset-0 bg-gradient-to-t from-space-bg via-space-bg/70 to-transparent" />}
+                      <div className="relative">
+                        <Icon className="mb-3 h-5 w-5 text-orbit-cyan" />
+                        <p className="text-sm font-semibold text-white">{label}</p>
+                        <p className="text-xs text-white/60">{count} {count === 1 ? "comunidade" : "comunidades"}</p>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             )}
 
@@ -760,7 +781,13 @@ function CommunityTile({ community }: { community: CommunityCard }) {
       href={`/comunidades/${community.slug}`}
       className="block rounded-2xl border border-white/10 bg-space-card p-4 transition hover:border-white/20"
     >
-      <div className="mb-3 h-16 rounded-xl bg-gradient-to-br from-orbit-blue/40 via-orbit-purple/40 to-orbit-pink/40" />
+      <div
+        className={clsx(
+          "mb-3 h-16 rounded-xl bg-cover bg-center",
+          !community.coverUrl && "bg-gradient-to-br from-orbit-blue/40 via-orbit-purple/40 to-orbit-pink/40"
+        )}
+        style={community.coverUrl ? { backgroundImage: `url(${community.coverUrl})` } : undefined}
+      />
       {community.category && (
         <span className="mb-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white/50">
           {categoryLabel(community.category)}

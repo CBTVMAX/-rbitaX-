@@ -20,6 +20,7 @@ type CommunityRow = {
   description: string | null;
   category: string | null;
   avatarUrl: string | null;
+  coverUrl: string | null;
 };
 
 export default async function ComunidadesPage({
@@ -39,13 +40,13 @@ export default async function ComunidadesPage({
 
   let listQuery = supabase
     .from("Community")
-    .select("id, name, slug, description, category, avatarUrl")
+    .select("id, name, slug, description, category, avatarUrl, coverUrl")
     .order("createdAt", { ascending: false });
   if (q) listQuery = listQuery.ilike("name", `%${q}%`);
   if (categoria) listQuery = listQuery.eq("category", categoria);
 
   const [{ data: allCommunities }, { data: filtered }, { data: members }] = await Promise.all([
-    supabase.from("Community").select("id, name, slug, description, category, avatarUrl"),
+    supabase.from("Community").select("id, name, slug, description, category, avatarUrl, coverUrl"),
     listQuery,
     supabase.from("CommunityMember").select("communityId, userId, role"),
   ]);
@@ -264,7 +265,13 @@ function CommunityCard({
   return (
     <div className="rounded-2xl border border-white/10 bg-space-card p-4">
       <Link href={`/comunidades/${community.slug}`} className="mb-2 block">
-        <div className="mb-3 h-16 rounded-xl bg-gradient-to-br from-orbit-blue/40 via-orbit-purple/40 to-orbit-pink/40" />
+        <div
+          className={clsx(
+            "mb-3 h-16 rounded-xl bg-cover bg-center",
+            !community.coverUrl && "bg-gradient-to-br from-orbit-blue/40 via-orbit-purple/40 to-orbit-pink/40"
+          )}
+          style={community.coverUrl ? { backgroundImage: `url(${community.coverUrl})` } : undefined}
+        />
         {community.category && (
           <span className="mb-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white/50">
             {categoryLabel(community.category)}
