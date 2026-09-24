@@ -83,7 +83,12 @@ export function AuthShell({
             className="absolute inset-0"
             style={{ background: "linear-gradient(0deg, rgba(5,6,15,0.55) 0%, transparent 45%)" }}
           />
-          <OrbitWordmarkImage className="relative h-auto w-full max-w-sm drop-shadow-[0_0_30px_rgba(79,139,255,0.35)]" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/hero-logo-lockup.webp"
+            alt="Órbita X — Seu universo em conexão"
+            className="relative h-auto w-full max-w-md mix-blend-screen drop-shadow-[0_0_30px_rgba(79,139,255,0.35)]"
+          />
         </div>
 
         <div className="flex flex-col justify-center p-8 md:p-10">
