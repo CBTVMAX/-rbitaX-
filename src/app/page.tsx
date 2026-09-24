@@ -35,23 +35,27 @@ export default async function LandingPage() {
         className="relative hidden min-h-[88vh] overflow-hidden bg-cover bg-no-repeat md:block"
         style={{ backgroundImage: "url('/hero-astronaut-desktop.webp')", backgroundPosition: "center center" }}
       >
-        <div className="absolute inset-y-0 left-0 w-[46%] backdrop-blur-[3px]" />
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(90deg, rgba(5,6,15,0.96) 0%, rgba(5,6,15,0.8) 28%, rgba(5,6,15,0.45) 46%, rgba(5,6,15,0.15) 62%, transparent 75%)" }}
+          style={{ background: "linear-gradient(180deg, rgba(5,6,15,0.5) 0%, transparent 18%, transparent 78%, rgba(5,6,15,0.4) 100%)" }}
         />
 
-        <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-6 py-16">
-          <div className="max-w-md">
-            <div className="mb-8 inline-block rounded-xl border border-orbit-cyan/40 bg-space-bg/70 py-2 pl-4 pr-5 text-xs font-semibold uppercase leading-6 tracking-[0.2em] text-white shadow-lg backdrop-blur-sm">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/hero-logo-lockup.webp"
+          alt="Órbita X — Seu universo em conexão"
+          className="pointer-events-none absolute left-1/2 top-[10%] w-full max-w-lg -translate-x-1/2 mix-blend-screen drop-shadow-[0_0_30px_rgba(79,139,255,0.35)]"
+        />
+
+        <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center justify-end px-6 py-16">
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-space-surface/70 p-7 shadow-2xl backdrop-blur-xl">
+            <div className="mb-6 inline-block rounded-xl border border-orbit-cyan/40 bg-space-bg/70 py-2 pl-4 pr-5 text-xs font-semibold uppercase leading-6 tracking-[0.2em] text-white">
               <span className="border-l-2 border-orbit-cyan pl-3">
                 Pessoas<br />Ideias<br />Conteúdos<br />Em órbita
               </span>
             </div>
 
-            <OrbitLockup className="mb-8 h-auto w-full max-w-sm" />
-
-            <p className="mb-8 max-w-md text-sm text-white/80">
+            <p className="mb-7 text-sm text-white/80">
               Seu universo em conexão: pessoas, ideias e conteúdos girando em torno de você.
             </p>
 
@@ -70,17 +74,15 @@ export default async function LandingPage() {
               </Link>
             </div>
 
-            <div className="mb-5 flex max-w-md items-center gap-3 text-xs text-white/50">
+            <div className="mb-5 flex items-center gap-3 text-xs text-white/50">
               <div className="h-px flex-1 bg-white/10" />
               OU
               <div className="h-px flex-1 bg-white/10" />
             </div>
 
-            <div className="max-w-md">
-              <LandingAuthRow />
-            </div>
+            <LandingAuthRow />
 
-            <p className="max-w-md text-xs text-white/60">
+            <p className="text-xs text-white/60">
               Ao continuar, você concorda com os{" "}
               <a href="/termos" className="underline hover:text-white/80">Termos de Uso</a> e a{" "}
               <a href="/privacidade" className="underline hover:text-white/80">Política de Privacidade</a>.
