@@ -79,24 +79,26 @@ export function AuthShell({
           </div>
         </div>
 
-        <div className="relative flex flex-col justify-center p-8 md:p-10">
-          {topRight && (
-            <div className="absolute right-8 top-8 hidden text-right md:block">{topRight}</div>
-          )}
+        <div className="flex flex-col justify-center p-8 md:p-10">
           <div className="mb-6 flex items-center gap-2 md:hidden">
             <OrbitLogo size={28} />
             <OrbitWordmarkImage className="h-7 w-auto" />
           </div>
-          {eyebrow && (
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-orbit-pink">{eyebrow}</p>
-          )}
-          <h1 className="mb-1 font-display text-2xl font-bold text-white">
-            {heading ?? (
-              <>
-                {title} no <span className="orbit-text-gradient">ÓrbitaX</span>
-              </>
-            )}
-          </h1>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              {eyebrow && (
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-orbit-pink">{eyebrow}</p>
+              )}
+              <h1 className="mb-1 font-display text-2xl font-bold text-white">
+                {heading ?? (
+                  <>
+                    {title} no <span className="orbit-text-gradient">ÓrbitaX</span>
+                  </>
+                )}
+              </h1>
+            </div>
+            {topRight && <div className="hidden shrink-0 text-right md:block">{topRight}</div>}
+          </div>
           <p className="mb-6 text-sm text-white/50">{subtitle}</p>
           {children}
         </div>
