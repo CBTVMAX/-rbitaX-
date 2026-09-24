@@ -91,8 +91,7 @@ export default function CriarContaPage() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [agreeTerms, setAgreeTerms] = useState(false);
-  const [agreePrivacy, setAgreePrivacy] = useState(false);
+  const [agree, setAgree] = useState(false);
 
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
@@ -108,8 +107,7 @@ export default function CriarContaPage() {
     if (mode === "email" && !email.trim()) return "Digite seu e-mail.";
     if (mode === "phone" && !phone.trim()) return "Digite seu número de celular.";
     if (password.length < 8) return "A senha precisa ter pelo menos 8 caracteres.";
-    if (!agreeTerms) return "Você precisa aceitar os Termos de Uso.";
-    if (!agreePrivacy) return "Você precisa aceitar a Política de Privacidade.";
+    if (!agree) return "Você precisa aceitar os Termos de Uso e a Política de Privacidade.";
     return null;
   }
 
@@ -413,21 +411,12 @@ export default function CriarContaPage() {
             <label className="flex items-start gap-2 text-xs text-white/50">
               <input
                 type="checkbox"
-                checked={agreeTerms}
-                onChange={(e) => setAgreeTerms(e.target.checked)}
+                checked={agree}
+                onChange={(e) => setAgree(e.target.checked)}
                 className="mt-0.5"
               />
               Li e concordo com os{" "}
-              <Link href="/termos" className="text-orbit-cyan hover:underline">Termos de Uso</Link>.
-            </label>
-            <label className="flex items-start gap-2 text-xs text-white/50">
-              <input
-                type="checkbox"
-                checked={agreePrivacy}
-                onChange={(e) => setAgreePrivacy(e.target.checked)}
-                className="mt-0.5"
-              />
-              Li e concordo com a{" "}
+              <Link href="/termos" className="text-orbit-cyan hover:underline">Termos de Uso</Link> e a{" "}
               <Link href="/privacidade" className="text-orbit-cyan hover:underline">Política de Privacidade</Link>.
             </label>
 

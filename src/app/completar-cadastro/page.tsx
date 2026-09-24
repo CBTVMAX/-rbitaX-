@@ -53,8 +53,7 @@ export default function CompletarCadastroPage() {
   const [checking, setChecking] = useState(true);
   const [birthDateInput, setBirthDateInput] = useState("");
   const [gender, setGender] = useState("");
-  const [agreeTerms, setAgreeTerms] = useState(false);
-  const [agreePrivacy, setAgreePrivacy] = useState(false);
+  const [agree, setAgree] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -86,12 +85,8 @@ export default function CompletarCadastroPage() {
       setError("Selecione seu gênero.");
       return;
     }
-    if (!agreeTerms) {
-      setError("Você precisa aceitar os Termos de Uso.");
-      return;
-    }
-    if (!agreePrivacy) {
-      setError("Você precisa aceitar a Política de Privacidade.");
+    if (!agree) {
+      setError("Você precisa aceitar os Termos de Uso e a Política de Privacidade.");
       return;
     }
 
@@ -176,13 +171,9 @@ export default function CompletarCadastroPage() {
         </div>
 
         <label className="flex items-start gap-2 text-xs text-white/50">
-          <input type="checkbox" checked={agreeTerms} onChange={(e) => setAgreeTerms(e.target.checked)} className="mt-0.5" />
+          <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-0.5" />
           Li e concordo com os{" "}
-          <Link href="/termos" className="text-orbit-cyan hover:underline">Termos de Uso</Link>.
-        </label>
-        <label className="flex items-start gap-2 text-xs text-white/50">
-          <input type="checkbox" checked={agreePrivacy} onChange={(e) => setAgreePrivacy(e.target.checked)} className="mt-0.5" />
-          Li e concordo com a{" "}
+          <Link href="/termos" className="text-orbit-cyan hover:underline">Termos de Uso</Link> e a{" "}
           <Link href="/privacidade" className="text-orbit-cyan hover:underline">Política de Privacidade</Link>.
         </label>
 
