@@ -4,15 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { OrbitLockup } from "@/components/orbit-logo";
 import { LandingAuthRow } from "@/components/landing-auth-row";
 import { PublicHeader } from "@/components/public-header";
-import { ArrowRight, Compass, LogIn, PlayCircle, Sparkles, UserPlus, Users } from "lucide-react";
-
-const HIGHLIGHTS = [
-  { icon: Users, title: "Conecte", subtitle: "Pessoas reais", color: "text-orbit-blue" },
-  { icon: Compass, title: "Explore", subtitle: "Novos interesses", color: "text-orbit-purple" },
-  { icon: PlayCircle, title: "Compartilhe", subtitle: "Seus momentos", color: "text-orbit-pink" },
-  { icon: Users, title: "Participe", subtitle: "Comunidades", color: "text-orbit-cyan" },
-  { icon: Sparkles, title: "Descubra", subtitle: "Mais de você", color: "text-orbit-pink" },
-];
+import { ArrowRight, LogIn, UserPlus } from "lucide-react";
 
 export default async function LandingPage() {
   const supabase = createClient();
@@ -32,7 +24,7 @@ export default async function LandingPage() {
 
       {/* ===== DESKTOP HERO — astronaut-centric universe ===== */}
       <section
-        className="relative hidden min-h-[88vh] overflow-hidden bg-cover bg-no-repeat md:block"
+        className="relative hidden min-h-[calc(100vh-167px)] overflow-hidden bg-cover bg-no-repeat md:block"
         style={{ backgroundImage: "url('/hero-astronaut-desktop.webp')", backgroundPosition: "center center" }}
       >
         <div
@@ -151,17 +143,6 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="relative z-10 border-t border-white/10 bg-space-surface/60 backdrop-blur">
-        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-6 px-6 py-10 md:grid-cols-5">
-          {HIGHLIGHTS.map(({ icon: Icon, title, subtitle, color }) => (
-            <div key={title} className="flex flex-col items-center gap-2 text-center">
-              <Icon className={`h-7 w-7 ${color}`} />
-              <span className="text-sm font-semibold text-white">{title}</span>
-              <span className="text-xs text-white/70">{subtitle}</span>
-            </div>
-          ))}
-        </div>
-      </section>
     </div>
   );
 }
