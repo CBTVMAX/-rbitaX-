@@ -31,28 +31,14 @@ export default async function LandingPage() {
       <PublicHeader />
 
       {/* ===== DESKTOP HERO — astronaut-centric universe ===== */}
-      <section className="relative hidden min-h-[88vh] overflow-hidden md:block">
-        <div className="absolute inset-0 bg-space-bg bg-stars" />
-        <div className="absolute inset-0 bg-nebula" />
-        <div className="absolute inset-0 bg-stars-deep opacity-70" />
-        <div className="absolute inset-0 bg-orbit-radial" />
-
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/hero-astronaut-desktop.webp"
-          alt=""
-          className="pointer-events-none absolute bottom-0 right-0 h-full w-auto max-w-[68%] object-contain object-bottom lg:max-w-[60%]"
-          style={{
-            maskImage: "linear-gradient(90deg, transparent 0%, black 14%), radial-gradient(ellipse 90% 90% at 65% 55%, black 65%, transparent 100%)",
-            maskComposite: "intersect",
-            WebkitMaskImage: "linear-gradient(90deg, transparent 0%, black 14%), radial-gradient(ellipse 90% 90% at 65% 55%, black 65%, transparent 100%)",
-            WebkitMaskComposite: "source-in",
-          }}
-        />
-
+      <section
+        className="relative hidden min-h-[88vh] overflow-hidden bg-cover bg-no-repeat md:block"
+        style={{ backgroundImage: "url('/hero-astronaut-desktop.webp')", backgroundPosition: "center center" }}
+      >
+        <div className="absolute inset-y-0 left-0 w-[46%] backdrop-blur-[3px]" />
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(90deg, rgba(5,6,15,0.85) 0%, rgba(5,6,15,0.45) 32%, rgba(5,6,15,0.1) 48%, transparent 58%)" }}
+          style={{ background: "linear-gradient(90deg, rgba(5,6,15,0.96) 0%, rgba(5,6,15,0.8) 28%, rgba(5,6,15,0.45) 46%, rgba(5,6,15,0.15) 62%, transparent 75%)" }}
         />
 
         <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-6 py-16">
