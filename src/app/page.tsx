@@ -52,7 +52,7 @@ export default async function LandingPage() {
             <img
               src="/hero-logo-lockup.webp"
               alt="Órbita X — Seu universo em conexão"
-              className="mb-5 h-auto w-full max-w-[17rem] drop-shadow-[0_0_28px_rgba(79,139,255,0.5)]"
+              className="mb-5 h-auto w-full drop-shadow-[0_0_28px_rgba(79,139,255,0.5)]"
             />
 
             <p className="mb-6 text-sm text-white/80">
