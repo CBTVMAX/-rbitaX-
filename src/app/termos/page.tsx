@@ -488,7 +488,7 @@ export default async function TermosPage() {
             <br />
             <span className="orbit-text-gradient">Órbita X</span>
           </h1>
-          <p className="mt-3 text-sm text-white/50">Seu universo em conexão.</p>
+          <p className="mt-3 text-sm text-white/80">Seu universo em conexão.</p>
           <p className="mt-1 text-sm text-orbit-purple/70">Última atualização: 23 de setembro de 2026.</p>
           <div className="mt-6 h-0.5 w-full bg-orbit-gradient opacity-60" />
         </div>

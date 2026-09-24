@@ -28,7 +28,7 @@ export const row = (blocks: Block[]): Block => ({ type: "row", blocks });
 
 export function RenderBlock({ block }: { block: Block }) {
   if (block.type === "p") {
-    return <p className="mb-3 text-sm leading-relaxed text-white/60">{block.text}</p>;
+    return <p className="mb-3 text-sm leading-relaxed text-white/80">{block.text}</p>;
   }
   if (block.type === "h3") {
     return <h3 className="mb-2 mt-5 text-sm font-semibold text-white/90">{block.text}</h3>;
