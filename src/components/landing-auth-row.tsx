@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Mail } from "lucide-react";
+import { Phone } from "lucide-react";
 
 export function LandingAuthRow() {
   async function handleGoogle() {
@@ -26,7 +26,7 @@ export function LandingAuthRow() {
         href="/criar-conta"
         className="flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
       >
-        <Mail className="h-4 w-4" /> Email
+        <Phone className="h-4 w-4" /> Telefone
       </Link>
     </div>
   );
