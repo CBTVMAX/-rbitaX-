@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
 import { ChevronDown, LifeBuoy, List } from "lucide-react";
+import { OrbitLogo } from "@/components/orbit-logo";
 
 export type TocItem = {
   id: string;
@@ -78,9 +79,8 @@ function HelpCard() {
 function PlanetCard() {
   return (
     <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-space-card p-6 text-center">
-      <div className="relative mx-auto mb-4 h-16 w-16">
-        <div className="absolute inset-0 rounded-full bg-orbit-gradient shadow-glow" />
-        <div className="absolute left-1/2 top-1/2 h-5 w-24 -translate-x-1/2 -translate-y-1/2 -rotate-12 rounded-full border-2 border-orbit-cyan/60" />
+      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center">
+        <OrbitLogo size={56} className="drop-shadow-[0_0_24px_rgba(139,92,246,0.45)]" />
       </div>
       <p className="font-display text-base font-bold orbit-text-gradient">ÓRBITA X</p>
       <p className="mt-1 text-[10px] font-semibold uppercase leading-relaxed tracking-[0.2em] text-white/30">
