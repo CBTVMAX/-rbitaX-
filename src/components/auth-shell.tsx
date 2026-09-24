@@ -74,72 +74,73 @@ export function AuthShell({
         </div>
       </div>
 
-      <div className="relative z-10 grid w-full max-w-7xl overflow-hidden rounded-3xl border border-white/10 bg-space-surface/80 shadow-2xl backdrop-blur md:min-h-[75vh] md:grid-cols-[1.15fr_1fr]">
+      <div className="relative z-10 w-full max-w-7xl overflow-hidden rounded-3xl border border-white/10 bg-space-surface/80 shadow-2xl backdrop-blur md:min-h-[75vh]">
         <div
-          className="relative hidden items-center justify-center overflow-hidden bg-cover bg-no-repeat p-10 md:flex"
+          className="pointer-events-none absolute inset-0 hidden bg-cover bg-no-repeat md:block"
           style={{ backgroundImage: "url(/hero-astronaut-desktop.webp)", backgroundPosition: "center center" }}
-        >
-          <div
-            className="absolute inset-0"
-            style={{ background: "linear-gradient(0deg, rgba(5,6,15,0.55) 0%, transparent 45%)" }}
-          />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/hero-logo-lockup.webp"
-            alt="Órbita X — Seu universo em conexão"
-            className="relative h-auto w-full max-w-md mix-blend-screen drop-shadow-[0_0_30px_rgba(79,139,255,0.35)]"
-          />
-        </div>
+        />
+        <div
+          className="pointer-events-none absolute inset-0 hidden md:block"
+          style={{ background: "linear-gradient(270deg, rgba(5,6,15,0.9) 0%, rgba(5,6,15,0.6) 32%, rgba(5,6,15,0.15) 55%, transparent 70%)" }}
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/hero-logo-lockup.webp"
+          alt="Órbita X — Seu universo em conexão"
+          className="pointer-events-none absolute left-10 top-1/2 hidden h-auto w-full max-w-sm -translate-y-1/2 mix-blend-screen drop-shadow-[0_0_30px_rgba(79,139,255,0.35)] md:block"
+        />
 
-        <div className="flex flex-col justify-center p-8 md:p-10">
+        <div className="relative flex min-h-full flex-col p-8 md:flex-row md:items-center md:justify-end md:p-10">
           <div className="mb-6 flex items-center gap-2 md:hidden">
             <OrbitLogo size={28} />
             <OrbitWordmarkImage className="h-7 w-auto" />
           </div>
 
-          {activeTab && (
-            <div className="mb-6 hidden gap-2 rounded-full border border-white/10 bg-white/5 p-1 text-sm md:flex">
-              <Link
-                href="/entrar"
-                className={clsx(
-                  "flex-1 rounded-full py-2 text-center font-medium transition",
-                  activeTab === "entrar" ? "bg-orbit-gradient text-white shadow-glow" : "text-white/50 hover:text-white"
-                )}
-              >
-                Entrar
-              </Link>
-              <Link
-                href="/criar-conta"
-                className={clsx(
-                  "flex-1 rounded-full py-2 text-center font-medium transition",
-                  activeTab === "criar-conta" ? "bg-orbit-gradient text-white shadow-glow" : "text-white/50 hover:text-white"
-                )}
-              >
-                Criar conta
-              </Link>
-            </div>
-          )}
+          <div className="w-full md:max-w-md md:rounded-2xl md:border md:border-white/10 md:bg-space-surface/70 md:p-8 md:shadow-2xl md:backdrop-blur-xl">
+            {activeTab && (
+              <div className="mb-6 flex gap-2 rounded-full border border-white/10 bg-white/5 p-1 text-sm">
+                <Link
+                  href="/entrar"
+                  className={clsx(
+                    "flex-1 rounded-full py-2 text-center font-medium transition",
+                    activeTab === "entrar" ? "bg-orbit-gradient text-white shadow-glow" : "text-white/50 hover:text-white"
+                  )}
+                >
+                  Entrar
+                </Link>
+                <Link
+                  href="/criar-conta"
+                  className={clsx(
+                    "flex-1 rounded-full py-2 text-center font-medium transition",
+                    activeTab === "criar-conta" ? "bg-orbit-gradient text-white shadow-glow" : "text-white/50 hover:text-white"
+                  )}
+                >
+                  Criar conta
+                </Link>
+              </div>
+            )}
 
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              {eyebrow && (
-                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-orbit-pink">{eyebrow}</p>
-              )}
-              <h1 className="mb-0.5 font-display text-2xl font-bold text-white">
-                {heading ?? (
-                  <>
-                    {title} no <span className="orbit-text-gradient">ÓrbitaX</span>
-                  </>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                {eyebrow && (
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-orbit-pink">{eyebrow}</p>
                 )}
-              </h1>
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">
-                Seu universo em conexão
-              </p>
+                <h1 className="mb-0.5 font-display text-2xl font-bold text-white">
+                  {heading ?? (
+                    <>
+                      {title} no <span className="orbit-text-gradient">ÓrbitaX</span>
+                    </>
+                  )}
+                </h1>
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">
+                  Seu universo em conexão
+                </p>
+              </div>
+              {topRight && <div className="hidden shrink-0 text-right md:block">{topRight}</div>}
             </div>
-            {topRight && <div className="hidden shrink-0 text-right md:block">{topRight}</div>}
+            <p className="mb-6 text-sm text-white/60">{subtitle}</p>
+            {children}
           </div>
-          <p className="mb-6 text-sm text-white/60">{subtitle}</p>
-          {children}
         </div>
       </div>
 
