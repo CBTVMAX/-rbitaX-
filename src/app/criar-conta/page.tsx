@@ -5,7 +5,30 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AuthShell } from "@/components/auth-shell";
-import { ArrowRight, Calendar, ChevronRight, Eye, EyeOff, Lock, Mail, Phone, ShieldCheck, User } from "lucide-react";
+import {
+  ArrowRight,
+  Calendar,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Phone,
+  ShieldCheck,
+  User,
+  UserRound,
+} from "lucide-react";
+
+const TERMS_VERSION = "1.0";
+const PRIVACY_VERSION = "1.0";
+
+const GENDER_OPTIONS = [
+  { value: "feminino", label: "Feminino" },
+  { value: "masculino", label: "Masculino" },
+  { value: "nao_binario", label: "Não binário" },
+  { value: "outro", label: "Outro" },
+  { value: "prefiro_nao_informar", label: "Prefiro não informar" },
+];
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -16,15 +39,6 @@ function GoogleIcon({ className }: { className?: string }) {
       <path fill="#EA4335" d="M12 4.8c1.7 0 3.3.6 4.5 1.8l3.4-3.4C17.9 1.2 15.2 0 12 0 7.3 0 3.3 2.7 1.3 6.5l4.1 3.1c.9-2.8 3.5-4.8 6.6-4.8Z" />
     </svg>
   );
-}
-
-function slugifyUsername(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9_.]/g, "")
-    .slice(0, 20);
 }
 
 function parseBirthDate(value: string) {
@@ -46,72 +60,150 @@ function formatBirthDateInput(raw: string, previous: string) {
   return raw.length < previous.length ? raw : next;
 }
 
+function calcAge(isoDate: string) {
+  const birth = new Date(isoDate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+function normalizePhone(value: string) {
+  const digits = value.replace(/[^\d+]/g, "");
+  if (digits.startsWith("+")) return digits;
+  return `+55${digits}`;
+}
+
+type Step = "form" | "otp" | "welcome";
+
 export default function CriarContaPage() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
+  const [mode, setMode] = useState<"email" | "phone">("email");
+  const [step, setStep] = useState<Step>("form");
+
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [birthDateInput, setBirthDateInput] = useState("");
+  const [gender, setGender] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [agree, setAgree] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [agreePrivacy, setAgreePrivacy] = useState(false);
+
+  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [welcome, setWelcome] = useState<{ name: string; username: string; orbitId: string } | null>(null);
 
-  const [phoneMode, setPhoneMode] = useState(false);
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [phoneLoading, setPhoneLoading] = useState(false);
-  const [phoneError, setPhoneError] = useState<string | null>(null);
-
-  async function reserveUsername(base: string) {
-    const clean = slugifyUsername(base) || "usuario";
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const candidate = attempt === 0 ? clean : `${clean}${Math.floor(1000 + Math.random() * 9000)}`;
-      const { data, error: rpcError } = await supabase.rpc("username_available", { check_username: candidate });
-      if (!rpcError && data) return candidate;
-    }
-    return `${clean}${Date.now().toString().slice(-6)}`;
+  function validateForm(): string | null {
+    if (!name.trim()) return "Digite seu nome e sobrenome.";
+    const birthDate = parseBirthDate(birthDateInput);
+    if (!birthDate) return "Digite uma data de nascimento válida (DD/MM/AAAA).";
+    if (calcAge(birthDate) < 18) return "Você precisa ter 18 anos ou mais para criar uma conta no Órbita X.";
+    if (!gender) return "Selecione seu gênero.";
+    if (mode === "email" && !email.trim()) return "Digite seu e-mail.";
+    if (mode === "phone" && !phone.trim()) return "Digite seu número de celular.";
+    if (password.length < 8) return "A senha precisa ter pelo menos 8 caracteres.";
+    if (!agreeTerms) return "Você precisa aceitar os Termos de Uso.";
+    if (!agreePrivacy) return "Você precisa aceitar a Política de Privacidade.";
+    return null;
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
+  async function sendCode() {
+    const metadata = {
+      name,
+      birthDate: parseBirthDate(birthDateInput),
+      gender,
+      termsVersion: TERMS_VERSION,
+      privacyVersion: PRIVACY_VERSION,
+    };
 
-    if (!agree) {
-      setError("Você precisa aceitar os Termos de Uso e a Política de Privacidade.");
-      return;
+    if (mode === "email") {
+      return supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: true, data: metadata },
+      });
     }
-    const birthDate = birthDateInput ? parseBirthDate(birthDateInput) : null;
-    if (birthDateInput && !birthDate) {
-      setError("Digite uma data de nascimento válida (DD/MM/AAAA).");
-      return;
-    }
-    if (password.length < 8) {
-      setError("A senha precisa ter pelo menos 8 caracteres.");
-      return;
-    }
-
-    setLoading(true);
-    const username = await reserveUsername(name || email.split("@")[0] || "usuario");
-    const { error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-        data: { name, username, birthDate },
-      },
+    return supabase.auth.signInWithOtp({
+      phone: normalizePhone(phone),
+      options: { shouldCreateUser: true, data: metadata },
     });
+  }
+
+  async function handleSendCode(e: React.FormEvent) {
+    e.preventDefault();
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setError(null);
+    setLoading(true);
+    const { error: otpError } = await sendCode();
     setLoading(false);
 
-    if (signUpError) {
-      setError(signUpError.message);
+    if (otpError) {
+      setError(otpError.message);
+      return;
+    }
+    setStep("otp");
+  }
+
+  async function handleResendCode() {
+    setError(null);
+    setLoading(true);
+    const { error: otpError } = await sendCode();
+    setLoading(false);
+    if (otpError) setError(otpError.message);
+  }
+
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    const { error: verifyError } =
+      mode === "email"
+        ? await supabase.auth.verifyOtp({ email, token: otp, type: "email" })
+        : await supabase.auth.verifyOtp({ phone: normalizePhone(phone), token: otp, type: "sms" });
+
+    if (verifyError) {
+      setLoading(false);
+      setError(verifyError.message);
       return;
     }
 
-    router.push("/entrar?cadastro=ok");
+    const { error: passwordError } = await supabase.auth.updateUser({ password });
+    if (passwordError) {
+      setLoading(false);
+      setError(passwordError.message);
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: profile } = await supabase
+        .from("User")
+        .select("name, username, orbitId")
+        .eq("id", user.id)
+        .single();
+      setWelcome({
+        name: profile?.name ?? name,
+        username: profile?.username ?? "",
+        orbitId: profile?.orbitId ?? "",
+      });
+    }
+
+    setLoading(false);
+    setStep("welcome");
   }
 
   async function handleGoogle() {
@@ -121,71 +213,40 @@ export default function CriarContaPage() {
     });
   }
 
-  function normalizePhone(value: string) {
-    const digits = value.replace(/[^\d+]/g, "");
-    if (digits.startsWith("+")) return digits;
-    return `+55${digits}`;
-  }
-
-  async function handleSendOtp(e: React.FormEvent) {
-    e.preventDefault();
-    setPhoneError(null);
-
-    if (!name.trim()) {
-      setPhoneError("Digite seu nome e sobrenome.");
-      return;
-    }
-    const birthDate = parseBirthDate(birthDateInput);
-    if (!birthDate) {
-      setPhoneError("Digite sua data de nascimento (DD/MM/AAAA) para confirmar sua idade.");
-      return;
-    }
-    if (password.length < 8) {
-      setPhoneError("A senha precisa ter pelo menos 8 caracteres.");
-      return;
-    }
-
-    setPhoneLoading(true);
-    const { error: otpError } = await supabase.auth.signInWithOtp({ phone: normalizePhone(phone) });
-    setPhoneLoading(false);
-
-    if (otpError) {
-      setPhoneError(otpError.message);
-      return;
-    }
-    setOtpSent(true);
-  }
-
-  async function handleVerifyOtp(e: React.FormEvent) {
-    e.preventDefault();
-    setPhoneError(null);
-    setPhoneLoading(true);
-    const { error: verifyError } = await supabase.auth.verifyOtp({
-      phone: normalizePhone(phone),
-      token: otp,
-      type: "sms",
-    });
-
-    if (verifyError) {
-      setPhoneLoading(false);
-      setPhoneError(verifyError.message);
-      return;
-    }
-
-    const username = await reserveUsername(name);
-    const { error: updateError } = await supabase.auth.updateUser({
-      password,
-      data: { name, username, birthDate: parseBirthDate(birthDateInput) },
-    });
-    setPhoneLoading(false);
-
-    if (updateError) {
-      setPhoneError(updateError.message);
-      return;
-    }
-
+  function handleContinue() {
     router.push("/feed");
     router.refresh();
+  }
+
+  if (step === "welcome" && welcome) {
+    return (
+      <AuthShell title="Bem-vindo" subtitle="Sua conta foi criada." eyebrow="Criar conta">
+        <div className="rounded-2xl border border-white/10 bg-space-card p-6 text-center">
+          <p className="mb-1 text-2xl">🛰️</p>
+          <h2 className="mb-6 font-display text-xl font-bold text-white">Bem-vindo ao Órbita X</h2>
+          <div className="mb-6 space-y-3 text-left">
+            <div>
+              <p className="text-xs text-white/40">Nome</p>
+              <p className="text-sm font-medium text-white">{welcome.name}</p>
+            </div>
+            <div>
+              <p className="text-xs text-white/40">@</p>
+              <p className="text-sm font-medium text-white">@{welcome.username}</p>
+            </div>
+            <div>
+              <p className="text-xs text-white/40">Orbit ID</p>
+              <p className="text-sm font-medium text-white">#{welcome.orbitId}</p>
+            </div>
+          </div>
+          <button
+            onClick={handleContinue}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-orbit-gradient py-2.5 text-sm font-semibold text-white shadow-glow transition hover:opacity-90"
+          >
+            Continuar <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
+      </AuthShell>
+    );
   }
 
   return (
@@ -213,34 +274,35 @@ export default function CriarContaPage() {
         </>
       }
     >
-      <button
-        type="button"
-        onClick={() => setPhoneMode(true)}
-        className="mb-3 flex w-full items-center justify-between rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
-      >
-        <span className="flex items-center gap-2">
-          <Phone className="h-4 w-4" /> Cadastrar com o número de celular
-        </span>
-        <ChevronRight className="h-4 w-4" />
-      </button>
+      {step === "form" && (
+        <>
+          <button
+            type="button"
+            onClick={() => setMode(mode === "phone" ? "email" : "phone")}
+            className="mb-3 flex w-full items-center justify-between rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+          >
+            <span className="flex items-center gap-2">
+              <Phone className="h-4 w-4" />
+              {mode === "phone" ? "Cadastrar com e-mail" : "Cadastrar com o número de celular"}
+            </span>
+            <ChevronRight className="h-4 w-4" />
+          </button>
 
-      <button
-        onClick={handleGoogle}
-        type="button"
-        className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
-      >
-        <GoogleIcon className="h-4 w-4" /> Cadastrar com o Google
-      </button>
+          <button
+            onClick={handleGoogle}
+            type="button"
+            className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+          >
+            <GoogleIcon className="h-4 w-4" /> Cadastrar com o Google
+          </button>
 
-      <div className="mb-4 flex items-center gap-3 text-xs text-white/30">
-        <div className="h-px flex-1 bg-white/10" />
-        OU PREENCHA SEUS DADOS
-        <div className="h-px flex-1 bg-white/10" />
-      </div>
+          <div className="mb-4 flex items-center gap-3 text-xs text-white/30">
+            <div className="h-px flex-1 bg-white/10" />
+            OU PREENCHA SEUS DADOS
+            <div className="h-px flex-1 bg-white/10" />
+          </div>
 
-      {phoneMode ? (
-        !otpSent ? (
-          <form onSubmit={handleSendOtp} className="space-y-3">
+          <form onSubmit={handleSendCode} className="space-y-3">
             <div>
               <label className="mb-1 block text-xs text-white/50">Nome e sobrenome</label>
               <div className="relative">
@@ -250,21 +312,6 @@ export default function CriarContaPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Seu nome completo"
-                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs text-white/50">Número de celular</label>
-              <div className="relative">
-                <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
-                <input
-                  required
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+55 (11) 91234-5678"
                   className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
                 />
               </div>
@@ -285,6 +332,60 @@ export default function CriarContaPage() {
                 />
               </div>
             </div>
+
+            <div>
+              <label className="mb-1 block text-xs text-white/50">Gênero</label>
+              <div className="relative">
+                <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+                <select
+                  required
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                  className="w-full appearance-none rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
+                >
+                  <option value="" disabled>
+                    Selecione
+                  </option>
+                  {GENDER_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {mode === "email" ? (
+              <div>
+                <label className="mb-1 block text-xs text-white/50">E-mail</label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+                  <input
+                    required
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="seuemail@exemplo.com"
+                    className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="mb-1 block text-xs text-white/50">Número de celular</label>
+                <div className="relative">
+                  <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+                  <input
+                    required
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+55 (11) 91234-5678"
+                    className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
+                  />
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="mb-1 block text-xs text-white/50">Senha</label>
@@ -309,149 +410,64 @@ export default function CriarContaPage() {
               </div>
             </div>
 
-            {phoneError && <p className="text-xs text-red-400">{phoneError}</p>}
+            <label className="flex items-start gap-2 text-xs text-white/50">
+              <input
+                type="checkbox"
+                checked={agreeTerms}
+                onChange={(e) => setAgreeTerms(e.target.checked)}
+                className="mt-0.5"
+              />
+              Li e concordo com os{" "}
+              <Link href="/termos" className="text-orbit-cyan hover:underline">Termos de Uso</Link>.
+            </label>
+            <label className="flex items-start gap-2 text-xs text-white/50">
+              <input
+                type="checkbox"
+                checked={agreePrivacy}
+                onChange={(e) => setAgreePrivacy(e.target.checked)}
+                className="mt-0.5"
+              />
+              Li e concordo com a{" "}
+              <Link href="/privacidade" className="text-orbit-cyan hover:underline">Política de Privacidade</Link>.
+            </label>
+
+            {error && <p className="text-xs text-red-400">{error}</p>}
 
             <button
               type="submit"
-              disabled={phoneLoading}
+              disabled={loading}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-orbit-gradient py-2.5 text-sm font-semibold text-white shadow-glow transition hover:opacity-90 disabled:opacity-50"
             >
-              {phoneLoading ? "Enviando código..." : (
+              {loading ? "Enviando código..." : (
                 <>
-                  Enviar código <ArrowRight className="h-4 w-4" />
+                  Continuar <ArrowRight className="h-4 w-4" />
                 </>
               )}
             </button>
-            <button
-              type="button"
-              onClick={() => setPhoneMode(false)}
-              className="w-full text-center text-xs text-white/40 hover:text-white/70"
-            >
-              Voltar
-            </button>
           </form>
-        ) : (
-          <form onSubmit={handleVerifyOtp} className="space-y-3">
-            <p className="text-xs text-white/50">
-              Enviamos um código de verificação por SMS para <span className="text-white">{normalizePhone(phone)}</span>.
-            </p>
-            <div>
-              <label className="mb-1 block text-xs text-white/50">Código de verificação</label>
-              <div className="relative">
-                <ShieldCheck className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
-                <input
-                  required
-                  inputMode="numeric"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  placeholder="000000"
-                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm tracking-[0.3em] text-white outline-none focus:border-orbit-purple"
-                />
-              </div>
-            </div>
+        </>
+      )}
 
-            {phoneError && <p className="text-xs text-red-400">{phoneError}</p>}
-
-            <button
-              type="submit"
-              disabled={phoneLoading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-orbit-gradient py-2.5 text-sm font-semibold text-white shadow-glow transition hover:opacity-90 disabled:opacity-50"
-            >
-              {phoneLoading ? "Verificando..." : (
-                <>
-                  Verificar e criar conta <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setOtpSent(false); setOtp(""); setPhoneError(null); }}
-              className="w-full text-center text-xs text-white/40 hover:text-white/70"
-            >
-              Trocar número ou reenviar código
-            </button>
-          </form>
-        )
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-3">
+      {step === "otp" && (
+        <form onSubmit={handleVerifyCode} className="space-y-3">
+          <p className="text-sm text-white/50">
+            Enviamos um código de verificação por {mode === "email" ? "e-mail" : "SMS"} para{" "}
+            <span className="text-white">{mode === "email" ? email : normalizePhone(phone)}</span>.
+          </p>
           <div>
-            <label className="mb-1 block text-xs text-white/50">Nome e sobrenome</label>
+            <label className="mb-1 block text-xs text-white/50">Código de verificação</label>
             <div className="relative">
-              <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+              <ShieldCheck className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
               <input
                 required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Seu nome completo"
-                className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs text-white/50">E-mail</label>
-            <div className="relative">
-              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
-              <input
-                required
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seuemail@exemplo.com"
-                className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs text-white/50">Data de nascimento</label>
-            <div className="relative">
-              <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
-              <input
                 inputMode="numeric"
-                value={birthDateInput}
-                onChange={(e) => setBirthDateInput(formatBirthDateInput(e.target.value, birthDateInput))}
-                placeholder="DD / MM / AAAA"
-                maxLength={10}
-                className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                placeholder="000000"
+                className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm tracking-[0.3em] text-white outline-none focus:border-orbit-purple"
               />
             </div>
           </div>
-
-          <div>
-            <label className="mb-1 block text-xs text-white/50">Senha</label>
-            <div className="relative">
-              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
-              <input
-                required
-                type={showPassword ? "text" : "password"}
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Mín. 8 caracteres"
-                className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-9 text-sm text-white outline-none focus:border-orbit-purple"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
-
-          <label className="flex items-start gap-2 text-xs text-white/50">
-            <input
-              type="checkbox"
-              checked={agree}
-              onChange={(e) => setAgree(e.target.checked)}
-              className="mt-0.5"
-            />
-            Li e concordo com os{" "}
-            <Link href="/termos" className="text-orbit-cyan hover:underline">Termos de Uso</Link> e a{" "}
-            <Link href="/privacidade" className="text-orbit-cyan hover:underline">Política de Privacidade</Link>.
-          </label>
 
           {error && <p className="text-xs text-red-400">{error}</p>}
 
@@ -460,12 +476,24 @@ export default function CriarContaPage() {
             disabled={loading}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-orbit-gradient py-2.5 text-sm font-semibold text-white shadow-glow transition hover:opacity-90 disabled:opacity-50"
           >
-            {loading ? "Criando..." : (
+            {loading ? "Verificando..." : (
               <>
-                Continuar <ArrowRight className="h-4 w-4" />
+                Verificar <ArrowRight className="h-4 w-4" />
               </>
             )}
           </button>
+          <div className="flex items-center justify-between text-xs">
+            <button
+              type="button"
+              onClick={() => { setStep("form"); setOtp(""); setError(null); }}
+              className="text-white/40 hover:text-white/70"
+            >
+              Voltar
+            </button>
+            <button type="button" onClick={handleResendCode} disabled={loading} className="text-orbit-cyan hover:underline">
+              Reenviar código
+            </button>
+          </div>
         </form>
       )}
 

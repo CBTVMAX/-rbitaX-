@@ -74,8 +74,8 @@ type PostViewRow = { createdAt: string; id: string; postId: string; userId: stri
 type PostViewInsert = { createdAt?: string; id: string; postId: string; userId: string };
 type PostViewUpdate = Partial<PostViewInsert>;
 
-type ProfileRow = { birthDate: string | null; createdAt: string; id: string; interests: string | null; links: string | null; location: string | null; occupation: string | null; showAge: boolean; showLocation: boolean; showSign: boolean; updatedAt: string; userId: string; website: string | null; zodiacSign: string | null };
-type ProfileInsert = { birthDate?: string | null; createdAt?: string; id: string; interests?: string | null; links?: string | null; location?: string | null; occupation?: string | null; showAge?: boolean; showLocation?: boolean; showSign?: boolean; updatedAt?: string; userId: string; website?: string | null; zodiacSign?: string | null };
+type ProfileRow = { birthDate: string | null; createdAt: string; gender: string | null; id: string; interests: string | null; links: string | null; location: string | null; occupation: string | null; showAge: boolean; showLocation: boolean; showSign: boolean; updatedAt: string; userId: string; website: string | null; zodiacSign: string | null };
+type ProfileInsert = { birthDate?: string | null; createdAt?: string; gender?: string | null; id: string; interests?: string | null; links?: string | null; location?: string | null; occupation?: string | null; showAge?: boolean; showLocation?: boolean; showSign?: boolean; updatedAt?: string; userId: string; website?: string | null; zodiacSign?: string | null };
 type ProfileUpdate = Partial<ProfileInsert>;
 
 type ReportRow = { createdAt: string; details: string | null; id: string; reason: string; reporterId: string; resolvedAt: string | null; resolvedById: string | null; status: string; targetId: string; targetType: string };
@@ -90,8 +90,8 @@ type TrackRow = { artist: string; audioUrl: string; coverUrl: string | null; cre
 type TrackInsert = { artist: string; audioUrl: string; coverUrl?: string | null; createdAt?: string; duration?: number | null; id: string; title: string; userId: string };
 type TrackUpdate = Partial<TrackInsert>;
 
-type UserRow = { accountStatus: string; avatarUrl: string | null; bio: string | null; coverUrl: string | null; createdAt: string; discoverable: boolean; email: string | null; emailVerifiedAt: string | null; googleId: string | null; id: string; isPrivate: boolean; isVerified: boolean; lastSeenAt: string | null; name: string; passwordHash: string | null; phone: string | null; phoneVerifiedAt: string | null; role: string; updatedAt: string; username: string; whoCanComment: string; whoCanMention: string; whoCanMessage: string; whoCanSeeMoments: string };
-type UserInsert = { accountStatus?: string; avatarUrl?: string | null; bio?: string | null; coverUrl?: string | null; createdAt?: string; discoverable?: boolean; email?: string | null; emailVerifiedAt?: string | null; googleId?: string | null; id: string; isPrivate?: boolean; isVerified?: boolean; lastSeenAt?: string | null; name: string; passwordHash?: string | null; phone?: string | null; phoneVerifiedAt?: string | null; role?: string; updatedAt?: string; username: string; whoCanComment?: string; whoCanMention?: string; whoCanMessage?: string; whoCanSeeMoments?: string };
+type UserRow = { accountStatus: string; avatarUrl: string | null; bio: string | null; coverUrl: string | null; createdAt: string; discoverable: boolean; email: string | null; emailVerifiedAt: string | null; googleId: string | null; id: string; isPrivate: boolean; isVerified: boolean; lastSeenAt: string | null; name: string; orbitId: string | null; passwordHash: string | null; phone: string | null; phoneVerifiedAt: string | null; privacyAcceptedAt: string | null; privacyAcceptedVersion: string | null; role: string; termsAcceptedAt: string | null; termsAcceptedVersion: string | null; updatedAt: string; username: string; whoCanComment: string; whoCanMention: string; whoCanMessage: string; whoCanSeeMoments: string };
+type UserInsert = { accountStatus?: string; avatarUrl?: string | null; bio?: string | null; coverUrl?: string | null; createdAt?: string; discoverable?: boolean; email?: string | null; emailVerifiedAt?: string | null; googleId?: string | null; id: string; isPrivate?: boolean; isVerified?: boolean; lastSeenAt?: string | null; name: string; orbitId?: string | null; passwordHash?: string | null; phone?: string | null; phoneVerifiedAt?: string | null; privacyAcceptedAt?: string | null; privacyAcceptedVersion?: string | null; role?: string; termsAcceptedAt?: string | null; termsAcceptedVersion?: string | null; updatedAt?: string; username: string; whoCanComment?: string; whoCanMention?: string; whoCanMessage?: string; whoCanSeeMoments?: string };
 type UserUpdate = Partial<UserInsert>;
 
 type WaitlistRow = { id: string; email: string; source: string | null; createdAt: string };
@@ -182,6 +182,15 @@ export type Database = {
     Functions: {
       compute_zodiac: { Args: { birth: string }; Returns: string };
       username_available: { Args: { check_username: string }; Returns: boolean };
+      generate_orbit_id: { Args: Record<string, never>; Returns: string };
+      finalize_new_user: {
+        Args: { p_user_id: string; p_birth_date: string | null; p_gender: string | null; p_terms_version: string | null; p_privacy_version: string | null };
+        Returns: void;
+      };
+      complete_signup: {
+        Args: { p_birth_date: string | null; p_gender: string | null; p_terms_version: string | null; p_privacy_version: string | null };
+        Returns: void;
+      };
       get_or_create_dm: { Args: { other_user_id: string }; Returns: string };
       discoverable_profiles: {
         Args: { limit_count?: number; search_query?: string | null };

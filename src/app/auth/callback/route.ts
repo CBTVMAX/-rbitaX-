@@ -8,7 +8,25 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+    const { data } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (data.user) {
+      const { data: profile } = await supabase
+        .from("Profile")
+        .select("birthDate, gender")
+        .eq("userId", data.user.id)
+        .single();
+      const { data: user } = await supabase
+        .from("User")
+        .select("termsAcceptedAt, privacyAcceptedAt")
+        .eq("id", data.user.id)
+        .single();
+
+      const incomplete = !profile?.birthDate || !profile?.gender || !user?.termsAcceptedAt || !user?.privacyAcceptedAt;
+      if (incomplete) {
+        return NextResponse.redirect(`${origin}/completar-cadastro`);
+      }
+    }
   }
 
   return NextResponse.redirect(`${origin}${next}`);
