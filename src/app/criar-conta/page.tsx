@@ -251,6 +251,7 @@ export default function CriarContaPage() {
     <AuthShell
       title="Crie sua conta"
       eyebrow="Criar conta"
+      activeTab="criar-conta"
       heading={
         <>
           Faça parte do <span className="orbit-text-gradient">ÓrbitaX</span>

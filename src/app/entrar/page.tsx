@@ -123,7 +123,16 @@ function EntrarForm() {
   }
 
   return (
-    <AuthShell title="Entrar" subtitle="Seu universo está te esperando.">
+    <AuthShell
+      title="Entrar"
+      activeTab="entrar"
+      heading={
+        <>
+          Bem-vindo à <span className="orbit-text-gradient">Órbita X</span>
+        </>
+      }
+      subtitle="Seu universo está te esperando."
+    >
       {params.get("cadastro") === "ok" && (
         <p className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
           Conta criada! Confirme seu e-mail (se necessário) e entre para continuar.

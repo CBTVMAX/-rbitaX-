@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { ChevronDown, Compass, Globe, Infinity as InfinityIcon, Users, UsersRound } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { clsx } from "clsx";
+import { ChevronDown, Globe } from "lucide-react";
 import { OrbitLogo, OrbitWordmarkImage } from "@/components/orbit-logo";
 
-const FEATURES: { icon: LucideIcon; title: string; text: string; color: string }[] = [
-  { icon: Users, title: "Conecte-se", text: "Conheça pessoas com interesses semelhantes.", color: "border-orbit-blue/40 text-orbit-blue" },
-  { icon: Compass, title: "Explore", text: "Descubra novos conteúdos, perfis e comunidades.", color: "border-orbit-purple/40 text-orbit-purple" },
-  { icon: UsersRound, title: "Participe", text: "Compartilhe seus momentos e faça parte de comunidades.", color: "border-orbit-purple/40 text-orbit-purple" },
-  { icon: InfinityIcon, title: "Viva novos mundos", text: "Do cotidiano ao extraordinário.", color: "border-orbit-pink/40 text-orbit-pink" },
+const NAV = [
+  { href: "/explorar", label: "Explorar" },
+  { href: "/comunidades", label: "Comunidades" },
+  { href: "/sobre", label: "Sobre" },
 ];
 
 export function AuthShell({
@@ -17,6 +16,7 @@ export function AuthShell({
   subtitle,
   eyebrow,
   topRight,
+  activeTab,
 }: {
   children: React.ReactNode;
   title: string;
@@ -24,59 +24,43 @@ export function AuthShell({
   subtitle: string;
   eyebrow?: string;
   topRight?: React.ReactNode;
+  activeTab?: "entrar" | "criar-conta";
 }) {
   return (
-    <div
-      className="relative flex min-h-screen flex-col items-center justify-center gap-4 overflow-hidden bg-space-bg bg-cover bg-center px-4 py-6"
-      style={{ backgroundImage: "url(/sobre-cta-bg.webp)" }}
-    >
-      <div className="pointer-events-none absolute inset-0 bg-space-bg/50" />
+    <div className="relative flex min-h-screen flex-col items-center justify-center gap-4 overflow-hidden bg-space-bg bg-stars px-4 py-6">
+      <div className="pointer-events-none absolute inset-0 bg-nebula" />
+      <div className="pointer-events-none absolute inset-0 bg-stars-deep opacity-70" />
       <div className="pointer-events-none absolute inset-0 bg-orbit-radial" />
 
-      <span className="absolute right-6 top-6 z-10 hidden items-center gap-1.5 text-sm text-white/50 sm:flex">
-        <Globe className="h-4 w-4" /> Português <ChevronDown className="h-3.5 w-3.5" />
-      </span>
+      <div className="relative z-10 hidden w-full max-w-6xl items-center justify-between md:flex">
+        <Link href="/" className="flex items-center gap-2">
+          <OrbitLogo size={30} />
+          <OrbitWordmarkImage className="h-7 w-auto" />
+        </Link>
+        <div className="flex items-center gap-8">
+          <nav className="flex items-center gap-6 text-sm text-white/70">
+            {NAV.map(({ href, label }) => (
+              <Link key={href} href={href} className="transition hover:text-white">
+                {label}
+              </Link>
+            ))}
+          </nav>
+          <span className="flex items-center gap-1.5 text-sm text-white/50">
+            <Globe className="h-4 w-4" /> Português <ChevronDown className="h-3.5 w-3.5" />
+          </span>
+        </div>
+      </div>
 
-      <div className="relative z-10 grid w-full max-w-6xl overflow-hidden rounded-3xl border border-white/10 bg-space-surface/80 shadow-2xl backdrop-blur md:min-h-[82vh] md:grid-cols-[1.15fr_1fr]">
+      <div className="relative z-10 grid w-full max-w-6xl overflow-hidden rounded-3xl border border-white/10 bg-space-surface/80 shadow-2xl backdrop-blur md:min-h-[75vh] md:grid-cols-[1.15fr_1fr]">
         <div
-          className="relative hidden flex-col justify-between overflow-hidden bg-cover p-10 md:flex"
-          style={{ backgroundImage: "url(/entrar-hero.webp)", backgroundPosition: "center center" }}
+          className="relative hidden items-center justify-center overflow-hidden bg-cover bg-no-repeat p-10 md:flex"
+          style={{ backgroundImage: "url(/hero-astronaut-desktop.webp)", backgroundPosition: "center center" }}
         >
           <div
             className="absolute inset-0"
-            style={{ background: "linear-gradient(90deg, rgba(5,6,15,0.97) 0%, rgba(5,6,15,0.92) 42%, rgba(5,6,15,0.5) 75%, rgba(5,6,15,0.15) 100%)" }}
+            style={{ background: "linear-gradient(0deg, rgba(5,6,15,0.55) 0%, transparent 45%)" }}
           />
-
-          <div className="relative">
-            <Link href="/" className="mb-10 flex items-center gap-2">
-              <OrbitLogo size={36} />
-              <OrbitWordmarkImage className="h-9 w-auto" />
-            </Link>
-            <h2 className="mb-6 max-w-md font-display text-2xl font-semibold leading-tight text-white">
-              Um lugar para pessoas reais, interesses verdadeiros e conteúdos que{" "}
-              <span className="orbit-text-gradient">fazem sentido</span> para você.
-            </h2>
-            <ul className="space-y-4">
-              {FEATURES.map(({ icon: Icon, title: featTitle, text, color }) => (
-                <li key={featTitle} className="flex items-start gap-3">
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 ${color}`}>
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-white">{featTitle}</p>
-                    <p className="text-xs text-white/50">{text}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="relative mt-10 max-w-xs">
-            <p className="text-xs font-semibold uppercase leading-relaxed tracking-[0.1em] text-white/40">
-              &ldquo;Grandes conexões começam com interesses em comum.&rdquo;
-            </p>
-            <span className="mt-2 block h-0.5 w-8 bg-orbit-pink" />
-          </div>
+          <OrbitWordmarkImage className="relative h-auto w-full max-w-sm drop-shadow-[0_0_30px_rgba(79,139,255,0.35)]" />
         </div>
 
         <div className="flex flex-col justify-center p-8 md:p-10">
@@ -84,6 +68,30 @@ export function AuthShell({
             <OrbitLogo size={28} />
             <OrbitWordmarkImage className="h-7 w-auto" />
           </div>
+
+          {activeTab && (
+            <div className="mb-6 hidden gap-2 rounded-full border border-white/10 bg-white/5 p-1 text-sm md:flex">
+              <Link
+                href="/entrar"
+                className={clsx(
+                  "flex-1 rounded-full py-2 text-center font-medium transition",
+                  activeTab === "entrar" ? "bg-orbit-gradient text-white shadow-glow" : "text-white/50 hover:text-white"
+                )}
+              >
+                Entrar
+              </Link>
+              <Link
+                href="/criar-conta"
+                className={clsx(
+                  "flex-1 rounded-full py-2 text-center font-medium transition",
+                  activeTab === "criar-conta" ? "bg-orbit-gradient text-white shadow-glow" : "text-white/50 hover:text-white"
+                )}
+              >
+                Criar conta
+              </Link>
+            </div>
+          )}
+
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               {eyebrow && (
@@ -99,17 +107,17 @@ export function AuthShell({
             </div>
             {topRight && <div className="hidden shrink-0 text-right md:block">{topRight}</div>}
           </div>
-          <p className="mb-6 text-sm text-white/50">{subtitle}</p>
+          <p className="mb-6 text-sm text-white/60">{subtitle}</p>
           {children}
         </div>
       </div>
 
-      <div className="relative z-10 flex w-full max-w-6xl flex-col items-center justify-between gap-2 px-2 text-xs text-white/30 sm:flex-row">
+      <div className="relative z-10 flex w-full max-w-6xl flex-col items-center justify-between gap-2 px-2 text-xs text-white/40 sm:flex-row">
         <p>© {new Date().getFullYear()} ÓrbitaX. Todos os direitos reservados.</p>
         <div className="flex items-center gap-4">
-          <Link href="/termos" className="transition hover:text-white/60">Termos de Uso</Link>
-          <Link href="/privacidade" className="transition hover:text-white/60">Política de Privacidade</Link>
-          <Link href="/contato" className="transition hover:text-white/60">Suporte</Link>
+          <Link href="/termos" className="transition hover:text-white/70">Termos de Uso</Link>
+          <Link href="/privacidade" className="transition hover:text-white/70">Política de Privacidade</Link>
+          <Link href="/contato" className="transition hover:text-white/70">Suporte</Link>
         </div>
       </div>
     </div>
