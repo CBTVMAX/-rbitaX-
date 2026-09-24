@@ -124,18 +124,20 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        <div className="relative z-10 mt-auto flex flex-col items-center px-6 pb-8 pt-10 text-center">
+        <div className="relative z-10 px-6 pt-6 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/hero-logo-lockup.webp"
             alt="Órbita X — Seu universo em conexão"
-            className="mb-4 h-auto w-full max-w-[19rem] drop-shadow-[0_0_28px_rgba(79,139,255,0.5)]"
+            className="mx-auto mb-4 h-auto w-full max-w-[19rem] drop-shadow-[0_0_28px_rgba(79,139,255,0.5)]"
           />
 
-          <p className="mb-6 text-sm text-white/80">
+          <p className="text-sm text-white/80">
             Seu universo em conexão: pessoas, ideias e conteúdos girando em torno de você.
           </p>
+        </div>
 
+        <div className="relative z-10 mt-auto flex flex-col items-center px-6 pb-8 pt-10 text-center">
           <div className="mb-4 flex w-full flex-col gap-2.5">
             <Link
               href="/criar-conta"
