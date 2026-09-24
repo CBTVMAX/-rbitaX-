@@ -403,14 +403,9 @@ export default async function PrivacidadePage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-space-bg bg-stars">
+      <div className="pointer-events-none absolute inset-0 bg-nebula" />
+      <div className="pointer-events-none absolute inset-0 bg-stars-deep opacity-80" />
       <div className="pointer-events-none absolute inset-0 bg-orbit-radial" />
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(circle at 85% 8%, rgba(79,139,255,0.18), transparent 40%), radial-gradient(circle at 10% 55%, rgba(168,85,247,0.12), transparent 45%)",
-        }}
-      />
 
       <PublicHeader authed={!!user} />
 

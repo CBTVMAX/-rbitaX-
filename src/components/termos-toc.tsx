@@ -79,11 +79,12 @@ function HelpCard() {
 function PlanetCard() {
   return (
     <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-space-card text-center">
-      <div
-        className="relative flex h-28 items-center justify-center overflow-hidden"
-        style={{ background: "radial-gradient(circle at 30% 30%, rgba(79,139,255,0.25), transparent 65%)" }}
-      >
-        <OrbitLogo size={96} className="drop-shadow-[0_0_28px_rgba(139,92,246,0.55)]" />
+      <div className="bg-stars-deep relative flex h-28 items-center justify-center overflow-hidden bg-space-bg">
+        <div
+          className="absolute inset-0"
+          style={{ background: "radial-gradient(circle at 30% 30%, rgba(79,139,255,0.4), transparent 65%), radial-gradient(circle at 80% 70%, rgba(236,72,153,0.25), transparent 60%)" }}
+        />
+        <OrbitLogo size={96} className="relative drop-shadow-[0_0_28px_rgba(139,92,246,0.55)]" />
       </div>
       <div className="p-5 pt-4">
         <p className="font-display text-base font-bold orbit-text-gradient">ÓRBITA X</p>
