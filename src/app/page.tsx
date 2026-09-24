@@ -127,7 +127,7 @@ export default async function LandingPage() {
         <div className="relative z-10 px-6 pt-6 text-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/hero-logo-lockup.webp"
+            src="/hero-logo-lockup-mobile.webp"
             alt="Órbita X — Seu universo em conexão"
             className="mx-auto mb-4 h-auto w-full max-w-[19rem] drop-shadow-[0_0_28px_rgba(79,139,255,0.5)]"
           />
