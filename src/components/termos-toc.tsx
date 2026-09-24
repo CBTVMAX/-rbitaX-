@@ -78,16 +78,21 @@ function HelpCard() {
 
 function PlanetCard() {
   return (
-    <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-space-card p-6 text-center">
-      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center">
-        <OrbitLogo size={56} className="drop-shadow-[0_0_24px_rgba(139,92,246,0.45)]" />
+    <div className="mt-6 overflow-hidden rounded-2xl border border-white/10 bg-space-card text-center">
+      <div
+        className="relative flex h-28 items-center justify-center overflow-hidden"
+        style={{ background: "radial-gradient(circle at 30% 30%, rgba(79,139,255,0.25), transparent 65%)" }}
+      >
+        <OrbitLogo size={96} className="drop-shadow-[0_0_28px_rgba(139,92,246,0.55)]" />
       </div>
-      <p className="font-display text-base font-bold orbit-text-gradient">ÓRBITA X</p>
-      <p className="mt-1 text-[10px] font-semibold uppercase leading-relaxed tracking-[0.2em] text-white/30">
-        Seu universo
-        <br />
-        em conexão
-      </p>
+      <div className="p-5 pt-4">
+        <p className="font-display text-base font-bold orbit-text-gradient">ÓRBITA X</p>
+        <p className="mt-1 text-[10px] font-semibold uppercase leading-relaxed tracking-[0.2em] text-white/30">
+          Seu universo
+          <br />
+          em conexão
+        </p>
+      </div>
     </div>
   );
 }

@@ -3,12 +3,11 @@ import { PublicHeader } from "@/components/public-header";
 import { PublicFooter } from "@/components/public-footer";
 import { TermosToc, type TocItem } from "@/components/termos-toc";
 import { DocHeroPlanet } from "@/components/doc-hero-planet";
-import { Block, RenderBlock, p, bullets, checklist, iconGrid, h3, quote, info, warn, fieldCard, row } from "@/components/legal-doc";
+import { Block, RenderBlock, p, bullets, checklist, iconGrid, h3, quote, info, hero, warn, fieldCard, row } from "@/components/legal-doc";
 import {
   House,
   User,
   UserPlus,
-  ScanFace,
   Users,
   Share2,
   Cookie,
@@ -16,7 +15,6 @@ import {
   Shield,
   Clock,
   Trash2,
-  Scale,
   FileText,
   Mail,
   Image as ImageIcon,
@@ -35,7 +33,7 @@ const ic = (Icon: typeof User, className = "h-4 w-4") => <Icon className={classN
 
 const INTRO: Block[] = [p("Bem-vindo ao Órbita X — Seu Universo em Conexão.")];
 
-const LEAD: Block = info(
+const LEAD: Block = hero(
   "Sua privacidade é importante",
   "Esta Política de Privacidade explica como o Órbita X coleta, utiliza, armazena, protege e trata informações relacionadas aos seus usuários. Nosso objetivo é ser transparente e claro sobre como seus dados são utilizados.",
   <ShieldCheck className="h-5 w-5" />
@@ -47,7 +45,7 @@ const SECTIONS: Section[] = [
     number: "01",
     title: "Introdução",
     icon: ic(House),
-    color: "border-orbit-blue/40 text-orbit-blue",
+    color: "border-orbit-blue/40 text-orbit-blue bg-orbit-blue/10",
     blocks: [
       p(
         "O Órbita X é uma rede social que permite aos usuários criar perfis, publicar conteúdos, conversar, participar de comunidades, adicionar amigos, seguir pessoas e utilizar diferentes recursos sociais e digitais."
@@ -68,7 +66,7 @@ const SECTIONS: Section[] = [
     number: "02",
     title: "Dados que coletamos",
     icon: ic(User),
-    color: "border-orbit-cyan/40 text-orbit-cyan",
+    color: "border-orbit-cyan/40 text-orbit-cyan bg-orbit-cyan/10",
     blocks: [
       h3("Dados de cadastro"),
       p("O Órbita X coleta somente as informações necessárias para oferecer seus serviços e permitir o funcionamento das funcionalidades utilizadas pelo usuário. Para criar uma conta, o usuário poderá informar:"),
@@ -178,9 +176,8 @@ const SECTIONS: Section[] = [
     id: "idade",
     number: "03",
     title: "Verificação de idade",
-    icon: ic(ScanFace),
-    color: "border-orbit-pink/40 text-orbit-pink",
-    navBadge: "18+",
+    icon: <span className="text-[10px] font-extrabold leading-none">18+</span>,
+    color: "border-orbit-pink/40 text-orbit-pink bg-orbit-pink/10",
     blocks: [
       warn("Plataforma 18+", "O Órbita X é uma plataforma destinada exclusivamente a pessoas com 18 anos ou mais.", "18+"),
       p("A data de nascimento informada durante o cadastro é utilizada para verificar o requisito mínimo de idade."),
@@ -193,7 +190,7 @@ const SECTIONS: Section[] = [
     number: "04",
     title: "Uso das informações",
     icon: ic(Users),
-    color: "border-orbit-purple/40 text-orbit-purple",
+    color: "border-orbit-purple/40 text-orbit-purple bg-orbit-purple/10",
     blocks: [
       h3("Como utilizamos os dados"),
       p("As informações poderão ser utilizadas para:"),
@@ -235,7 +232,7 @@ const SECTIONS: Section[] = [
     number: "05",
     title: "Compartilhamento",
     icon: ic(Share2),
-    color: "border-orbit-blue/40 text-orbit-blue",
+    color: "border-orbit-blue/40 text-orbit-blue bg-orbit-blue/10",
     blocks: [
       p("O Órbita X poderá utilizar fornecedores e prestadores de serviços necessários para o funcionamento da plataforma. Isso poderá incluir fornecedores de:"),
       bullets(["Hospedagem;", "Banco de dados;", "Autenticação;", "Armazenamento;", "Envio de e-mails e SMS;", "Pagamentos;", "Segurança;", "Infraestrutura tecnológica;", "Análise técnica;", "Suporte."]),
@@ -248,11 +245,6 @@ const SECTIONS: Section[] = [
         "Pagamentos processados com segurança",
         "Os dados completos de pagamento poderão ser processados diretamente por provedores especializados. O Órbita X não precisa armazenar diretamente dados completos de cartão quando o processamento for realizado por um provedor de pagamento adequado."
       ),
-
-      h3("Transferências internacionais"),
-      p(
-        "Alguns fornecedores utilizados para operar o Órbita X poderão estar localizados fora do Brasil ou processar informações em outros países. Quando houver transferência internacional de dados pessoais, serão observados os requisitos previstos na legislação brasileira aplicável."
-      ),
     ],
   },
   {
@@ -260,7 +252,7 @@ const SECTIONS: Section[] = [
     number: "06",
     title: "Cookies",
     icon: ic(Cookie),
-    color: "border-orbit-cyan/40 text-orbit-cyan",
+    color: "border-orbit-cyan/40 text-orbit-cyan bg-orbit-cyan/10",
     blocks: [
       p("O Órbita X poderá utilizar cookies e tecnologias semelhantes para:"),
       checklist([
@@ -279,7 +271,7 @@ const SECTIONS: Section[] = [
     number: "07",
     title: "Segurança",
     icon: ic(ShieldCheck),
-    color: "border-orbit-purple/40 text-orbit-purple",
+    color: "border-orbit-purple/40 text-orbit-purple bg-orbit-purple/10",
     blocks: [
       p("O Órbita X adotará medidas técnicas e administrativas destinadas a proteger os dados pessoais contra:"),
       bullets(["Acesso não autorizado;", "Perda;", "Alteração indevida;", "Destruição;", "Divulgação indevida;", "Utilização não autorizada."]),
@@ -293,7 +285,7 @@ const SECTIONS: Section[] = [
     number: "08",
     title: "Seus direitos",
     icon: ic(Shield),
-    color: "border-orbit-pink/40 text-orbit-pink",
+    color: "border-orbit-pink/40 text-orbit-pink bg-orbit-pink/10",
     blocks: [
       p("Nos termos da legislação aplicável, especialmente da LGPD, o usuário poderá exercer direitos relacionados aos seus dados pessoais, incluindo, conforme aplicável:"),
       checklist([
@@ -321,7 +313,7 @@ const SECTIONS: Section[] = [
     number: "09",
     title: "Retenção de dados",
     icon: ic(Clock),
-    color: "border-orbit-blue/40 text-orbit-blue",
+    color: "border-orbit-blue/40 text-orbit-blue bg-orbit-blue/10",
     blocks: [
       p("Os dados poderão ser mantidos enquanto forem necessários para:"),
       bullets(["Manter a conta;", "Oferecer os serviços;", "Cumprir obrigações legais;", "Prevenir fraude;", "Garantir segurança;", "Resolver disputas;", "Exercer direitos legalmente reconhecidos."]),
@@ -333,7 +325,7 @@ const SECTIONS: Section[] = [
     number: "10",
     title: "Exclusão da conta",
     icon: ic(Trash2),
-    color: "border-orbit-cyan/40 text-orbit-cyan",
+    color: "border-orbit-cyan/40 text-orbit-cyan bg-orbit-cyan/10",
     blocks: [
       p("O usuário poderá solicitar a exclusão de sua conta através dos recursos disponibilizados pelo Órbita X. A exclusão poderá resultar na remoção ou anonimização de informações associadas à conta."),
       p("Entretanto, determinadas informações poderão permanecer armazenadas quando sua conservação for necessária para:"),
@@ -341,12 +333,23 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    id: "menores",
+    id: "transferencias",
     number: "11",
+    title: "Transferências internacionais",
+    icon: ic(Globe),
+    color: "border-orbit-cyan/40 text-orbit-cyan bg-orbit-cyan/10",
+    blocks: [
+      p(
+        "Alguns fornecedores utilizados para operar o Órbita X poderão estar localizados fora do Brasil ou processar informações em outros países. Quando houver transferência internacional de dados pessoais, serão observados os requisitos previstos na legislação brasileira aplicável."
+      ),
+    ],
+  },
+  {
+    id: "menores",
+    number: "12",
     title: "Menores de 18 anos",
-    icon: ic(Scale),
-    color: "border-orbit-purple/40 text-orbit-purple",
-    navBadge: "18+",
+    icon: <span className="text-[10px] font-extrabold leading-none">18+</span>,
+    color: "border-orbit-purple/40 text-orbit-purple bg-orbit-purple/10",
     blocks: [
       warn(
         "Proibido para menores de idade",
@@ -358,10 +361,10 @@ const SECTIONS: Section[] = [
   },
   {
     id: "alteracoes",
-    number: "12",
+    number: "13",
     title: "Alterações da Política",
     icon: ic(FileText),
-    color: "border-orbit-pink/40 text-orbit-pink",
+    color: "border-orbit-pink/40 text-orbit-pink bg-orbit-pink/10",
     blocks: [
       p("Esta Política poderá ser atualizada para refletir:"),
       bullets(["Novas funcionalidades;", "Mudanças na plataforma;", "Alterações legais;", "Mudanças nos serviços;", "Melhorias de segurança;", "Alterações na forma de tratamento dos dados."]),
@@ -370,10 +373,10 @@ const SECTIONS: Section[] = [
   },
   {
     id: "contato",
-    number: "13",
+    number: "14",
     title: "Contato",
     icon: ic(Mail),
-    color: "border-orbit-blue/40 text-orbit-blue",
+    color: "border-orbit-blue/40 text-orbit-blue bg-orbit-blue/10",
     blocks: [
       p("Órbita X — Seu Universo em Conexão"),
       p("E-mail: orbitaxonline@gmail.com"),
@@ -401,6 +404,13 @@ export default async function PrivacidadePage() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-space-bg bg-stars">
       <div className="pointer-events-none absolute inset-0 bg-orbit-radial" />
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 85% 8%, rgba(79,139,255,0.18), transparent 40%), radial-gradient(circle at 10% 55%, rgba(168,85,247,0.12), transparent 45%)",
+        }}
+      />
 
       <PublicHeader authed={!!user} />
 
@@ -411,12 +421,13 @@ export default async function PrivacidadePage() {
             <span className="text-orbit-cyan">|</span> Legal
           </p>
           <h1 className="max-w-xl font-display text-3xl font-bold leading-tight text-white sm:text-4xl">
-            Política de Privacidade
+            Política de <span className="orbit-text-gradient">Privacidade</span>
             <br />
             <span className="orbit-text-gradient">Órbita X</span>
           </h1>
-          <p className="mt-3 text-sm text-white/40">Seu universo em conexão.</p>
-          <p className="mt-1 text-sm text-white/40">Última atualização: 23 de setembro de 2026.</p>
+          <p className="mt-3 text-sm text-white/50">Seu universo em conexão.</p>
+          <p className="mt-1 text-sm text-orbit-purple/70">Última atualização: 23 de setembro de 2026.</p>
+          <div className="mt-6 h-0.5 w-full bg-orbit-gradient opacity-60" />
         </div>
 
         <div className="mt-8 max-w-3xl">

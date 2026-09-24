@@ -3,11 +3,10 @@ import { PublicHeader } from "@/components/public-header";
 import { PublicFooter } from "@/components/public-footer";
 import { TermosToc, type TocItem } from "@/components/termos-toc";
 import { DocHeroPlanet } from "@/components/doc-hero-planet";
-import { Block, RenderBlock, p, bullets, checklist, iconGrid, h3, quote, info, warn, fieldCard, row } from "@/components/legal-doc";
+import { Block, RenderBlock, p, bullets, checklist, iconGrid, h3, quote, info, hero, warn, fieldCard, row } from "@/components/legal-doc";
 import {
   Globe,
   UserPlus,
-  ShieldAlert,
   IdCard,
   Image as ImageIcon,
   Users,
@@ -47,7 +46,7 @@ const INTRO: Block[] = [
   ),
 ];
 
-const LEAD: Block = info(
+const LEAD: Block = hero(
   "Seu aceite é importante",
   "Ao criar uma conta ou utilizar o Órbita X, você declara que leu, compreendeu e concorda com estes Termos de Uso.",
   <Rocket className="h-5 w-5" />
@@ -59,7 +58,7 @@ const SECTIONS: Section[] = [
     number: "01",
     title: "Sobre o Órbita X",
     icon: ic(Globe),
-    color: "border-orbit-blue/40 text-orbit-blue",
+    color: "border-orbit-blue/40 text-orbit-blue bg-orbit-blue/10",
     blocks: [
       p(
         "O Órbita X é uma rede social criada para conectar pessoas, permitir o compartilhamento de conteúdos, criação de comunidades, comunicação entre usuários e participação em diferentes experiências dentro da plataforma."
@@ -93,7 +92,7 @@ const SECTIONS: Section[] = [
     number: "02",
     title: "Conta e cadastro",
     icon: ic(UserPlus),
-    color: "border-orbit-cyan/40 text-orbit-cyan",
+    color: "border-orbit-cyan/40 text-orbit-cyan bg-orbit-cyan/10",
     blocks: [
       h3("Criação da conta"),
       p("Para criar uma conta, o usuário deverá fornecer informações verdadeiras e atualizadas. O cadastro poderá solicitar:"),
@@ -131,9 +130,8 @@ const SECTIONS: Section[] = [
     id: "idade",
     number: "03",
     title: "Requisito de idade",
-    icon: ic(ShieldAlert),
-    color: "border-orbit-pink/40 text-orbit-pink",
-    navBadge: "18+",
+    icon: <span className="text-[10px] font-extrabold leading-none">18+</span>,
+    color: "border-orbit-pink/40 text-orbit-pink bg-orbit-pink/10",
     blocks: [
       warn("Plataforma 18+", "O Órbita X é destinado exclusivamente a pessoas com 18 anos ou mais.", "18+"),
       p("Para criar uma conta, o usuário deverá informar sua data de nascimento verdadeira."),
@@ -147,7 +145,7 @@ const SECTIONS: Section[] = [
     number: "04",
     title: "Orbit ID e @username",
     icon: ic(IdCard),
-    color: "border-orbit-purple/40 text-orbit-purple",
+    color: "border-orbit-purple/40 text-orbit-purple bg-orbit-purple/10",
     blocks: [
       h3("Orbit ID"),
       p("Cada conta do Órbita X possuirá um Orbit ID exclusivo. Ele:"),
@@ -180,7 +178,7 @@ const SECTIONS: Section[] = [
     number: "05",
     title: "Perfil e conteúdo",
     icon: ic(ImageIcon),
-    color: "border-orbit-blue/40 text-orbit-blue",
+    color: "border-orbit-blue/40 text-orbit-blue bg-orbit-blue/10",
     blocks: [
       h3("Perfil"),
       p("O usuário poderá personalizar seu perfil utilizando os recursos disponibilizados pelo Órbita X. Isso poderá incluir:"),
@@ -236,7 +234,7 @@ const SECTIONS: Section[] = [
     number: "06",
     title: "Comunidades",
     icon: ic(Users),
-    color: "border-orbit-cyan/40 text-orbit-cyan",
+    color: "border-orbit-cyan/40 text-orbit-cyan bg-orbit-cyan/10",
     blocks: [
       h3("Amigos e seguidores"),
       p("O Órbita X poderá disponibilizar recursos de:"),
@@ -266,7 +264,7 @@ const SECTIONS: Section[] = [
     number: "07",
     title: "Messenger",
     icon: ic(MessageCircle),
-    color: "border-orbit-purple/40 text-orbit-purple",
+    color: "border-orbit-purple/40 text-orbit-purple bg-orbit-purple/10",
     blocks: [
       p("O Órbita X poderá oferecer um sistema de mensagens chamado Messenger. O Messenger poderá permitir:"),
       iconGrid([
@@ -293,7 +291,7 @@ const SECTIONS: Section[] = [
     number: "08",
     title: "Adesivos e Órbita Coins",
     icon: ic(Coins),
-    color: "border-orbit-pink/40 text-orbit-pink",
+    color: "border-orbit-pink/40 text-orbit-pink bg-orbit-pink/10",
     blocks: [
       h3("Adesivos, presentes e personalizações"),
       p("O Órbita X poderá disponibilizar itens virtuais e cosméticos, incluindo:"),
@@ -325,7 +323,7 @@ const SECTIONS: Section[] = [
     number: "09",
     title: "Regras de uso",
     icon: ic(ShieldCheck),
-    color: "border-orbit-blue/40 text-orbit-blue",
+    color: "border-orbit-blue/40 text-orbit-blue bg-orbit-blue/10",
     blocks: [
       h3("Conteúdo proibido"),
       warn(
@@ -367,7 +365,7 @@ const SECTIONS: Section[] = [
     number: "10",
     title: "Denúncias e moderação",
     icon: ic(Flag),
-    color: "border-orbit-cyan/40 text-orbit-cyan",
+    color: "border-orbit-cyan/40 text-orbit-cyan bg-orbit-cyan/10",
     blocks: [
       p("O Órbita X poderá disponibilizar ferramentas para denunciar:"),
       bullets(["Perfis;", "Publicações;", "Comentários;", "Mensagens;", "Comunidades;", "Grupos;", "Outros conteúdos."]),
@@ -388,7 +386,7 @@ const SECTIONS: Section[] = [
     number: "11",
     title: "Suspensão e encerramento",
     icon: ic(Ban),
-    color: "border-orbit-purple/40 text-orbit-purple",
+    color: "border-orbit-purple/40 text-orbit-purple bg-orbit-purple/10",
     blocks: [
       p("O usuário poderá solicitar o encerramento de sua conta através dos recursos disponibilizados pela plataforma."),
       p("O Órbita X poderá suspender ou encerrar uma conta quando houver:"),
@@ -409,7 +407,7 @@ const SECTIONS: Section[] = [
     number: "12",
     title: "Alterações dos Termos",
     icon: ic(FileText),
-    color: "border-orbit-pink/40 text-orbit-pink",
+    color: "border-orbit-pink/40 text-orbit-pink bg-orbit-pink/10",
     blocks: [
       h3("Disponibilidade da plataforma"),
       p("O Órbita X buscará manter seus serviços disponíveis, mas poderão ocorrer interrupções causadas por:"),
@@ -433,7 +431,7 @@ const SECTIONS: Section[] = [
     number: "13",
     title: "Legislação aplicável",
     icon: ic(Scale),
-    color: "border-orbit-blue/40 text-orbit-blue",
+    color: "border-orbit-blue/40 text-orbit-blue bg-orbit-blue/10",
     blocks: [
       h3("Privacidade"),
       p("O tratamento dos dados pessoais dos usuários é realizado de acordo com a Política de Privacidade do Órbita X, que explica quais dados são tratados, para quais finalidades, como são protegidos e quais direitos podem ser exercidos pelos usuários."),
@@ -446,7 +444,7 @@ const SECTIONS: Section[] = [
     number: "14",
     title: "Contato",
     icon: ic(Mail),
-    color: "border-orbit-cyan/40 text-orbit-cyan",
+    color: "border-orbit-cyan/40 text-orbit-cyan bg-orbit-cyan/10",
     blocks: [
       p("Órbita X — Seu Universo em Conexão"),
       p("E-mail: orbitaxonline@gmail.com"),
@@ -474,6 +472,13 @@ export default async function TermosPage() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-space-bg bg-stars">
       <div className="pointer-events-none absolute inset-0 bg-orbit-radial" />
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 85% 8%, rgba(79,139,255,0.18), transparent 40%), radial-gradient(circle at 10% 55%, rgba(168,85,247,0.12), transparent 45%)",
+        }}
+      />
 
       <PublicHeader authed={!!user} />
 
@@ -484,12 +489,13 @@ export default async function TermosPage() {
             <span className="text-orbit-cyan">|</span> Legal
           </p>
           <h1 className="max-w-xl font-display text-3xl font-bold leading-tight text-white sm:text-4xl">
-            Termos de Uso
+            Termos de <span className="orbit-text-gradient">Uso</span>
             <br />
             <span className="orbit-text-gradient">Órbita X</span>
           </h1>
-          <p className="mt-3 text-sm text-white/40">Seu universo em conexão.</p>
-          <p className="mt-1 text-sm text-white/40">Última atualização: 23 de setembro de 2026.</p>
+          <p className="mt-3 text-sm text-white/50">Seu universo em conexão.</p>
+          <p className="mt-1 text-sm text-orbit-purple/70">Última atualização: 23 de setembro de 2026.</p>
+          <div className="mt-6 h-0.5 w-full bg-orbit-gradient opacity-60" />
         </div>
 
         <div className="mt-8 max-w-3xl">

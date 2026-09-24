@@ -9,6 +9,7 @@ export type Block =
   | { type: "h3"; text: string }
   | { type: "quote"; text: string }
   | { type: "info"; icon?: React.ReactNode; title: string; text: string }
+  | { type: "hero"; icon?: React.ReactNode; title: string; text: string }
   | { type: "warn"; badge?: string; title: string; text: string }
   | { type: "fieldCard"; icon: React.ReactNode; title: string; items: string[] }
   | { type: "row"; blocks: Block[] };
@@ -20,6 +21,7 @@ export const iconGrid = (items: IconListItem[]): Block => ({ type: "iconGrid", i
 export const h3 = (text: string): Block => ({ type: "h3", text });
 export const quote = (text: string): Block => ({ type: "quote", text });
 export const info = (title: string, text: string, icon?: React.ReactNode): Block => ({ type: "info", title, text, icon });
+export const hero = (title: string, text: string, icon?: React.ReactNode): Block => ({ type: "hero", title, text, icon });
 export const warn = (title: string, text: string, badge?: string): Block => ({ type: "warn", title, text, badge });
 export const fieldCard = (icon: React.ReactNode, title: string, items: string[]): Block => ({ type: "fieldCard", icon, title, items });
 export const row = (blocks: Block[]): Block => ({ type: "row", blocks });
@@ -46,6 +48,19 @@ export function RenderBlock({ block }: { block: Block }) {
         </span>
         <div>
           <p className="mb-1 text-sm font-semibold text-white">{block.title}</p>
+          <p className="text-sm leading-relaxed text-white/60">{block.text}</p>
+        </div>
+      </div>
+    );
+  }
+  if (block.type === "hero") {
+    return (
+      <div className="mb-8 flex items-start gap-4 rounded-2xl border border-orbit-purple/25 bg-gradient-to-br from-orbit-blue/10 via-orbit-purple/10 to-orbit-pink/10 p-6">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orbit-gradient text-white shadow-glow">
+          {block.icon ?? <Info className="h-5 w-5" />}
+        </span>
+        <div>
+          <p className="mb-1 text-base font-semibold text-white">{block.title}</p>
           <p className="text-sm leading-relaxed text-white/60">{block.text}</p>
         </div>
       </div>
@@ -114,7 +129,7 @@ export function RenderBlock({ block }: { block: Block }) {
     <ul className="mb-4 space-y-1.5 text-sm leading-relaxed text-white/60">
       {block.items.map((item, i) => (
         <li key={i} className="flex gap-2">
-          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-orbit-cyan/60" />
+          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orbit-blue" />
           {item}
         </li>
       ))}
