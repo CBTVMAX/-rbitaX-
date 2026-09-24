@@ -52,20 +52,20 @@ export default async function LandingPage() {
 
         <div
           className="absolute inset-0"
-          style={{ background: "linear-gradient(90deg, rgba(5,6,15,0.55) 0%, rgba(5,6,15,0.15) 34%, transparent 50%)" }}
+          style={{ background: "linear-gradient(90deg, rgba(5,6,15,0.85) 0%, rgba(5,6,15,0.45) 32%, rgba(5,6,15,0.1) 48%, transparent 58%)" }}
         />
 
         <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-6 py-16">
-          <div className="max-w-md rounded-3xl border border-white/10 bg-space-bg/60 p-7 shadow-2xl backdrop-blur-md">
-            <div className="mb-6 inline-block rounded-xl border border-orbit-cyan/40 bg-space-bg/70 py-2 pl-4 pr-5 text-xs font-semibold uppercase leading-6 tracking-[0.2em] text-white">
+          <div className="max-w-md">
+            <div className="mb-8 inline-block rounded-xl border border-orbit-cyan/40 bg-space-bg/70 py-2 pl-4 pr-5 text-xs font-semibold uppercase leading-6 tracking-[0.2em] text-white shadow-lg backdrop-blur-sm">
               <span className="border-l-2 border-orbit-cyan pl-3">
                 Pessoas<br />Ideias<br />Conteúdos<br />Em órbita
               </span>
             </div>
 
-            <OrbitLockup className="mb-6 h-auto w-full max-w-[15rem]" />
+            <OrbitLockup className="mb-8 h-auto w-full max-w-sm" />
 
-            <p className="mb-7 text-sm text-white/80">
+            <p className="mb-8 max-w-md text-sm text-white/80">
               Seu universo em conexão: pessoas, ideias e conteúdos girando em torno de você.
             </p>
 
@@ -84,15 +84,17 @@ export default async function LandingPage() {
               </Link>
             </div>
 
-            <div className="mb-5 flex items-center gap-3 text-xs text-white/50">
+            <div className="mb-5 flex max-w-md items-center gap-3 text-xs text-white/50">
               <div className="h-px flex-1 bg-white/10" />
               OU
               <div className="h-px flex-1 bg-white/10" />
             </div>
 
-            <LandingAuthRow />
+            <div className="max-w-md">
+              <LandingAuthRow />
+            </div>
 
-            <p className="text-xs text-white/60">
+            <p className="max-w-md text-xs text-white/60">
               Ao continuar, você concorda com os{" "}
               <a href="/termos" className="underline hover:text-white/80">Termos de Uso</a> e a{" "}
               <a href="/privacidade" className="underline hover:text-white/80">Política de Privacidade</a>.
