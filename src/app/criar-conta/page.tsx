@@ -130,6 +130,21 @@ export default function CriarContaPage() {
   async function handleSendOtp(e: React.FormEvent) {
     e.preventDefault();
     setPhoneError(null);
+
+    if (!name.trim()) {
+      setPhoneError("Digite seu nome e sobrenome.");
+      return;
+    }
+    const birthDate = parseBirthDate(birthDateInput);
+    if (!birthDate) {
+      setPhoneError("Digite sua data de nascimento (DD/MM/AAAA) para confirmar sua idade.");
+      return;
+    }
+    if (password.length < 8) {
+      setPhoneError("A senha precisa ter pelo menos 8 caracteres.");
+      return;
+    }
+
     setPhoneLoading(true);
     const { error: otpError } = await supabase.auth.signInWithOtp({ phone: normalizePhone(phone) });
     setPhoneLoading(false);
@@ -150,10 +165,22 @@ export default function CriarContaPage() {
       token: otp,
       type: "sms",
     });
-    setPhoneLoading(false);
 
     if (verifyError) {
+      setPhoneLoading(false);
       setPhoneError(verifyError.message);
+      return;
+    }
+
+    const username = await reserveUsername(name);
+    const { error: updateError } = await supabase.auth.updateUser({
+      password,
+      data: { name, username, birthDate: parseBirthDate(birthDateInput) },
+    });
+    setPhoneLoading(false);
+
+    if (updateError) {
+      setPhoneError(updateError.message);
       return;
     }
 
@@ -215,6 +242,20 @@ export default function CriarContaPage() {
         !otpSent ? (
           <form onSubmit={handleSendOtp} className="space-y-3">
             <div>
+              <label className="mb-1 block text-xs text-white/50">Nome e sobrenome</label>
+              <div className="relative">
+                <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+                <input
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Seu nome completo"
+                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
+                />
+              </div>
+            </div>
+
+            <div>
               <label className="mb-1 block text-xs text-white/50">Número de celular</label>
               <div className="relative">
                 <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
@@ -226,6 +267,45 @@ export default function CriarContaPage() {
                   placeholder="+55 (11) 91234-5678"
                   className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
                 />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs text-white/50">Data de nascimento</label>
+              <div className="relative">
+                <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+                <input
+                  required
+                  inputMode="numeric"
+                  value={birthDateInput}
+                  onChange={(e) => setBirthDateInput(formatBirthDateInput(e.target.value, birthDateInput))}
+                  placeholder="DD / MM / AAAA"
+                  maxLength={10}
+                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs text-white/50">Senha</label>
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+                <input
+                  required
+                  type={showPassword ? "text" : "password"}
+                  minLength={8}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Mín. 8 caracteres"
+                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-9 text-sm text-white outline-none focus:border-orbit-purple"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
 
