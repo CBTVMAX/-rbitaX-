@@ -13,11 +13,17 @@ const FEATURES: { icon: LucideIcon; title: string; text: string; color: string }
 export function AuthShell({
   children,
   title,
+  heading,
   subtitle,
+  eyebrow,
+  topRight,
 }: {
   children: React.ReactNode;
   title: string;
+  heading?: React.ReactNode;
   subtitle: string;
+  eyebrow?: string;
+  topRight?: React.ReactNode;
 }) {
   return (
     <div
@@ -73,13 +79,23 @@ export function AuthShell({
           </div>
         </div>
 
-        <div className="flex flex-col justify-center p-8 md:p-10">
+        <div className="relative flex flex-col justify-center p-8 md:p-10">
+          {topRight && (
+            <div className="absolute right-8 top-8 hidden text-right md:block">{topRight}</div>
+          )}
           <div className="mb-6 flex items-center gap-2 md:hidden">
             <OrbitLogo size={28} />
             <OrbitWordmarkImage className="h-7 w-auto" />
           </div>
+          {eyebrow && (
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-orbit-pink">{eyebrow}</p>
+          )}
           <h1 className="mb-1 font-display text-2xl font-bold text-white">
-            {title} no <span className="orbit-text-gradient">ÓrbitaX</span>
+            {heading ?? (
+              <>
+                {title} no <span className="orbit-text-gradient">ÓrbitaX</span>
+              </>
+            )}
           </h1>
           <p className="mb-6 text-sm text-white/50">{subtitle}</p>
           {children}
