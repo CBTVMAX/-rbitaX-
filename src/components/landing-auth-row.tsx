@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { Phone } from "lucide-react";
 
-export function LandingAuthRow() {
+export function LandingAuthRow({ pill = false }: { pill?: boolean }) {
   async function handleGoogle() {
     const supabase = createClient();
     await supabase.auth.signInWithOAuth({
@@ -13,18 +14,26 @@ export function LandingAuthRow() {
     });
   }
 
+  const shape = pill ? "rounded-full" : "rounded-xl";
+
   return (
-    <div className="mb-6 grid grid-cols-2 gap-3">
+    <div className="mb-6 grid w-full grid-cols-2 gap-3">
       <button
         onClick={handleGoogle}
         type="button"
-        className="flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+        className={clsx(
+          "flex items-center justify-center gap-2 border border-white/15 bg-white/5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10",
+          shape
+        )}
       >
         <GoogleIcon className="h-4 w-4" /> Google
       </button>
       <Link
         href="/criar-conta"
-        className="flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+        className={clsx(
+          "flex items-center justify-center gap-2 border border-white/15 bg-white/5 py-2.5 text-sm font-medium text-white transition hover:bg-white/10",
+          shape
+        )}
       >
         <Phone className="h-4 w-4" /> Telefone
       </Link>
