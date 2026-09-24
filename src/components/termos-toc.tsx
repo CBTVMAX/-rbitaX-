@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { clsx } from "clsx";
-import { ChevronDown, List } from "lucide-react";
+import { ChevronDown, LifeBuoy, List } from "lucide-react";
 
 export type TocItem = {
   id: string;
@@ -51,6 +52,26 @@ function NavRow({
         </span>
       )}
     </a>
+  );
+}
+
+function HelpCard() {
+  return (
+    <div className="mt-4 rounded-2xl border border-white/10 bg-space-card p-5">
+      <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-full border-2 border-orbit-cyan/40 text-orbit-cyan">
+        <LifeBuoy className="h-4 w-4" />
+      </span>
+      <p className="mb-1 text-sm font-semibold text-white">Precisa de ajuda?</p>
+      <p className="mb-4 text-xs leading-relaxed text-white/50">
+        Nossa Central de Ajuda está sempre disponível para você.
+      </p>
+      <Link
+        href="mailto:orbitaxonline@gmail.com"
+        className="flex w-full items-center justify-center rounded-xl bg-orbit-gradient py-2 text-xs font-semibold text-white transition hover:opacity-90"
+      >
+        Acessar Central de Ajuda
+      </Link>
+    </div>
   );
 }
 
@@ -134,6 +155,7 @@ export function TermosToc({ items }: { items: TocItem[] }) {
             ))}
           </nav>
           <PlanetCard />
+          <HelpCard />
         </div>
       </aside>
     </>

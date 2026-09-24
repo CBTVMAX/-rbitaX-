@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PublicHeader } from "@/components/public-header";
 import { PublicFooter } from "@/components/public-footer";
 import { TermosToc, type TocItem } from "@/components/termos-toc";
-import { ExpandableIconList, type IconListItem } from "@/components/expandable-list";
+import { DocHeroPlanet } from "@/components/doc-hero-planet";
+import { Block, RenderBlock, p, bullets, checklist, iconGrid, h3, quote, info, warn, fieldCard, row } from "@/components/legal-doc";
 import {
   Globe,
   UserPlus,
@@ -30,30 +31,12 @@ import {
   Store,
   Sparkles,
   Aperture,
-  Zap,
   Link2,
-  KeyRound,
-  Lock,
-  RotateCcw,
   AtSign,
+  Rocket,
 } from "lucide-react";
 
-type Block =
-  | { type: "p"; text: string }
-  | { type: "bullets"; items: string[] }
-  | { type: "iconGrid"; items: IconListItem[] }
-  | { type: "h3"; text: string }
-  | { type: "quote"; text: string }
-  | { type: "warn"; badge?: string; title: string; text: string };
-
 type Section = { id: string; number: string; title: string; icon: React.ReactNode; color: string; navBadge?: string; blocks: Block[] };
-
-const p = (text: string): Block => ({ type: "p", text });
-const bullets = (items: string[]): Block => ({ type: "bullets", items });
-const iconGrid = (items: IconListItem[]): Block => ({ type: "iconGrid", items });
-const h3 = (text: string): Block => ({ type: "h3", text });
-const quote = (text: string): Block => ({ type: "quote", text });
-const warn = (title: string, text: string, badge?: string): Block => ({ type: "warn", title, text, badge });
 
 const ic = (Icon: typeof User, className = "h-4 w-4") => <Icon className={className} />;
 
@@ -62,8 +45,13 @@ const INTRO: Block[] = [
   p(
     "Estes Termos de Uso estabelecem as regras para utilização do Órbita X, incluindo perfis, publicações, comunidades, grupos, Messenger, Stories, Clipes, música, vídeos, jogos, adesivos, presentes, personalizações, Órbita Coins e demais recursos disponibilizados pela plataforma."
   ),
-  p("Ao criar uma conta ou utilizar o Órbita X, você declara que leu, compreendeu e concorda com estes Termos de Uso."),
 ];
+
+const LEAD: Block = info(
+  "Seu aceite é importante",
+  "Ao criar uma conta ou utilizar o Órbita X, você declara que leu, compreendeu e concorda com estes Termos de Uso.",
+  <Rocket className="h-5 w-5" />
+);
 
 const SECTIONS: Section[] = [
   {
@@ -108,34 +96,33 @@ const SECTIONS: Section[] = [
     color: "border-orbit-cyan/40 text-orbit-cyan",
     blocks: [
       h3("Criação da conta"),
-      p("Para criar uma conta, o usuário deverá fornecer informações verdadeiras e atualizadas."),
-      p("O cadastro poderá solicitar:"),
-      bullets([
-        "Nome;",
-        "Sobrenome;",
-        "Data de nascimento;",
-        "Gênero;",
-        "E-mail ou número de telefone;",
-        "Senha;",
-        "Código de verificação;",
-        "Aceite dos Termos de Uso;",
-        "Ciência da Política de Privacidade.",
+      p("Para criar uma conta, o usuário deverá fornecer informações verdadeiras e atualizadas. O cadastro poderá solicitar:"),
+      row([
+        fieldCard(ic(IdCard), "Campos do cadastro", [
+          "Nome",
+          "Sobrenome",
+          "Data de nascimento",
+          "Gênero",
+          "E-mail ou número de telefone",
+          "Senha",
+          "Código de verificação",
+          "Aceite dos Termos de Uso",
+          "Ciência da Política de Privacidade",
+        ]),
+        info("Sem CPF nem CNPJ", "O usuário não precisa informar CPF ou CNPJ para criar uma conta pessoal no Órbita X."),
       ]),
-      p("O usuário não precisa informar CPF ou CNPJ para criar uma conta pessoal no Órbita X."),
       p("O Órbita X poderá solicitar confirmação do e-mail ou número de telefone através de código de segurança."),
       h3("Informações verdadeiras"),
-      p("O usuário deve fornecer informações verdadeiras durante o cadastro e manter suas informações relevantes atualizadas."),
-      p("É proibido utilizar informações falsas com a finalidade de:"),
+      p("O usuário deve fornecer informações verdadeiras durante o cadastro e manter suas informações relevantes atualizadas. É proibido utilizar informações falsas com a finalidade de:"),
       bullets(["Fraudar a plataforma;", "Enganar outros usuários;", "Praticar golpes;", "Se passar por outra pessoa;", "Burlar restrições de segurança ou idade."]),
       h3("Segurança da conta"),
-      p("O usuário é responsável por proteger sua conta."),
-      p("O usuário deverá:"),
-      bullets([
-        "Manter sua senha em sigilo;",
-        "Não compartilhar códigos de verificação;",
-        "Não permitir acesso indevido à conta;",
-        "Utilizar dispositivos confiáveis;",
-        "Comunicar atividades suspeitas.",
+      p("O usuário é responsável por proteger sua conta. O usuário deverá:"),
+      checklist([
+        "Manter sua senha em sigilo",
+        "Não compartilhar códigos de verificação",
+        "Não permitir acesso indevido à conta",
+        "Utilizar dispositivos confiáveis",
+        "Comunicar atividades suspeitas",
       ]),
       warn("Nunca pediremos sua senha", "O Órbita X nunca deverá solicitar que o usuário forneça sua senha por mensagem."),
     ],
@@ -163,21 +150,20 @@ const SECTIONS: Section[] = [
     color: "border-orbit-purple/40 text-orbit-purple",
     blocks: [
       h3("Orbit ID"),
-      p("Cada conta do Órbita X possuirá um Orbit ID exclusivo."),
-      iconGrid([
-        { icon: ic(Zap), text: "É gerado automaticamente" },
-        { icon: ic(Link2), text: "É associado permanentemente à conta" },
-        { icon: ic(KeyRound), text: "É exclusivo" },
-        { icon: ic(Ban), text: "Não é escolhido pelo usuário durante o cadastro" },
-        { icon: ic(Lock), text: "Não pode ser transferido para outra pessoa" },
-        { icon: ic(RotateCcw), text: "Não deve ser reutilizado após encerramento da conta" },
+      p("Cada conta do Órbita X possuirá um Orbit ID exclusivo. Ele:"),
+      checklist([
+        "É gerado automaticamente",
+        "É associado permanentemente à conta",
+        "É exclusivo",
+        "Não é escolhido pelo usuário durante o cadastro",
+        "Não pode ser transferido para outra pessoa",
+        "Não deve ser reutilizado após encerramento da conta",
       ]),
       p("O Orbit ID serve como identificador público permanente da conta dentro do Órbita X."),
       h3("Nome de usuário (@username)"),
       p("O usuário poderá posteriormente escolher um nome de usuário personalizado, quando essa funcionalidade estiver disponível."),
       quote("Exemplo: @nicolasrayne"),
-      p("O nome de usuário deverá respeitar as regras da plataforma e estar disponível."),
-      p("O Órbita X poderá impedir nomes de usuário que:"),
+      p("O nome de usuário deverá respeitar as regras da plataforma e estar disponível. O Órbita X poderá impedir nomes de usuário que:"),
       bullets([
         "Já estejam sendo utilizados;",
         "Sejam reservados;",
@@ -197,8 +183,7 @@ const SECTIONS: Section[] = [
     color: "border-orbit-blue/40 text-orbit-blue",
     blocks: [
       h3("Perfil"),
-      p("O usuário poderá personalizar seu perfil utilizando os recursos disponibilizados pelo Órbita X."),
-      p("Isso poderá incluir:"),
+      p("O usuário poderá personalizar seu perfil utilizando os recursos disponibilizados pelo Órbita X. Isso poderá incluir:"),
       iconGrid([
         { icon: ic(ImageIcon), text: "Foto de perfil" },
         { icon: ic(ImageIcon), text: "Foto de capa" },
@@ -221,12 +206,10 @@ const SECTIONS: Section[] = [
       ]),
       p("O usuário poderá controlar a visibilidade de determinadas informações através das configurações de privacidade."),
       h3("Foto de perfil e capa"),
-      p("O usuário poderá alterar sua foto de perfil e sua foto de capa."),
-      p("A capa do perfil é independente da personalização visual escolhida pelo usuário e poderá ser uma imagem de sua preferência, desde que respeite estes Termos e a legislação aplicável."),
+      p("O usuário poderá alterar sua foto de perfil e sua foto de capa. A capa do perfil é independente da personalização visual escolhida pelo usuário e poderá ser uma imagem de sua preferência, desde que respeite estes Termos e a legislação aplicável."),
       p("Não é permitido utilizar imagens que violem direitos autorais, direitos de imagem ou outras regras aplicáveis."),
       h3("Publicações"),
-      p("O usuário poderá criar publicações utilizando os recursos disponíveis no Órbita X."),
-      p("Entre eles:"),
+      p("O usuário poderá criar publicações utilizando os recursos disponíveis no Órbita X. Entre eles:"),
       bullets([
         "Texto;",
         "Fotos;",
@@ -242,11 +225,10 @@ const SECTIONS: Section[] = [
       ]),
       p("O usuário é responsável pelo conteúdo que publica."),
       h3("Direitos sobre o conteúdo"),
-      p("O usuário continua sendo titular dos direitos sobre conteúdos que lhe pertencem."),
-      p(
-        "Ao publicar conteúdo no Órbita X, o usuário concede à plataforma uma licença necessária para hospedar, armazenar, processar, reproduzir tecnicamente, exibir e disponibilizar esse conteúdo dentro das funcionalidades escolhidas pelo próprio usuário."
+      info(
+        "Você continua sendo o dono do que publica",
+        "O usuário continua sendo titular dos direitos sobre conteúdos que lhe pertencem. Ao publicar no Órbita X, concede à plataforma apenas a licença necessária para hospedar, armazenar, processar, reproduzir tecnicamente, exibir e disponibilizar esse conteúdo — isso não significa transferência de propriedade."
       ),
-      p("Essa licença não significa transferência da propriedade do conteúdo para o Órbita X."),
     ],
   },
   {
@@ -261,8 +243,7 @@ const SECTIONS: Section[] = [
       bullets(["Amizade;", "Seguidores;", "Seguindo;", "Solicitações;", "Contatos;", "Amigos em comum;", "Bloqueio;", "Restrição."]),
       p("O usuário poderá utilizar as configurações de privacidade para controlar determinadas interações."),
       h3("Comunidades"),
-      p("Usuários poderão criar comunidades de acordo com as regras da plataforma."),
-      p("Uma comunidade poderá possuir:"),
+      p("Usuários poderão criar comunidades de acordo com as regras da plataforma. Uma comunidade poderá possuir:"),
       bullets([
         "Proprietário;",
         "Administradores;",
@@ -277,8 +258,7 @@ const SECTIONS: Section[] = [
         "Grupos;",
         "Regras próprias.",
       ]),
-      p("Os responsáveis pelas comunidades devem administrar seus espaços de acordo com estes Termos e a legislação aplicável."),
-      p("O Órbita X poderá tomar medidas contra comunidades que violem as regras da plataforma."),
+      p("Os responsáveis pelas comunidades devem administrar seus espaços de acordo com estes Termos e a legislação aplicável. O Órbita X poderá tomar medidas contra comunidades que violem as regras da plataforma."),
     ],
   },
   {
@@ -288,8 +268,7 @@ const SECTIONS: Section[] = [
     icon: ic(MessageCircle),
     color: "border-orbit-purple/40 text-orbit-purple",
     blocks: [
-      p("O Órbita X poderá oferecer um sistema de mensagens chamado Messenger."),
-      p("O Messenger poderá permitir:"),
+      p("O Órbita X poderá oferecer um sistema de mensagens chamado Messenger. O Messenger poderá permitir:"),
       iconGrid([
         { icon: ic(FileText), text: "Mensagens de texto" },
         { icon: ic(ImageIcon), text: "Fotos" },
@@ -306,7 +285,7 @@ const SECTIONS: Section[] = [
         { icon: ic(Phone), text: "Chamadas" },
         { icon: ic(Users), text: "Conversas em grupo" },
       ]),
-      p("O Messenger não deverá ser utilizado para atividades ilegais, golpes, ameaças, assédio ou outras violações destes Termos."),
+      warn("Uso responsável", "O Messenger não deverá ser utilizado para atividades ilegais, golpes, ameaças, assédio ou outras violações destes Termos."),
     ],
   },
   {
@@ -338,8 +317,7 @@ const SECTIONS: Section[] = [
       ),
       p("As condições de compra, utilização e eventual reembolso serão apresentadas pela plataforma quando aplicáveis."),
       h3("Compras"),
-      p("Antes da confirmação de uma compra, o usuário deverá receber informações sobre produto ou recurso, preço, forma de pagamento e condições aplicáveis."),
-      p("Os pagamentos poderão ser processados por provedores especializados."),
+      p("Antes da confirmação de uma compra, o usuário deverá receber informações sobre produto ou recurso, preço, forma de pagamento e condições aplicáveis. Os pagamentos poderão ser processados por provedores especializados."),
     ],
   },
   {
@@ -380,9 +358,8 @@ const SECTIONS: Section[] = [
       p("O Órbita X poderá investigar contas envolvidas em impersonação ou fraude."),
       h3("Propriedade intelectual"),
       p(
-        "A marca Órbita X, incluindo seu nome, logotipo, identidade visual, interface, software, elementos gráficos e demais materiais pertencentes à plataforma, são protegidos pela legislação aplicável."
+        "A marca Órbita X, incluindo seu nome, logotipo, identidade visual, interface, software, elementos gráficos e demais materiais pertencentes à plataforma, são protegidos pela legislação aplicável. Não é permitido copiar, reproduzir, modificar ou utilizar esses elementos comercialmente sem autorização."
       ),
-      p("Não é permitido copiar, reproduzir, modificar ou utilizar esses elementos comercialmente sem autorização."),
     ],
   },
   {
@@ -394,8 +371,7 @@ const SECTIONS: Section[] = [
     blocks: [
       p("O Órbita X poderá disponibilizar ferramentas para denunciar:"),
       bullets(["Perfis;", "Publicações;", "Comentários;", "Mensagens;", "Comunidades;", "Grupos;", "Outros conteúdos."]),
-      p("As denúncias poderão ser analisadas por sistemas automatizados, equipes de moderação ou ambos."),
-      p("Quando necessário, poderão ser tomadas medidas como:"),
+      p("As denúncias poderão ser analisadas por sistemas automatizados, equipes de moderação ou ambos. Quando necessário, poderão ser tomadas medidas como:"),
       bullets([
         "Remoção de conteúdo;",
         "Restrição de conteúdo;",
@@ -460,8 +436,7 @@ const SECTIONS: Section[] = [
     color: "border-orbit-blue/40 text-orbit-blue",
     blocks: [
       h3("Privacidade"),
-      p("O tratamento dos dados pessoais dos usuários é realizado de acordo com a Política de Privacidade do Órbita X."),
-      p("A Política de Privacidade explica quais dados são tratados, para quais finalidades, como são protegidos e quais direitos podem ser exercidos pelos usuários."),
+      p("O tratamento dos dados pessoais dos usuários é realizado de acordo com a Política de Privacidade do Órbita X, que explica quais dados são tratados, para quais finalidades, como são protegidos e quais direitos podem ser exercidos pelos usuários."),
       h3("Legislação aplicável"),
       p("Estes Termos serão interpretados de acordo com a legislação aplicável no Brasil."),
     ],
@@ -490,50 +465,6 @@ const TOC_ITEMS: TocItem[] = SECTIONS.map((section) => ({
   badge: section.navBadge,
 }));
 
-function RenderBlock({ block }: { block: Block }) {
-  if (block.type === "p") {
-    return <p className="mb-3 text-sm leading-relaxed text-white/60">{block.text}</p>;
-  }
-  if (block.type === "h3") {
-    return <h3 className="mb-2 mt-5 text-sm font-semibold text-white/90">{block.text}</h3>;
-  }
-  if (block.type === "quote") {
-    return (
-      <blockquote className="mb-3 border-l-2 border-orbit-pink pl-4 text-sm italic leading-relaxed text-white/70">
-        {block.text}
-      </blockquote>
-    );
-  }
-  if (block.type === "warn") {
-    return (
-      <div className="mb-4 flex items-start gap-3 rounded-xl border border-orbit-pink/30 bg-orbit-pink/[0.06] p-4">
-        {block.badge && (
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-orbit-pink/50 text-xs font-bold text-orbit-pink">
-            {block.badge}
-          </span>
-        )}
-        <div>
-          <p className="mb-0.5 text-sm font-semibold text-white">{block.title}</p>
-          <p className="text-sm leading-relaxed text-white/60">{block.text}</p>
-        </div>
-      </div>
-    );
-  }
-  if (block.type === "iconGrid") {
-    return <ExpandableIconList items={block.items} />;
-  }
-  return (
-    <ul className="mb-4 space-y-1.5 text-sm leading-relaxed text-white/60">
-      {block.items.map((item, i) => (
-        <li key={i} className="flex gap-2">
-          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-orbit-cyan/60" />
-          {item}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 export default async function TermosPage() {
   const supabase = createClient();
   const {
@@ -547,32 +478,33 @@ export default async function TermosPage() {
       <PublicHeader authed={!!user} />
 
       <main className="relative z-10 mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6">
-        <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-white/30">
-          <span className="text-orbit-cyan">|</span> Legal
-        </p>
-        <h1 className="font-display text-3xl font-bold text-white sm:text-4xl">
-          Termos de Uso — <span className="orbit-text-gradient">Órbita X</span>
-        </h1>
-        <p className="mt-2 text-sm text-white/40">Seu universo em conexão.</p>
-        <p className="mt-1 text-sm text-white/40">Última atualização: 23 de setembro de 2026.</p>
-        <div className="mt-6 h-px w-full bg-orbit-gradient opacity-40" />
+        <div className="relative">
+          <DocHeroPlanet />
+          <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-white/30">
+            <span className="text-orbit-cyan">|</span> Legal
+          </p>
+          <h1 className="max-w-xl font-display text-3xl font-bold leading-tight text-white sm:text-4xl">
+            Termos de Uso
+            <br />
+            <span className="orbit-text-gradient">Órbita X</span>
+          </h1>
+          <p className="mt-3 text-sm text-white/40">Seu universo em conexão.</p>
+          <p className="mt-1 text-sm text-white/40">Última atualização: 23 de setembro de 2026.</p>
+        </div>
 
         <div className="mt-8 max-w-3xl">
           {INTRO.map((block, i) => (
             <RenderBlock key={i} block={block} />
           ))}
+          <RenderBlock block={LEAD} />
         </div>
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[260px_1fr]">
           <TermosToc items={TOC_ITEMS} />
 
-          <div className="min-w-0 space-y-6">
+          <div className="min-w-0 space-y-10">
             {SECTIONS.map((section) => (
-              <section
-                key={section.id}
-                id={section.id}
-                className="scroll-mt-24 rounded-2xl border border-white/10 bg-space-card p-6 sm:p-8"
-              >
+              <section key={section.id} id={section.id} className="scroll-mt-24">
                 <div className="mb-4 flex items-center gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orbit-gradient text-sm font-bold text-white">
                     {section.number}
