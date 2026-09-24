@@ -3,7 +3,7 @@ import { PublicHeader } from "@/components/public-header";
 import { PublicFooter } from "@/components/public-footer";
 import { TermosToc, type TocItem } from "@/components/termos-toc";
 import { DocHeroPlanet } from "@/components/doc-hero-planet";
-import { Block, RenderBlock, p, bullets, checklist, iconGrid, h3, quote, info, hero, warn, fieldCard, row } from "@/components/legal-doc";
+import { Block, RenderBlock, p, bullets, checklist, iconGrid, h3, quote, info, hero, warn, fieldCard } from "@/components/legal-doc";
 import {
   Globe,
   UserPlus,
@@ -96,19 +96,16 @@ const SECTIONS: Section[] = [
     blocks: [
       h3("Criação da conta"),
       p("Para criar uma conta, o usuário deverá fornecer informações verdadeiras e atualizadas. O cadastro poderá solicitar:"),
-      row([
-        fieldCard(ic(IdCard), "Campos do cadastro", [
-          "Nome",
-          "Sobrenome",
-          "Data de nascimento",
-          "Gênero",
-          "E-mail ou número de telefone",
-          "Senha",
-          "Código de verificação",
-          "Aceite dos Termos de Uso",
-          "Ciência da Política de Privacidade",
-        ]),
-        info("Sem CPF nem CNPJ", "O usuário não precisa informar CPF ou CNPJ para criar uma conta pessoal no Órbita X."),
+      fieldCard(ic(IdCard), "Campos do cadastro", [
+        "Nome",
+        "Sobrenome",
+        "Data de nascimento",
+        "Gênero",
+        "E-mail ou número de telefone",
+        "Senha",
+        "Código de verificação",
+        "Aceite dos Termos de Uso",
+        "Ciência da Política de Privacidade",
       ]),
       p("O Órbita X poderá solicitar confirmação do e-mail ou número de telefone através de código de segurança."),
       h3("Informações verdadeiras"),

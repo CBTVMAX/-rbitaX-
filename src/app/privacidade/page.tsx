@@ -3,7 +3,7 @@ import { PublicHeader } from "@/components/public-header";
 import { PublicFooter } from "@/components/public-footer";
 import { TermosToc, type TocItem } from "@/components/termos-toc";
 import { DocHeroPlanet } from "@/components/doc-hero-planet";
-import { Block, RenderBlock, p, bullets, checklist, iconGrid, h3, quote, info, hero, warn, fieldCard, row } from "@/components/legal-doc";
+import { Block, RenderBlock, p, bullets, checklist, iconGrid, h3, quote, info, hero, warn, fieldCard } from "@/components/legal-doc";
 import {
   House,
   User,
@@ -70,10 +70,7 @@ const SECTIONS: Section[] = [
     blocks: [
       h3("Dados de cadastro"),
       p("O Órbita X coleta somente as informações necessárias para oferecer seus serviços e permitir o funcionamento das funcionalidades utilizadas pelo usuário. Para criar uma conta, o usuário poderá informar:"),
-      row([
-        fieldCard(ic(UserPlus), "Dados de cadastro", ["Nome", "Sobrenome", "Data de nascimento", "Gênero", "E-mail ou número de telefone", "Senha"]),
-        warn("Sem CPF nem CNPJ", "O cadastro do Órbita X é pessoal e não exige CPF ou CNPJ."),
-      ]),
+      fieldCard(ic(UserPlus), "Dados de cadastro", ["Nome", "Sobrenome", "Data de nascimento", "Gênero", "E-mail ou número de telefone", "Senha"]),
       info("Uso restrito", "Utilizamos essas informações apenas para criar e proteger sua conta e oferecer os serviços da plataforma."),
 
       h3("Dados de autenticação"),
