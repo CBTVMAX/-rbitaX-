@@ -48,18 +48,12 @@ export default async function LandingPage() {
               </span>
             </div>
 
-            <div className="relative mb-6">
-              <div
-                className="absolute -inset-x-6 -inset-y-4"
-                style={{ background: "radial-gradient(ellipse 75% 80% at 40% 50%, rgba(5,6,15,0.75) 0%, transparent 75%)" }}
-              />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/hero-logo-lockup.webp"
-                alt="Órbita X — Seu universo em conexão"
-                className="relative h-auto w-full max-w-lg mix-blend-screen drop-shadow-[0_0_35px_rgba(79,139,255,0.5)]"
-              />
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/hero-logo-lockup.webp"
+              alt="Órbita X — Seu universo em conexão"
+              className="mb-6 h-auto w-full max-w-lg drop-shadow-[0_0_35px_rgba(79,139,255,0.5)]"
+            />
 
             <p className="mb-7 max-w-md text-sm text-white/80">
               Seu universo em conexão: pessoas, ideias e conteúdos girando em torno de você.

@@ -87,7 +87,7 @@ export function AuthShell({
         <img
           src="/hero-logo-lockup.webp"
           alt="Órbita X — Seu universo em conexão"
-          className="pointer-events-none absolute left-10 top-1/2 hidden h-auto w-full max-w-sm -translate-y-1/2 mix-blend-screen drop-shadow-[0_0_30px_rgba(79,139,255,0.35)] md:block"
+          className="pointer-events-none absolute left-10 top-1/2 hidden h-auto w-full max-w-sm -translate-y-1/2 drop-shadow-[0_0_30px_rgba(79,139,255,0.35)] md:block"
         />
 
         <div className="relative flex min-h-full flex-col p-8 md:flex-row md:items-center md:justify-end md:p-10">
