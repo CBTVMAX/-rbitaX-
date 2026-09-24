@@ -41,8 +41,8 @@ export default async function LandingPage() {
         />
 
         <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-6 py-16">
-          <div className="w-full max-w-sm">
-            <div className="mb-5 inline-block rounded-xl border border-orbit-cyan/40 bg-space-bg/70 py-1.5 pl-3.5 pr-4 text-[11px] font-semibold uppercase leading-5 tracking-[0.2em] text-white shadow-lg backdrop-blur-sm">
+          <div className="w-full max-w-md">
+            <div className="mb-5 inline-block rounded-lg border border-orbit-cyan/40 bg-space-bg/70 py-1.5 pl-3.5 pr-4 text-xs font-semibold uppercase leading-5 tracking-[0.15em] text-white shadow-lg backdrop-blur-sm">
               <span className="border-l-2 border-orbit-cyan pl-2.5">
                 Pessoas<br />Ideias<br />Conteúdos<br />Em órbita
               </span>
@@ -52,10 +52,10 @@ export default async function LandingPage() {
             <img
               src="/hero-logo-lockup.webp"
               alt="Órbita X — Seu universo em conexão"
-              className="mb-5 h-auto w-full max-w-xs drop-shadow-[0_0_30px_rgba(79,139,255,0.5)]"
+              className="mb-5 h-auto w-full max-w-[17rem] drop-shadow-[0_0_28px_rgba(79,139,255,0.5)]"
             />
 
-            <p className="mb-6 text-xs text-white/80 sm:text-sm">
+            <p className="mb-6 text-sm text-white/80">
               Seu universo em conexão: pessoas, ideias e conteúdos girando em torno de você.
             </p>
 
@@ -80,17 +80,15 @@ export default async function LandingPage() {
               </Link>
             </div>
 
-            <div className="mb-5 flex max-w-md items-center gap-3 text-xs text-white/50">
+            <div className="mb-4 flex items-center gap-3 text-xs text-white/50">
               <div className="h-px flex-1 bg-white/10" />
               OU
               <div className="h-px flex-1 bg-white/10" />
             </div>
 
-            <div className="max-w-md">
-              <LandingAuthRow />
-            </div>
+            <LandingAuthRow />
 
-            <p className="max-w-md text-xs text-white/60">
+            <p className="text-xs text-white/60">
               Ao continuar, você concorda com os{" "}
               <a href="/termos" className="underline hover:text-white/80">Termos de Uso</a> e a{" "}
               <a href="/privacidade" className="underline hover:text-white/80">Política de Privacidade</a>.
