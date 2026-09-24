@@ -41,9 +41,9 @@ export default async function LandingPage() {
         />
 
         <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-6 py-16">
-          <div className="w-full max-w-lg">
-            <div className="mb-6 inline-block rounded-xl border border-orbit-cyan/40 bg-space-bg/70 py-2 pl-4 pr-5 text-xs font-semibold uppercase leading-6 tracking-[0.2em] text-white shadow-lg backdrop-blur-sm">
-              <span className="border-l-2 border-orbit-cyan pl-3">
+          <div className="w-full max-w-sm">
+            <div className="mb-5 inline-block rounded-xl border border-orbit-cyan/40 bg-space-bg/70 py-1.5 pl-3.5 pr-4 text-[11px] font-semibold uppercase leading-5 tracking-[0.2em] text-white shadow-lg backdrop-blur-sm">
+              <span className="border-l-2 border-orbit-cyan pl-2.5">
                 Pessoas<br />Ideias<br />Conteúdos<br />Em órbita
               </span>
             </div>
@@ -52,17 +52,17 @@ export default async function LandingPage() {
             <img
               src="/hero-logo-lockup.webp"
               alt="Órbita X — Seu universo em conexão"
-              className="mb-6 h-auto w-full max-w-lg drop-shadow-[0_0_35px_rgba(79,139,255,0.5)]"
+              className="mb-5 h-auto w-full max-w-xs drop-shadow-[0_0_30px_rgba(79,139,255,0.5)]"
             />
 
-            <p className="mb-7 max-w-md text-sm text-white/80">
+            <p className="mb-6 text-xs text-white/80 sm:text-sm">
               Seu universo em conexão: pessoas, ideias e conteúdos girando em torno de você.
             </p>
 
-            <div className="mb-5 flex max-w-md flex-col gap-3">
+            <div className="mb-4 flex flex-col gap-2.5">
               <Link
                 href="/criar-conta"
-                className="flex items-center justify-between rounded-full bg-orbit-gradient px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition hover:opacity-90"
+                className="flex items-center justify-between rounded-full bg-orbit-gradient px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition hover:opacity-90"
               >
                 <span className="flex items-center gap-2">
                   <UserPlus className="h-4 w-4" /> Criar uma conta
@@ -71,7 +71,7 @@ export default async function LandingPage() {
               </Link>
               <Link
                 href="/entrar"
-                className="flex items-center justify-between rounded-full border border-white/15 bg-space-bg/40 px-6 py-3.5 text-sm font-semibold text-white/90 backdrop-blur-sm transition hover:bg-white/5"
+                className="flex items-center justify-between rounded-full border border-white/15 bg-space-bg/40 px-5 py-2.5 text-sm font-semibold text-white/90 backdrop-blur-sm transition hover:bg-white/5"
               >
                 <span className="flex items-center gap-2">
                   <LogIn className="h-4 w-4" /> Entrar
