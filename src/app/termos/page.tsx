@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PublicHeader } from "@/components/public-header";
 import { PublicFooter } from "@/components/public-footer";
@@ -5,6 +6,7 @@ import { TermosToc, type TocItem } from "@/components/termos-toc";
 import { DocHeroPlanet } from "@/components/doc-hero-planet";
 import { Block, RenderBlock, p, bullets, checklist, iconGrid, h3, quote, info, hero, warn, fieldCard } from "@/components/legal-doc";
 import {
+  ArrowLeft,
   Globe,
   UserPlus,
   IdCard,
@@ -475,6 +477,13 @@ export default async function TermosPage() {
       <PublicHeader authed={!!user} />
 
       <main className="relative z-10 mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6">
+        <Link
+          href="/criar-conta"
+          className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-xs font-semibold text-white/70 transition hover:bg-white/5 hover:text-white"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Voltar para Criar conta
+        </Link>
+
         <div className="relative">
           <DocHeroPlanet />
           <p className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-white/30">
