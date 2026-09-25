@@ -198,10 +198,6 @@ export type Database = {
         Returns: void;
       };
       get_or_create_dm: { Args: { other_user_id: string }; Returns: string };
-      discoverable_profiles: {
-        Args: { limit_count?: number; search_query?: string | null };
-        Returns: { id: string; name: string; username: string; avatarUrl: string | null; bio: string | null; isVerified: boolean }[];
-      };
       my_badge_counts: { Args: Record<string, never>; Returns: { messages: number; friendRequests: number; notifications: number }[] };
       mark_conversation_read: { Args: { conversation_id: string }; Returns: undefined };
       mark_friend_requests_seen: { Args: Record<string, never>; Returns: undefined };
@@ -247,7 +243,6 @@ export type Database = {
       cancel_friend_request: { Args: { target_user_id: string }; Returns: string };
       remove_friend: { Args: { other_user_id: string }; Returns: string };
       friendship_state: { Args: { other_user_id: string }; Returns: string };
-      are_friends: { Args: { a: string; b: string }; Returns: boolean };
       search_profiles: {
         Args: { search_query: string; limit_count?: number; offset_count?: number };
         Returns: {
