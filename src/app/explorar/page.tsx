@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PublicHeader } from "@/components/public-header";
 import { NotifyMeButton } from "@/components/notify-me-button";
+import { PeopleResults, type PersonResult } from "@/components/people-results";
 import { Avatar } from "@/components/post-card";
 import { COMMUNITY_CATEGORIES, categoryLabel } from "@/lib/community-categories";
 import { timeAgo } from "@/lib/format";
@@ -110,6 +111,15 @@ export default async function ExplorarPage({
   if (tab === "para-voce") {
     const { data: pubPosts } = await supabase.rpc("public_posts", { limit_count: 10, search_query: null });
     posts = ((pubPosts as PublicPost[]) ?? []).filter((p) => p.authorUsername === "orbitax").slice(0, 1);
+  }
+
+  // People search runs in the database (search_profiles): every account, current or new,
+  // is found by name or @ as soon as it exists, respecting privacy and blocks.
+  const searchesPeople = q.length > 0 && (tab === "para-voce" || tab === "pessoas");
+  let people: PersonResult[] = [];
+  if (searchesPeople && user) {
+    const { data } = await supabase.rpc("search_profiles", { search_query: q, limit_count: 30 });
+    people = (data as PersonResult[] | null) ?? [];
   }
 
   const tabHref = (id: Tab) => `/explorar?tab=${id}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
@@ -267,6 +277,12 @@ export default async function ExplorarPage({
       </section>
 
       <main className="relative z-10 mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6">
+        {searchesPeople && (
+          <div className="mb-12">
+            <PeopleResults query={q} people={people} signedIn={!!user} />
+          </div>
+        )}
+
         {tab === "para-voce" && (
           <div className="space-y-12">
             <div>
@@ -318,7 +334,7 @@ export default async function ExplorarPage({
           </div>
         )}
 
-        {tab === "pessoas" && (
+        {tab === "pessoas" && !q && (
           <div className="space-y-10">
             <ComingSoonCard
               icon={Users}

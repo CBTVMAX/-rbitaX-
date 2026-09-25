@@ -89,13 +89,9 @@ export function MessengerApp({
       return;
     }
     const handle = setTimeout(async () => {
-      const { data } = await supabase
-        .from("User")
-        .select("id, name, username, avatarUrl, presence")
-        .ilike("username", `%${query.trim()}%`)
-        .neq("id", currentUserId)
-        .limit(8);
-      setResults(data ?? []);
+      // Same global search as Explorar: by name or @, respecting privacy and blocks.
+      const { data } = await supabase.rpc("search_profiles", { search_query: query, limit_count: 9 });
+      setResults((data ?? []).filter((u) => u.id !== currentUserId).slice(0, 8));
     }, 250);
     return () => clearTimeout(handle);
   }, [query, searchOpen, supabase, currentUserId]);

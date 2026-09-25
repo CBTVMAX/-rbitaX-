@@ -196,6 +196,20 @@ export type Database = {
         Args: { limit_count?: number; search_query?: string | null };
         Returns: { id: string; name: string; username: string; avatarUrl: string | null; bio: string | null; isVerified: boolean }[];
       };
+      search_profiles: {
+        Args: { search_query: string; limit_count?: number; offset_count?: number };
+        Returns: {
+          id: string;
+          name: string;
+          username: string;
+          avatarUrl: string | null;
+          bio: string | null;
+          isVerified: boolean;
+          isPrivate: boolean;
+          presence: string;
+          isFollowing: boolean;
+        }[];
+      };
       public_posts: {
         Args: { limit_count?: number; search_query?: string | null };
         Returns: {
