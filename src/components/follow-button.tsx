@@ -69,7 +69,7 @@ export function FollowButton({
         "rounded-full px-5 py-2 text-sm font-semibold transition disabled:opacity-50",
         following
           ? "border border-white/15 text-white/80 hover:bg-white/5"
-          : "bg-orbit-gradient text-white shadow-glow hover:opacity-90",
+          : "bg-orbit-gradient text-snow shadow-glow hover:opacity-90",
         className
       )}
     >

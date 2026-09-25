@@ -81,7 +81,7 @@ export function VideoComposer({ userId }: { userId: string }) {
       <button
         type="submit"
         disabled={busy || !file}
-        className="mt-3 rounded-full bg-orbit-gradient px-5 py-2 text-sm font-semibold text-white shadow-glow disabled:opacity-50"
+        className="mt-3 rounded-full bg-orbit-gradient px-5 py-2 text-sm font-semibold text-snow shadow-glow disabled:opacity-50"
       >
         {busy ? "Enviando..." : "Publicar vídeo"}
       </button>

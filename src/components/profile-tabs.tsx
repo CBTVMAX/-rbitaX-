@@ -28,9 +28,11 @@ const EMPTY_TEXT: Record<ProfileTabId, string> = {
 export function ProfileTabs({
   slots,
   aside,
+  accent = false,
 }: {
   slots: Partial<Record<ProfileTabId, React.ReactNode>>;
   aside?: React.ReactNode;
+  accent?: boolean;
 }) {
   const [active, setActive] = useState<ProfileTabId>("posts");
 
@@ -54,7 +56,14 @@ export function ProfileTabs({
             )}
           >
             {label}
-            {active === id && <span className="absolute inset-x-3 bottom-0 h-[3px] rounded-full bg-orbit-gradient" />}
+            {active === id && (
+              <span
+                className={clsx(
+                  "absolute inset-x-3 bottom-0 h-[3px] rounded-full",
+                  accent ? "bg-pa shadow-[0_0_10px_rgb(var(--pa)/0.7)]" : "bg-orbit-gradient"
+                )}
+              />
+            )}
           </button>
         ))}
       </div>

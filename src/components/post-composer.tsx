@@ -177,7 +177,7 @@ export function PostComposer({
           <button
             type="submit"
             disabled={posting || (!content.trim() && !file)}
-            className="hidden shrink-0 rounded-full bg-orbit-gradient px-7 py-2 text-sm font-semibold text-white shadow-glow transition hover:opacity-90 disabled:opacity-60 md:block"
+            className="hidden shrink-0 rounded-full bg-orbit-gradient px-7 py-2 text-sm font-semibold text-snow shadow-glow transition hover:opacity-90 disabled:opacity-60 md:block"
           >
             {posting ? "Publicando..." : "Publicar"}
           </button>
@@ -187,7 +187,7 @@ export function PostComposer({
           <button
             type="submit"
             disabled={posting}
-            className="mt-3 w-full rounded-full bg-orbit-gradient py-2 text-sm font-semibold text-white shadow-glow md:hidden"
+            className="mt-3 w-full rounded-full bg-orbit-gradient py-2 text-sm font-semibold text-snow shadow-glow md:hidden"
           >
             {posting ? "Publicando..." : "Publicar"}
           </button>
@@ -251,7 +251,7 @@ export function PostComposer({
         <button
           type="submit"
           disabled={posting || (!content.trim() && !file)}
-          className="rounded-full bg-orbit-gradient px-5 py-1.5 text-sm font-semibold text-white shadow-glow transition hover:opacity-90 disabled:opacity-40"
+          className="rounded-full bg-orbit-gradient px-5 py-1.5 text-sm font-semibold text-snow shadow-glow transition hover:opacity-90 disabled:opacity-40"
         >
           {posting ? "Publicando..." : "Publicar"}
         </button>

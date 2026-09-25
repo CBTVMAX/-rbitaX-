@@ -148,7 +148,7 @@ function Toggle({ checked, onChange, label, icon: Icon }: { checked: boolean; on
           checked ? "bg-orbit-gradient" : "bg-white/15"
         )}
       >
-        <span className={clsx("absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all", checked ? "left-[22px]" : "left-0.5")} />
+        <span className={clsx("absolute top-0.5 h-5 w-5 rounded-full bg-snow transition-all", checked ? "left-[22px]" : "left-0.5")} />
       </button>
     </div>
   );
@@ -408,7 +408,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
               onClick={() => avatarRef.current?.click()}
               disabled={uploading !== null}
               aria-label="Trocar foto de perfil"
-              className="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full bg-orbit-gradient text-white shadow-glow"
+              className="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full bg-orbit-gradient text-snow shadow-glow"
             >
               {uploading === "avatar" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
             </button>
@@ -629,7 +629,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
       <button
         type="submit"
         disabled={saving || uploading !== null}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orbit-gradient py-3.5 text-base font-semibold text-white shadow-glow transition hover:opacity-90 disabled:opacity-60"
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orbit-gradient py-3.5 text-base font-semibold text-snow shadow-glow transition hover:opacity-90 disabled:opacity-60"
       >
         {saving && <Loader2 className="h-5 w-5 animate-spin" />}
         {saving ? "Salvando..." : "Salvar alterações"}

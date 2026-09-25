@@ -144,7 +144,7 @@ export function MessengerApp({
           </div>
           <button
             onClick={() => setSearchOpen(true)}
-            className="rounded-full bg-orbit-gradient p-2 text-white shadow-glow"
+            className="rounded-full bg-orbit-gradient p-2 text-snow shadow-glow"
             title="Nova conversa"
           >
             <Search className="h-4 w-4" />
@@ -225,7 +225,7 @@ export function MessengerApp({
                     className={clsx(
                       "max-w-xs rounded-2xl px-3.5 py-2 text-sm",
                       m.senderId === currentUserId
-                        ? "bg-orbit-gradient text-white"
+                        ? "bg-orbit-gradient text-snow"
                         : "bg-white/10 text-white/90"
                     )}
                   >
@@ -243,7 +243,7 @@ export function MessengerApp({
                 placeholder="Escreva uma mensagem..."
                 className="flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white outline-none focus:border-orbit-purple"
               />
-              <button type="submit" className="rounded-full bg-orbit-gradient p-2.5 text-white shadow-glow">
+              <button type="submit" className="rounded-full bg-orbit-gradient p-2.5 text-snow shadow-glow">
                 <Send className="h-4 w-4" />
               </button>
             </form>

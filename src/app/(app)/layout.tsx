@@ -1,5 +1,8 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/current-user";
+import { APP_THEME_COOKIE, parseAppTheme } from "@/lib/app-theme";
+import { AppThemeSync } from "@/components/app-theme";
 import { AppSidebar, AppTopBar, MobileHeader, MobileTabBar } from "@/components/app-sidebar";
 
 export const dynamic = "force-dynamic";
@@ -9,9 +12,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!current) redirect("/entrar");
 
   const { profile } = current;
+  const theme = parseAppTheme(cookies().get(APP_THEME_COOKIE)?.value);
 
   return (
-    <div className="min-h-screen bg-space-bg bg-stars">
+    <div data-app-theme={theme} className="min-h-screen bg-space-bg bg-stars">
+      <AppThemeSync theme={theme} />
       <AppTopBar
         userId={current.authId}
         username={profile.username}

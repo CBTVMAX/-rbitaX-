@@ -12,6 +12,7 @@ import {
 } from "@/components/profile-client";
 import { presenceOf } from "@/lib/presence";
 import { relationshipLabel } from "@/lib/profile-options";
+import { hasCustomAccent, profileAccentStyle, profileColorHex, profileColorLabel } from "@/lib/profile-colors";
 import { PresenceDot, PresenceStatus } from "@/components/presence-picker";
 import {
   BadgeCheck,
@@ -27,6 +28,7 @@ import {
   MapPin,
   MessageCircle,
   Music2,
+  Palette,
   PenLine,
   Play,
   Plus,
@@ -81,6 +83,7 @@ function ProfileAvatar({
   userId,
   isMe,
   online,
+  accent,
   className,
 }: {
   name: string;
@@ -88,11 +91,18 @@ function ProfileAvatar({
   userId: string;
   isMe: boolean;
   online: boolean;
+  accent: boolean;
   className: string;
 }) {
   return (
     <div className={`relative shrink-0 ${className}`}>
-      <div className="h-full w-full rounded-full bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] p-[4px] shadow-[0_0_32px_rgba(139,92,246,0.45)]">
+      <div
+        className={`h-full w-full rounded-full p-[4px] ${
+          accent
+            ? "bg-pa shadow-[0_0_34px_rgb(var(--pa)/0.6)]"
+            : "bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] shadow-[0_0_32px_rgba(139,92,246,0.45)]"
+        }`}
+      >
         <div className="flex h-full w-full items-end justify-center overflow-hidden rounded-full border-4 border-space-bg bg-space-card">
           {url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -110,7 +120,7 @@ function ProfileAvatar({
           userId={userId}
           field="avatarUrl"
           ariaLabel="Alterar foto"
-          className="absolute bottom-[3%] right-[3%] flex h-10 w-10 items-center justify-center rounded-full border-2 border-orbit-purple bg-space-bg/90 text-white shadow-glow transition hover:bg-space-card md:h-12 md:w-12"
+          className="absolute bottom-[3%] right-[3%] flex h-10 w-10 items-center justify-center rounded-full border-2 border-pa bg-space-bg/90 text-white shadow-glow transition hover:bg-space-card md:h-12 md:w-12"
         >
           <Camera className="h-5 w-5" />
         </ProfileImageUpload>
@@ -140,6 +150,7 @@ export type ProfileViewProps = {
     presence: string;
     avatarUrl: string | null;
     coverUrl: string | null;
+    profileColor: string;
   };
   info: ProfileInfo | null | undefined;
   current: { authId: string; profile: { name: string; avatarUrl: string | null } } | null;
@@ -196,6 +207,7 @@ export function ProfileView({
 
   const presence = presenceOf(user.presence);
   const online = presence === "online";
+  const accent = hasCustomAccent(user.profileColor);
 
   const age = info?.birthDate && (isMe || info.showAge) ? ageFrom(info.birthDate) : null;
   const sign = info?.zodiacSign && (isMe || info.showSign) ? info.zodiacSign : null;
@@ -210,7 +222,7 @@ export function ProfileView({
     <>
       <div className="flex items-center gap-2">
         <h1 className="truncate font-display text-xl font-bold text-white md:text-2xl">{user.name}</h1>
-        {user.isVerified && <BadgeCheck className="h-5 w-5 shrink-0 text-orbit-blue" />}
+        {user.isVerified && <BadgeCheck className={`h-5 w-5 shrink-0 ${accent ? "text-pa" : "text-orbit-blue"}`} />}
       </div>
       <p className="mt-0.5 text-sm text-white/70">
         @{user.username}
@@ -262,7 +274,7 @@ export function ProfileView({
       {(interests.length > 0 || isMe) && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {interests.map((i) => (
-            <span key={i} className="rounded-lg border border-orbit-purple/50 bg-orbit-purple/10 px-3 py-1 text-xs text-white/85">
+            <span key={i} className="rounded-lg border border-pa/50 bg-pa/10 px-3 py-1 text-xs text-white/85">
               {i}
             </span>
           ))}
@@ -284,9 +296,27 @@ export function ProfileView({
   const editButton = (extra: string) => (
     <Link
       href="/configuracoes/conta"
-      className={`flex items-center justify-center rounded-xl bg-orbit-gradient text-sm font-semibold text-white shadow-glow transition hover:opacity-90 ${extra}`}
+      className={`flex items-center justify-center rounded-xl text-sm font-semibold transition ${
+        accent
+          ? "border border-pa bg-pa/15 text-white shadow-[0_0_22px_rgb(var(--pa)/0.35)] hover:bg-pa/25"
+          : "bg-orbit-gradient text-snow shadow-glow hover:opacity-90"
+      } ${extra}`}
     >
       Editar perfil
+    </Link>
+  );
+
+  const customizeButton = (compact: boolean) => (
+    <Link
+      href="/configuracoes/personalizar"
+      aria-label="Personalizar perfil"
+      title="Personalizar perfil"
+      className={`flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-space-bg/40 text-sm font-medium text-white transition hover:bg-white/5 ${
+        compact ? "h-11 w-11 shrink-0" : "px-4 py-2.5"
+      }`}
+    >
+      <Palette className={`h-4 w-4 ${accent ? "text-pa" : "text-orbit-purple"}`} />
+      {!compact && "Personalizar"}
     </Link>
   );
 
@@ -311,7 +341,7 @@ export function ProfileView({
       <p className="mt-2 text-sm text-white/65">Comece compartilhando sua primeira publicação.</p>
       <a
         href="#composer"
-        className="mt-6 inline-block rounded-full bg-orbit-gradient px-12 py-3 text-sm font-semibold text-white shadow-glow transition hover:opacity-90 md:px-14"
+        className="mt-6 inline-block rounded-full bg-orbit-gradient px-12 py-3 text-sm font-semibold text-snow shadow-glow transition hover:opacity-90 md:px-14"
       >
         Criar publicação
       </a>
@@ -388,7 +418,7 @@ export function ProfileView({
               <>
                 <span
                   className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                    done ? "bg-emerald-500/15 text-emerald-400" : "bg-orbit-gradient text-white"
+                    done ? "bg-emerald-500/15 text-emerald-400" : "bg-orbit-gradient text-snow"
                   }`}
                 >
                   {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
@@ -419,17 +449,27 @@ export function ProfileView({
       {isMe && (
         <SideCard title="Seu tema atual">
           <div className="flex items-center gap-3">
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-orbit-purple/40 bg-gradient-to-br from-orbit-blue/25 to-orbit-purple/25">
-              <Gem className="h-6 w-6 text-orbit-cyan" />
-            </span>
+            {accent ? (
+              <span
+                className="h-12 w-12 shrink-0 rounded-xl border border-pa/60 shadow-[0_0_16px_rgb(var(--pa)/0.45)]"
+                style={{ backgroundColor: profileColorHex(user.profileColor) }}
+              />
+            ) : (
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-orbit-purple/40 bg-gradient-to-br from-orbit-blue/25 to-orbit-purple/25">
+                <Gem className="h-6 w-6 text-orbit-cyan" />
+              </span>
+            )}
             <div>
-              <p className="text-sm font-medium text-white">Padrão Órbita X</p>
-              <p className="text-xs text-white/50">Tema escuro</p>
+              <p className="text-sm font-medium text-white">{accent ? "Órbita X" : "Padrão Órbita X"}</p>
+              <p className="text-xs text-white/50">Cor: {profileColorLabel(user.profileColor)}</p>
             </div>
           </div>
-          <button type="button" disabled title="Em breve" className={soonButton}>
-            Alterar tema
-          </button>
+          <Link
+            href="/configuracoes/personalizar"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-space-bg/40 py-2 text-xs font-medium text-white/80 transition hover:bg-white/5 hover:text-white"
+          >
+            <Palette className="h-3.5 w-3.5" /> Personalizar perfil
+          </Link>
         </SideCard>
       )}
       {isMe && (
@@ -498,7 +538,7 @@ export function ProfileView({
           <Link
             key={c.id}
             href={`/comunidades/${c.slug}`}
-            className="flex items-center gap-3 rounded-2xl border border-white/10 bg-space-surface/80 p-3 transition hover:border-orbit-purple/50"
+            className="flex items-center gap-3 rounded-2xl border border-white/10 bg-space-surface/80 p-3 transition hover:border-pa/50"
           >
             <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-space-card">
               {c.avatarUrl ? (
@@ -545,10 +585,10 @@ export function ProfileView({
         <Link
           key={f.id}
           href={`/perfil/${f.username}`}
-          className="flex flex-col items-center rounded-2xl border border-white/10 bg-space-surface/80 px-3 py-4 text-center transition hover:border-orbit-purple/50"
+          className="flex flex-col items-center rounded-2xl border border-white/10 bg-space-surface/80 px-3 py-4 text-center transition hover:border-pa/50"
         >
           <span className="relative">
-            <span className="flex h-16 w-16 items-end justify-center overflow-hidden rounded-full border-2 border-orbit-purple/60 bg-space-card">
+            <span className="flex h-16 w-16 items-end justify-center overflow-hidden rounded-full border-2 border-pa/60 bg-space-card">
               {f.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={f.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -584,8 +624,8 @@ export function ProfileView({
 
   const testimonialsEmpty = (
     <div className="rounded-2xl border border-white/10 bg-space-surface/80 px-6 py-12 text-center">
-      <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-orbit-purple/40 bg-orbit-purple/10">
-        <Quote className="h-6 w-6 text-orbit-purple" />
+      <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-pa/40 bg-pa/10">
+        <Quote className="h-6 w-6 text-pa" />
       </span>
       <p className="text-sm font-medium text-white/85">Nenhum depoimento ainda</p>
       <p className="mx-auto mt-1 max-w-sm text-xs text-white/50">
@@ -597,9 +637,13 @@ export function ProfileView({
   );
 
   return (
-    <div className="mx-auto flex max-w-[1240px] gap-5 px-3 pt-3 md:px-5 md:py-5">
+    <div className="mx-auto flex max-w-[1240px] gap-5 px-3 pt-3 md:px-5 md:py-5" style={profileAccentStyle(user.profileColor)}>
       <div className="min-w-0 flex-1 space-y-3 md:space-y-4">
-        <section className="rounded-2xl border border-white/10 bg-space-surface/80">
+        <section
+          className={`rounded-2xl border bg-space-surface/80 ${
+            accent ? "border-pa/40 shadow-[0_0_40px_rgb(var(--pa)/0.14)]" : "border-white/10"
+          }`}
+        >
           <div
             className={`relative overflow-hidden rounded-t-2xl ${
               !user.coverUrl && isMe ? "h-60 md:aspect-[8/3] md:h-auto" : "aspect-[8/3]"
@@ -609,15 +653,19 @@ export function ProfileView({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={user.coverUrl} alt="" className="h-full w-full object-cover" />
             ) : isMe ? (
-              <div className="flex h-full flex-col items-center justify-start border-b border-dashed border-white/15 bg-gradient-to-br from-orbit-blue/10 via-space-card to-orbit-purple/10 px-6 pt-6 text-center md:justify-center md:pb-4 md:pt-0">
-                <ImagePlus className="mb-3 h-9 w-9 text-orbit-blue/80" />
+              <div className={`flex h-full flex-col items-center justify-start border-b border-dashed border-white/15 bg-gradient-to-br ${accent ? "from-pa/20 via-space-card to-pa/5" : "from-orbit-blue/10 via-space-card to-orbit-purple/10"} px-6 pt-6 text-center md:justify-center md:pb-4 md:pt-0`}>
+                <ImagePlus className={`mb-3 h-9 w-9 ${accent ? "text-pa" : "text-orbit-blue/80"}`} />
                 <p className="text-sm font-semibold text-white">Adicione uma capa</p>
                 <p className="mt-1 max-w-xs text-xs text-white/55 md:max-w-none">
                   A capa é totalmente livre e pode ser qualquer imagem que você quiser.
                 </p>
               </div>
             ) : (
-              <div className="h-full bg-gradient-to-br from-orbit-blue/25 via-space-card to-orbit-purple/25" />
+              <div
+                className={`h-full bg-gradient-to-br ${
+                  accent ? "from-pa/35 via-space-card to-pa/15" : "from-orbit-blue/25 via-space-card to-orbit-purple/25"
+                }`}
+              />
             )}
             {isMe && (
               <ProfileImageUpload
@@ -633,7 +681,7 @@ export function ProfileView({
 
           {/* Desktop */}
           <div className="hidden gap-6 px-6 pb-5 md:flex">
-            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} isMe={isMe} online={online} className="-mt-24 h-44 w-44" />
+            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} isMe={isMe} online={online} accent={accent} className="-mt-24 h-44 w-44" />
             <div className="min-w-0 flex-1 pt-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">{identity}</div>
@@ -641,6 +689,7 @@ export function ProfileView({
                   {isMe ? (
                     <>
                       {editButton("px-6 py-2.5")}
+                      {customizeButton(false)}
                       <ShareProfileButton username={user.username} />
                     </>
                   ) : (
@@ -655,13 +704,14 @@ export function ProfileView({
 
           {/* Mobile */}
           <div className="px-4 pb-4 md:hidden">
-            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} isMe={isMe} online={online} className="-mt-12 h-28 w-28" />
+            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} isMe={isMe} online={online} accent={accent} className="-mt-12 h-28 w-28" />
             <div className="mt-3">{identity}</div>
             {bioAndMeta}
             <div className="mt-4 flex items-center gap-2">
               {isMe ? (
                 <>
                   {editButton("h-11 flex-1")}
+                  {customizeButton(true)}
                   <ShareProfileButton username={user.username} compact />
                 </>
               ) : (
@@ -682,6 +732,7 @@ export function ProfileView({
         {onboarding}
 
         <ProfileTabs
+          accent={accent}
           aside={aside}
           slots={{
             posts: (

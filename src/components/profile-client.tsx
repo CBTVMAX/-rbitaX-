@@ -18,6 +18,7 @@ import {
   LogOut,
   MessageCircle,
   MoreHorizontal,
+  Palette,
   PanelRightClose,
   PanelRightOpen,
   Pencil,
@@ -132,6 +133,9 @@ export function ProfileMoreMenu({
               <Link href="/configuracoes/conta" className={item}>
                 <Pencil className="h-4 w-4" /> Editar perfil
               </Link>
+              <Link href="/configuracoes/personalizar" className={item}>
+                <Palette className="h-4 w-4" /> Personalizar perfil
+              </Link>
               <ProfileImageUpload userId={userId} field="avatarUrl" ariaLabel="Alterar foto" className={item}>
                 <Camera className="h-4 w-4" /> Alterar foto
               </ProfileImageUpload>
@@ -168,7 +172,7 @@ export function ProfileMoreMenu({
                 <Archive className="h-4 w-4" /> Arquivo
               </span>
               {divider}
-              <Link href="/configuracoes/conta" className={item}>
+              <Link href="/configuracoes" className={item}>
                 <Settings className="h-4 w-4" /> Configurações
               </Link>
               <Link href="/configuracoes/conta" className={item}>

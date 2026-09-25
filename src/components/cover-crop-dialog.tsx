@@ -255,7 +255,7 @@ export function CoverCropDialog({
             type="button"
             onClick={confirm}
             disabled={!nat || saving}
-            className="flex items-center justify-center gap-2 rounded-xl bg-orbit-gradient px-6 py-2.5 text-sm font-semibold text-white shadow-glow disabled:opacity-60"
+            className="flex items-center justify-center gap-2 rounded-xl bg-orbit-gradient px-6 py-2.5 text-sm font-semibold text-snow shadow-glow disabled:opacity-60"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             {saving ? "Salvando..." : "Aplicar capa"}

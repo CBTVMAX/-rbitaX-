@@ -15,6 +15,64 @@ body {
   color: #e5e7f5;
 }
 
+/* App appearance (Configurações → Aparência). Only the logged-in app sets data-app-theme. */
+[data-app-theme="light"] {
+  --c-ink: 17 20 43;
+  --c-space-bg: 242 243 250;
+  --c-space-surface: 255 255 255;
+  --c-space-card: 234 236 246;
+  --c-space-border: 218 222 236;
+  --c-body: 30 34 62;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: light) {
+  [data-app-theme="auto"] {
+    --c-ink: 17 20 43;
+    --c-space-bg: 242 243 250;
+    --c-space-surface: 255 255 255;
+    --c-space-card: 234 236 246;
+    --c-space-border: 218 222 236;
+    --c-body: 30 34 62;
+    color-scheme: light;
+  }
+}
+[data-app-theme] {
+  color: rgb(var(--c-body, 229 231 245));
+}
+html[data-app-theme] body {
+  background-color: rgb(var(--c-space-bg, 5 6 15));
+  color: rgb(var(--c-body, 229 231 245));
+}
+.app-logo-light {
+  display: none;
+}
+[data-app-theme="light"] .app-logo-dark {
+  display: none;
+}
+[data-app-theme="light"] .app-logo-light {
+  display: block;
+}
+[data-app-theme="light"] .bg-stars {
+  background-image: none;
+}
+[data-app-theme="light"] .orbit-scrollbar::-webkit-scrollbar-thumb {
+  background: #cdd2e5;
+}
+@media (prefers-color-scheme: light) {
+  [data-app-theme="auto"] .app-logo-dark {
+    display: none;
+  }
+  [data-app-theme="auto"] .app-logo-light {
+    display: block;
+  }
+  [data-app-theme="auto"] .bg-stars {
+    background-image: none;
+  }
+  [data-app-theme="auto"] .orbit-scrollbar::-webkit-scrollbar-thumb {
+    background: #cdd2e5;
+  }
+}
+
 .bg-stars {
   background-image:
     radial-gradient(circle at 10% 20%, rgba(255,255,255,0.9) 0.5px, transparent 0.5px),

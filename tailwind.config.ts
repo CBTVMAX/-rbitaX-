@@ -5,12 +5,19 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Inside the logged-in app these follow the chosen appearance (Escuro/Claro/Automático):
+        // "white" is the foreground ink and "space-*" the surfaces. Without the variables
+        // (public pages) they resolve to the original dark palette.
+        white: "rgb(var(--c-ink, 255 255 255) / <alpha-value>)",
+        snow: "#ffffff", // always white, for text on colored or gradient backgrounds
         space: {
-          bg: "#05060f",
-          surface: "#0b0e1c",
-          card: "#11152a",
-          border: "#1f2542",
+          bg: "rgb(var(--c-space-bg, 5 6 15) / <alpha-value>)",
+          surface: "rgb(var(--c-space-surface, 11 14 28) / <alpha-value>)",
+          card: "rgb(var(--c-space-card, 17 21 42) / <alpha-value>)",
+          border: "rgb(var(--c-space-border, 31 37 66) / <alpha-value>)",
         },
+        // Accent of the profile being viewed (Personalizar perfil → Cor do perfil).
+        pa: "rgb(var(--pa, 139 92 246) / <alpha-value>)",
         orbit: {
           blue: "#2b6cff",
           cyan: "#22d3ee",

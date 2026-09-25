@@ -5,7 +5,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
-import { OrbitWordmarkImage } from "@/components/orbit-logo";
+import { OrbitWordmarkThemed } from "@/components/orbit-logo";
 import { PresenceDot, PresenceList } from "@/components/presence-picker";
 import {
   Bell,
@@ -129,7 +129,7 @@ export function AppTopBar({
   return (
     <header className="fixed inset-x-0 top-0 z-30 hidden h-16 items-center border-b border-white/10 bg-space-bg/90 backdrop-blur md:flex">
       <Link href="/feed" className="flex w-64 shrink-0 items-center px-5">
-        <OrbitWordmarkImage className="h-10 w-auto" />
+        <OrbitWordmarkThemed className="h-10 w-auto" />
       </Link>
 
       <SearchBox className="w-full max-w-sm lg:max-w-md" />
@@ -174,7 +174,7 @@ export function AppTopBar({
             <Link href={`/perfil/${username}`} className="flex items-center gap-2 px-4 py-2.5 text-sm text-white/80 hover:bg-white/5">
               <UserRound className="h-4 w-4" /> Meu perfil
             </Link>
-            <Link href="/configuracoes/conta" className="flex items-center gap-2 px-4 py-2.5 text-sm text-white/80 hover:bg-white/5">
+            <Link href="/configuracoes" className="flex items-center gap-2 px-4 py-2.5 text-sm text-white/80 hover:bg-white/5">
               <Settings className="h-4 w-4" /> Configurações
             </Link>
             <button
@@ -231,7 +231,7 @@ export function AppSidebar({ username }: { username: string; name: string; avata
             <Link href="/notificacoes" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white">
               <Bell className="h-4 w-4" /> Notificações
             </Link>
-            <Link href="/configuracoes/conta" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white">
+            <Link href="/configuracoes" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white">
               <Settings className="h-4 w-4" /> Configurações
             </Link>
             <button
@@ -254,7 +254,7 @@ export function AppSidebar({ username }: { username: string; name: string; avata
           type="button"
           disabled
           title="Em breve"
-          className="mt-3 w-full rounded-xl bg-orbit-gradient py-2 text-sm font-semibold text-white shadow-glow disabled:cursor-default"
+          className="mt-3 w-full rounded-xl bg-orbit-gradient py-2 text-sm font-semibold text-snow shadow-glow disabled:cursor-default"
         >
           Comprar Coins
         </button>
@@ -270,7 +270,7 @@ export function MobileHeader({ userId, username, presence }: { userId: string; u
     <header className="sticky top-0 z-30 border-b border-white/10 bg-space-bg/90 backdrop-blur md:hidden">
       <div className="flex h-14 items-center justify-between px-4">
         <Link href="/feed">
-          <OrbitWordmarkImage className="h-8 w-auto" />
+          <OrbitWordmarkThemed className="h-8 w-auto" />
         </Link>
         <div className="flex items-center gap-4 text-white">
           <Link href="/explorar" aria-label="Pesquisar">
@@ -313,7 +313,7 @@ export function MobileHeader({ userId, username, presence }: { userId: string; u
             )
           )}
           <Link
-            href="/configuracoes/conta"
+            href="/configuracoes"
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/80 hover:bg-white/5"
           >
@@ -365,7 +365,7 @@ export function MobileTabBar({ username }: { username: string }) {
         <Link
           href={`/perfil/${username}#composer`}
           aria-label="Criar publicação"
-          className="-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-orbit-gradient text-white shadow-glow"
+          className="-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-orbit-gradient text-snow shadow-glow"
         >
           <Plus className="h-7 w-7" />
         </Link>

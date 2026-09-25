@@ -208,7 +208,7 @@ export function PostCard({
               placeholder="Escreva um comentário..."
               className="flex-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white outline-none focus:border-orbit-purple"
             />
-            <button type="submit" className="rounded-full bg-orbit-gradient px-3 py-1.5 text-xs font-semibold text-white">
+            <button type="submit" className="rounded-full bg-orbit-gradient px-3 py-1.5 text-xs font-semibold text-snow">
               Enviar
             </button>
           </form>
@@ -222,7 +222,7 @@ export function Avatar({ name, url, size = 40 }: { name: string; url: string | n
   return (
     <div
       style={{ width: size, height: size }}
-      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-orbit-gradient text-[11px] font-bold text-white"
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-orbit-gradient text-[11px] font-bold text-snow"
     >
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element

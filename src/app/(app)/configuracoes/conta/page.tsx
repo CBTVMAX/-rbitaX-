@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Eye } from "lucide-react";
+import { ArrowLeft, Eye, Palette } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { AccountSettingsForm } from "@/components/account-settings-form";
@@ -39,6 +39,13 @@ export default async function AccountSettingsPage() {
             Atualize suas informações e personalize seu perfil no Órbita X.
           </p>
         </div>
+        <Link
+          href="/configuracoes/personalizar"
+          aria-label="Personalizar perfil"
+          className="flex items-center gap-2 rounded-xl border border-white/15 p-2.5 text-sm font-medium text-white transition hover:bg-white/5 lg:px-4"
+        >
+          <Palette className="h-4 w-4 text-orbit-purple" /> <span className="hidden lg:inline">Personalizar perfil</span>
+        </Link>
         <Link
           href={`/perfil/${user.username}`}
           className="hidden items-center gap-2 rounded-xl border border-orbit-purple/60 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-orbit-purple/10 lg:flex"

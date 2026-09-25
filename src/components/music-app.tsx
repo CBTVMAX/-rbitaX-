@@ -110,7 +110,7 @@ export function MusicApp({ userId, initialTracks }: { userId: string; initialTra
         <button
           type="submit"
           disabled={uploading}
-          className="mt-3 rounded-full bg-orbit-gradient px-5 py-2 text-sm font-semibold text-white shadow-glow disabled:opacity-50"
+          className="mt-3 rounded-full bg-orbit-gradient px-5 py-2 text-sm font-semibold text-snow shadow-glow disabled:opacity-50"
         >
           {uploading ? "Enviando..." : "Publicar faixa"}
         </button>
@@ -126,7 +126,7 @@ export function MusicApp({ userId, initialTracks }: { userId: string; initialTra
           <div key={t.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-space-card p-3">
             <button
               onClick={() => togglePlay(t)}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-orbit-gradient text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-orbit-gradient text-snow"
             >
               {playingId === t.id ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
             </button>
@@ -144,7 +144,7 @@ export function MusicApp({ userId, initialTracks }: { userId: string; initialTra
           <div className="mx-auto flex max-w-3xl items-center gap-3">
             <button
               onClick={() => togglePlay(nowPlaying)}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-orbit-gradient text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-orbit-gradient text-snow"
             >
               <Pause className="h-4 w-4" />
             </button>

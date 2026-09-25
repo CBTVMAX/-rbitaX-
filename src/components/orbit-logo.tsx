@@ -31,6 +31,26 @@ export function OrbitWordmarkImage({ className }: { className?: string }) {
   );
 }
 
+/** Wordmark for the logged-in app: switches to the light-mode version with the app appearance. */
+export function OrbitWordmarkThemed({ className }: { className?: string }) {
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/orbit-wordmark.webp"
+        alt="ÓrbitaX — Seu universo em conexão"
+        className={clsx("app-logo-dark object-contain", className)}
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/orbit-wordmark-light.webp"
+        alt="ÓrbitaX — Seu universo em conexão"
+        className={clsx("app-logo-light object-contain", className)}
+      />
+    </>
+  );
+}
+
 export function OrbitLockup({ className }: { className?: string }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
