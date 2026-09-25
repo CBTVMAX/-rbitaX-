@@ -31,6 +31,8 @@ import {
   Plus,
 } from "lucide-react";
 import { clsx } from "clsx";
+import { AppAccentSync } from "@/components/app-theme";
+import { appAccentVars } from "@/lib/profile-colors";
 import type { LucideIcon } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -90,6 +92,10 @@ export default async function ExplorarPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  // Signed-in members see Explorar in their own color (visitors keep the default look).
+  const accent = user
+    ? appAccentVars((await supabase.from("User").select("profileColor").eq("id", user.id).maybeSingle()).data?.profileColor)
+    : undefined;
 
   const q = (searchParams.q ?? "").trim();
   const tab: Tab = (["para-voce", "pessoas", "publicacoes", "comunidades", "musica"] as Tab[]).includes(
@@ -180,7 +186,8 @@ export default async function ExplorarPage({
   const heroImg = HERO_ILLUSTRATION[tab];
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-space-bg bg-stars">
+    <div className="relative min-h-screen overflow-hidden bg-space-bg bg-stars" style={accent as React.CSSProperties | undefined}>
+      <AppAccentSync vars={accent} />
       <div className="pointer-events-none absolute inset-0 bg-orbit-radial" />
 
       <section

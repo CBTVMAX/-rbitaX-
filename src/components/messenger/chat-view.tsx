@@ -910,7 +910,7 @@ export function ChatView({
             type: "contact",
             content: "",
             attachments: [],
-            meta: { userId: u.id, name: u.name, username: u.username, avatarUrl: u.avatarUrl },
+            meta: { userId: u.id, name: u.name, username: u.username, avatarUrl: u.avatarUrl, avatarFrame: u.avatarFrame ?? null },
             uploads: [],
           });
         }}

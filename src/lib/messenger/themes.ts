@@ -19,11 +19,13 @@ export type ChatTheme = {
 
 export const CHAT_THEMES: ChatTheme[] = [
   {
+    // Follows the member's profile color (Personalizar perfil → Cor do perfil).
     id: "padrao",
     label: "Escuro Padrão",
-    accent: "139 92 246",
-    bubble: "linear-gradient(135deg, #2b6cff 0%, #8b5cf6 55%, #ec4899 100%)",
-    glow: ["79 139 255", "168 85 247"],
+    accent: "var(--app-accent, 139 92 246)",
+    bubble:
+      "linear-gradient(135deg, rgb(var(--app-accent-a, 43 108 255)) 0%, rgb(var(--app-accent, 139 92 246)) 55%, rgb(var(--app-accent-b, 236 72 153)) 100%)",
+    glow: ["var(--app-accent-a, 79 139 255)", "var(--app-accent, 168 85 247)"],
   },
   {
     id: "nebulosa",

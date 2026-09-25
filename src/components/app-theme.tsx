@@ -35,3 +35,17 @@ export function useAppTheme(initial: AppTheme) {
 
   return { theme, change };
 }
+
+const ACCENT_VARS = ["--app-accent", "--app-accent-a", "--app-accent-b"];
+
+/** Mirrors the member's color on <html> so dialogs, sheets and the phone chat (portals) use it too. */
+export function AppAccentSync({ vars }: { vars: Record<string, string> | undefined }) {
+  const key = JSON.stringify(vars ?? null);
+  useEffect(() => {
+    const root = document.documentElement.style;
+    const values: Record<string, string> | null = JSON.parse(key);
+    ACCENT_VARS.forEach((v) => (values?.[v] ? root.setProperty(v, values[v]) : root.removeProperty(v)));
+    return () => ACCENT_VARS.forEach((v) => root.removeProperty(v));
+  }, [key]);
+  return null;
+}

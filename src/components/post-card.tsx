@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo, initials } from "@/lib/format";
-import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff } from "lucide-react";
+import { BadgeCheck, Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff } from "lucide-react";
 import { clsx } from "clsx";
 
 export type FeedPost = {
@@ -121,6 +121,7 @@ export function PostCard({
         <div className="min-w-0">
           <Link href={`/perfil/${post.author.username}`} className="flex items-center gap-1 text-sm font-semibold text-white hover:underline">
             {post.author.name}
+            {post.author.isVerified && <BadgeCheck className="h-4 w-4 shrink-0 text-orbit-cyan" aria-label="Verificado" />}
           </Link>
           <p className="text-xs text-white/40">
             @{post.author.username} · {timeAgo(post.createdAt)}

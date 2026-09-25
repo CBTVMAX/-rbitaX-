@@ -92,7 +92,7 @@ export function FriendPicker({
                 onClick={() => onToggle(f)}
                 className="flex w-full items-center gap-3 rounded-2xl px-2 py-2 text-left transition hover:bg-white/[0.05]"
               >
-                <ChatAvatar name={f.name} url={f.avatarUrl} size={42} presence={f.presence ?? "offline"} ringClass="border-space-surface" />
+                <ChatAvatar name={f.name} url={f.avatarUrl} size={42} presence={f.presence ?? "offline"} frame={f.avatarFrame} ringClass="border-space-surface" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium text-white">{f.name}</span>
                   <span className="block truncate text-xs text-white/45">@{f.username}</span>

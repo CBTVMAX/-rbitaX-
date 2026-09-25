@@ -125,7 +125,7 @@ export function ConversationList({
                 className={clsx(
                   "flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-medium transition",
                   on
-                    ? "bg-orbit-gradient text-snow shadow-[0_0_16px_rgba(139,92,246,0.35)]"
+                    ? "bg-orbit-gradient text-snow shadow-[0_0_16px_rgb(var(--app-accent,139_92_246)/0.35)]"
                     : "border border-white/10 text-white/60 hover:border-white/20 hover:text-white"
                 )}
               >
@@ -148,7 +148,7 @@ export function ConversationList({
         </div>
       )}
 
-      <div className="orbit-scrollbar min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 pb-4">
+      <div className="orbit-scrollbar min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 pb-4 pt-1">
         {conversations.length === 0 ? (
           <EmptyUniverse onFind={onNew} compact />
         ) : visible.length === 0 ? (

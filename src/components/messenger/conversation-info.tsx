@@ -467,7 +467,7 @@ function MemberRow({ m, c, onChanged }: { m: Member; c: Conversation; onChanged:
   return (
     <div className="relative flex items-center gap-3 py-1.5">
       <Link href={`/perfil/${m.username}`} className="flex min-w-0 flex-1 items-center gap-3">
-        <ChatAvatar name={m.name} url={m.avatarUrl} size={38} presence={m.presence ?? "offline"} ringClass="border-space-surface" />
+        <ChatAvatar name={m.name} url={m.avatarUrl} size={38} presence={m.presence ?? "offline"} frame={m.avatarFrame} ringClass="border-space-surface" />
         <span className="min-w-0">
           <span className="block truncate text-sm font-medium text-white">
             {isMe ? "Você" : m.name}

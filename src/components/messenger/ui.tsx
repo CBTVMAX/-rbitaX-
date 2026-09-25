@@ -27,39 +27,44 @@ export function ChatAvatar({
   ringClass?: string;
 }) {
   const f = frame ? getFrame(frame) : null;
+  // Small avatars with a frame: the photo shrinks a little so the frame fits the same spot.
+  const photo = f && size <= 56 ? Math.round(size * 0.8) : size;
   return (
-    <span className="relative inline-flex shrink-0" style={{ width: size, height: size }}>
-      {f && <span aria-hidden className="pointer-events-none absolute -inset-[30%]" style={frameBackdropStyle(f)} />}
-      <span
-        className={clsx(
-          "relative flex h-full w-full items-center justify-center overflow-hidden rounded-full font-semibold text-snow",
-          group ? "bg-gradient-to-br from-orbit-blue/80 via-orbit-purple/80 to-orbit-pink/70" : "bg-orbit-gradient"
-        )}
-        style={{ fontSize: Math.max(11, size * 0.34) }}
-      >
-        {url ? (
+    <span className="relative inline-flex shrink-0 items-center justify-center" style={{ width: size, height: size }}>
+      <span className="relative inline-flex shrink-0" style={{ width: photo, height: photo }}>
+        {f && <span aria-hidden className="pointer-events-none absolute -inset-[30%]" style={frameBackdropStyle(f)} />}
+        <span
+          className={clsx(
+            "relative flex h-full w-full items-center justify-center overflow-hidden rounded-full font-semibold text-snow",
+            group ? "bg-gradient-to-br from-orbit-blue/80 via-orbit-purple/80 to-orbit-pink/70" : "bg-orbit-gradient"
+          )}
+          style={{ fontSize: Math.max(10, photo * 0.34) }}
+        >
+          {url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={url} alt="" loading="lazy" className="h-full w-full object-cover" />
+          ) : group ? (
+            <Users style={{ width: photo * 0.45, height: photo * 0.45 }} />
+          ) : (
+            initials(name) || "?"
+          )}
+        </span>
+        {f && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt="" loading="lazy" className="h-full w-full object-cover" />
-        ) : group ? (
-          <Users style={{ width: size * 0.45, height: size * 0.45 }} />
-        ) : (
-          initials(name) || "?"
+          <img
+            src={frameSrc(f.id)}
+            alt=""
+            aria-hidden
+            loading="lazy"
+            className="pointer-events-none absolute -inset-[30%] h-[160%] w-[160%] max-w-none select-none"
+          />
         )}
       </span>
-      {f && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={frameSrc(f.id)}
-          alt=""
-          aria-hidden
-          className="pointer-events-none absolute -inset-[30%] h-[160%] w-[160%] max-w-none select-none"
-        />
-      )}
       {presence !== undefined && !group && (
         <PresenceDot
           value={presence}
           className={clsx(
-            "absolute bottom-0 right-0 border-2",
+            "absolute bottom-0 right-0 z-[1] border-2",
             size >= 64 ? "h-4 w-4" : size >= 40 ? "h-3.5 w-3.5" : "h-3 w-3",
             ringClass
           )}
@@ -79,6 +84,7 @@ export function ConversationAvatar({ c, size = 48, ringClass }: { c: Conversatio
       url={c.otherUser?.avatarUrl}
       size={size}
       presence={c.otherUser?.presence ?? "offline"}
+      frame={c.otherUser?.avatarFrame}
       ringClass={ringClass}
     />
   );

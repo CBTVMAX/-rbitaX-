@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { AppSidebar, MobileTabBar } from "@/components/app-sidebar";
+import { AppAccentSync } from "@/components/app-theme";
+import { appAccentVars } from "@/lib/profile-colors";
 import { PublicHeader } from "@/components/public-header";
 import { CommunityJoinButton } from "@/components/community-join-button";
 import { Avatar } from "@/components/post-card";
@@ -94,8 +96,10 @@ export default async function CommunityDetailPage({ params }: { params: { slug: 
 
   if (current) {
     const { profile } = current;
+    const accent = appAccentVars(profile.profileColor);
     return (
-      <div className="min-h-screen bg-space-bg bg-stars">
+      <div className="min-h-screen bg-space-bg bg-stars" style={accent as React.CSSProperties | undefined}>
+        <AppAccentSync vars={accent} />
         <AppSidebar username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} />
         <main className="min-h-screen pb-20 md:ml-64 md:pb-0">{content}</main>
         <MobileTabBar username={profile.username} />

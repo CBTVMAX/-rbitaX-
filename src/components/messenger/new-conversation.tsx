@@ -40,7 +40,7 @@ function PersonRow({ u, onChat }: { u: Result; onChat: (u: ChatUser) => void }) 
   return (
     <div className="flex items-center gap-3 rounded-2xl px-2 py-2 transition hover:bg-white/[0.04]">
       <Link href={`/perfil/${u.username}`} className="flex min-w-0 flex-1 items-center gap-3">
-        <ChatAvatar name={u.name} url={u.avatarUrl} size={44} presence={u.presence ?? "offline"} ringClass="border-space-surface" />
+        <ChatAvatar name={u.name} url={u.avatarUrl} size={44} presence={u.presence ?? "offline"} frame={u.avatarFrame} ringClass="border-space-surface" />
         <span className="min-w-0">
           <span className="block truncate text-sm font-medium text-white">{u.name}</span>
           <span className="block truncate text-xs text-white/45">@{u.username}</span>
@@ -109,7 +109,14 @@ export function NewConversationDialog({ open, onClose }: { open: boolean; onClos
     setSearching(true);
     const t = setTimeout(async () => {
       const { data } = await supabase.rpc("search_profiles", { search_query: q, limit_count: 20 });
-      setResults(((data ?? []) as Result[]).filter((u) => u.id !== me.id));
+      const list = ((data ?? []) as Result[]).filter((u) => u.id !== me.id);
+      // Frames chosen in Personalizar perfil show around the photos here too.
+      if (list.length) {
+        const { data: frames } = await supabase.from("User").select("id, avatarFrame").in("id", list.map((u) => u.id));
+        const byId = new Map((frames ?? []).map((f) => [f.id, f.avatarFrame]));
+        list.forEach((u) => (u.avatarFrame = byId.get(u.id) ?? null));
+      }
+      setResults(list);
       setSearching(false);
     }, 250);
     return () => clearTimeout(t);

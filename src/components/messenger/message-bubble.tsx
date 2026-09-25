@@ -209,7 +209,7 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
     >
       {showAvatarColumn && (
         <span className="w-8 shrink-0 self-end">
-          {lastInRun && sender && <ChatAvatar name={sender.name} url={sender.avatarUrl} size={32} />}
+          {lastInRun && sender && <ChatAvatar name={sender.name} url={sender.avatarUrl} size={32} frame={sender.avatarFrame} />}
         </span>
       )}
 

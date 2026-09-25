@@ -20,17 +20,19 @@ const config: Config = {
         pa: "rgb(var(--pa, 139 92 246) / <alpha-value>)",
         // Accent of the open conversation (Messenger → Tema da conversa).
         chat: "rgb(var(--chat-accent, 139 92 246) / <alpha-value>)",
+        // Inside the app these follow the member's color (Personalizar perfil → Cor do perfil);
+        // without it (default color, public pages) they are the original ÓrbitaX palette.
         orbit: {
-          blue: "#2b6cff",
+          blue: "rgb(var(--app-accent-a, 43 108 255) / <alpha-value>)",
           cyan: "#22d3ee",
-          purple: "#8b5cf6",
-          pink: "#ec4899",
+          purple: "rgb(var(--app-accent, 139 92 246) / <alpha-value>)",
+          pink: "rgb(var(--app-accent-b, 236 72 153) / <alpha-value>)",
         },
       },
       backgroundImage: {
-        "orbit-gradient": "linear-gradient(135deg, #2b6cff 0%, #8b5cf6 55%, #ec4899 100%)",
-        "chat-bubble": "var(--chat-bubble, linear-gradient(135deg, #2b6cff 0%, #8b5cf6 55%, #ec4899 100%))",
-        "orbit-radial": "radial-gradient(circle at 30% 20%, rgba(139,92,246,0.25), transparent 60%)",
+        "orbit-gradient": "linear-gradient(135deg, rgb(var(--app-accent-a, 43 108 255)) 0%, rgb(var(--app-accent, 139 92 246)) 55%, rgb(var(--app-accent-b, 236 72 153)) 100%)",
+        "chat-bubble": "var(--chat-bubble, linear-gradient(135deg, rgb(var(--app-accent-a, 43 108 255)) 0%, rgb(var(--app-accent, 139 92 246)) 55%, rgb(var(--app-accent-b, 236 72 153)) 100%))",
+        "orbit-radial": "radial-gradient(circle at 30% 20%, rgb(var(--app-accent, 139 92 246) / 0.25), transparent 60%)",
       },
       fontFamily: {
         display: ["var(--font-space-grotesk)", "sans-serif"],
@@ -38,7 +40,7 @@ const config: Config = {
         script: ["var(--font-caveat)", "cursive"],
       },
       boxShadow: {
-        glow: "0 0 40px rgba(139,92,246,0.35)",
+        glow: "0 0 40px rgb(var(--app-accent, 139 92 246) / 0.35)",
       },
     },
   },

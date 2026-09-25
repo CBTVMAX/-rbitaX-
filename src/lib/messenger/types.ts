@@ -43,6 +43,7 @@ export type MessageMeta = {
   name?: string;
   username?: string;
   avatarUrl?: string | null;
+  avatarFrame?: string | null;
   question?: string;
   options?: string[];
   multiple?: boolean;

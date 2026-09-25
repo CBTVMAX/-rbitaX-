@@ -451,11 +451,11 @@ export function LocationCard({ message, mine }: { message: ChatMessage; mine: bo
 }
 
 export function ContactCard({ message, mine }: { message: ChatMessage; mine: boolean }) {
-  const { name = "Contato", username, avatarUrl } = message.meta;
+  const { name = "Contato", username, avatarUrl, avatarFrame } = message.meta;
   return (
     <div className="w-[min(260px,64vw)] p-1">
       <div className="flex items-center gap-3">
-        <ChatAvatar name={name} url={avatarUrl} size={46} />
+        <ChatAvatar name={name} url={avatarUrl} size={46} frame={avatarFrame} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold">{name}</span>
           {username && <span className={clsx("block truncate text-xs", mine ? "text-snow/70" : "text-white/50")}>@{username}</span>}

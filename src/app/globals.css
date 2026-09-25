@@ -106,7 +106,7 @@ html[data-app-theme] body {
 }
 
 .orbit-text-gradient {
-  background: linear-gradient(135deg, #4f8bff 0%, #a855f7 55%, #f472b6 100%);
+  background: linear-gradient(135deg, rgb(var(--app-accent-a, 79 139 255)) 0%, rgb(var(--app-accent, 168 85 247)) 55%, rgb(var(--app-accent-b, 244 114 182)) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

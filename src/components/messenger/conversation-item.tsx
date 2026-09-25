@@ -96,7 +96,7 @@ export const ConversationItem = memo(function ConversationItem({
             <span
               className={clsx(
                 "flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold leading-none text-snow",
-                muted ? "bg-white/25" : "bg-orbit-gradient shadow-[0_0_10px_rgba(139,92,246,0.5)]"
+                muted ? "bg-white/25" : "bg-orbit-gradient shadow-[0_0_10px_rgb(var(--app-accent,139_92_246)/0.5)]"
               )}
               aria-label={`${c.unread} não lidas`}
             >

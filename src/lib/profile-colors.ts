@@ -48,3 +48,46 @@ export function profileAccentStyle(value: string | null | undefined): CSSPropert
 export function hasCustomAccent(value: string | null | undefined) {
   return !!value && value !== DEFAULT_PROFILE_COLOR;
 }
+
+function hexToHsl(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1), 16);
+  const r = ((n >> 16) & 255) / 255;
+  const g = ((n >> 8) & 255) / 255;
+  const b = (n & 255) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l * 100];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  const h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s * 100, l * 100];
+}
+
+function hslToChannels(h: number, s: number, l: number) {
+  const hh = ((h % 360) + 360) % 360;
+  const ss = Math.max(0, Math.min(100, s)) / 100;
+  const ll = Math.max(0, Math.min(100, l)) / 100;
+  const k = (n: number) => (n + hh / 30) % 12;
+  const a = ss * Math.min(ll, 1 - ll);
+  const f = (n: number) => Math.round(255 * (ll - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)))));
+  return `${f(0)} ${f(8)} ${f(4)}`;
+}
+
+/**
+ * The member's color applied to the whole logged-in app (buttons, gradients, highlights, Messenger).
+ * One color becomes a three-tone palette, like the original blue → purple → pink:
+ * `--app-accent` (the chosen color) with neighbours a bit cooler (`-a`) and warmer (`-b`).
+ * Returns undefined for the default color, so the original ÓrbitaX palette stays untouched.
+ */
+export function appAccentVars(value: string | null | undefined): Record<string, string> | undefined {
+  if (!hasCustomAccent(value)) return undefined;
+  const hex = profileColorHex(value);
+  const [h, s, l] = hexToHsl(hex);
+  const sat = Math.max(s, 55);
+  return {
+    "--app-accent": hexToChannels(hex),
+    "--app-accent-a": hslToChannels(h - 26, sat, Math.max(38, l - 6)),
+    "--app-accent-b": hslToChannels(h + 26, sat, Math.min(68, l + 6)),
+  };
+}
