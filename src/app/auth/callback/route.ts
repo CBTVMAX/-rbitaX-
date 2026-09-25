@@ -11,18 +11,11 @@ export async function GET(request: Request) {
     const { data } = await supabase.auth.exchangeCodeForSession(code);
 
     if (data.user) {
-      const { data: profile } = await supabase
-        .from("Profile")
-        .select("birthDate, gender")
-        .eq("userId", data.user.id)
-        .single();
-      const { data: user } = await supabase
-        .from("User")
-        .select("termsAcceptedAt, privacyAcceptedAt")
-        .eq("id", data.user.id)
-        .single();
+      const { data: rows } = await supabase.rpc("my_account_details");
+      const account = Array.isArray(rows) ? rows[0] : null;
 
-      const incomplete = !profile?.birthDate || !profile?.gender || !user?.termsAcceptedAt || !user?.privacyAcceptedAt;
+      const incomplete =
+        !account?.birthDate || !account?.gender || !account?.termsAcceptedAt || !account?.privacyAcceptedAt;
       if (incomplete) {
         return NextResponse.redirect(`${origin}/completar-cadastro`);
       }

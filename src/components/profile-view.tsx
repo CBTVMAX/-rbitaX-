@@ -44,7 +44,8 @@ import {
 } from "lucide-react";
 
 export type ProfileInfo = {
-  birthDate: string | null;
+  /** Already hidden (null) by the database when the owner chose not to show it. */
+  age: number | null;
   location: string | null;
   zodiacSign: string | null;
   showAge: boolean;
@@ -62,15 +63,6 @@ export function parseInterests(raw: string | null | undefined) {
     .split(",")
     .map((i) => i.trim())
     .filter(Boolean);
-}
-
-function ageFrom(birthDate: string) {
-  const b = new Date(birthDate);
-  const now = new Date();
-  let age = now.getFullYear() - b.getFullYear();
-  const m = now.getMonth() - b.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age--;
-  return age;
 }
 
 function Silhouette({ className }: { className?: string }) {
@@ -242,7 +234,7 @@ export function ProfileView({
   const accent = hasCustomAccent(user.profileColor);
   const frame = getFrame(user.avatarFrame);
 
-  const age = info?.birthDate && (isMe || info.showAge) ? ageFrom(info.birthDate) : null;
+  const age = info?.age ?? null;
   const sign = info?.zodiacSign && (isMe || info.showSign) ? info.zodiacSign : null;
   const location = info?.location && (isMe || info.showLocation) ? info.location : null;
   const interests = isMe || info?.showInterests !== false ? parseInterests(info?.interests) : [];

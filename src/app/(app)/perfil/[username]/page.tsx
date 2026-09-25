@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { parseFriendState } from "@/lib/friends";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUser } from "@/lib/current-user";
+import { getCurrentUser, PUBLIC_USER_COLUMNS } from "@/lib/current-user";
 import type { FeedPost } from "@/components/post-card";
 import {
   ProfileView,
@@ -18,7 +18,7 @@ export default async function ProfilePage({ params }: { params: { username: stri
 
   const { data: user } = await supabase
     .from("User")
-    .select("*, profile:Profile(*)")
+    .select(PUBLIC_USER_COLUMNS)
     .eq("username", params.username.toLowerCase())
     .maybeSingle();
 
@@ -154,8 +154,9 @@ export default async function ProfilePage({ params }: { params: { username: stri
     return community ? [{ ...community, role: m.role }] : [];
   });
 
-  const rawProfile = (user as unknown as { profile?: ProfileInfo | ProfileInfo[] | null }).profile;
-  const info = Array.isArray(rawProfile) ? rawProfile[0] : rawProfile;
+  // Privacy (idade, signo, cidade…) is applied by the database for whoever is viewing.
+  const { data: detailRows } = await supabase.rpc("public_profile_details", { target_user_id: user.id });
+  const info: ProfileInfo | null = Array.isArray(detailRows) && detailRows[0] ? detailRows[0] : null;
 
   return (
     <ProfileView

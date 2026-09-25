@@ -35,6 +35,9 @@ import type { LucideIcon } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
+// Official ÓrbitaX account: its latest post is featured in "Publicações em destaque".
+const OFFICIAL_USERNAME = "orbitaxoficial";
+
 type Tab = "para-voce" | "pessoas" | "publicacoes" | "comunidades" | "musica";
 
 const TABS: { id: Tab; label: string }[] = [
@@ -110,7 +113,7 @@ export default async function ExplorarPage({
 
   if (tab === "para-voce") {
     const { data: pubPosts } = await supabase.rpc("public_posts", { limit_count: 10, search_query: null });
-    posts = ((pubPosts as PublicPost[]) ?? []).filter((p) => p.authorUsername === "orbitax").slice(0, 1);
+    posts = ((pubPosts as PublicPost[]) ?? []).filter((p) => p.authorUsername === OFFICIAL_USERNAME).slice(0, 1);
   }
 
   // People search runs in the database (search_profiles): every account, current or new,

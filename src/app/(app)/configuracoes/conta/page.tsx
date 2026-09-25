@@ -13,13 +13,11 @@ export default async function AccountSettingsPage() {
   if (!current) redirect("/entrar");
 
   const supabase = createClient();
-  const { data: profile } = await supabase
-    .from("Profile")
-    .select(
-      "location, website, interests, birthDate, gender, relationshipStatus, showAge, showSign, showLocation, showInterests, showRelationship"
-    )
-    .eq("userId", current.authId)
-    .maybeSingle();
+  // The owner's private details (birth date, gender…) come from a function that only
+  // returns the signed-in account; they are not readable through the table.
+  const { data: rows } = await supabase.rpc("my_account_details");
+  const account = Array.isArray(rows) ? rows[0] : null;
+  const profile = account?.hasProfileRow ? account : null;
 
   const user = current.profile;
 

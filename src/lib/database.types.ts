@@ -205,6 +205,43 @@ export type Database = {
       my_badge_counts: { Args: Record<string, never>; Returns: { messages: number; friendRequests: number; notifications: number }[] };
       mark_conversation_read: { Args: { conversation_id: string }; Returns: undefined };
       mark_friend_requests_seen: { Args: Record<string, never>; Returns: undefined };
+      public_profile_details: {
+        Args: { target_user_id: string };
+        Returns: {
+          age: number | null;
+          zodiacSign: string | null;
+          location: string | null;
+          website: string | null;
+          interests: string | null;
+          relationshipStatus: string | null;
+          showAge: boolean;
+          showSign: boolean;
+          showLocation: boolean;
+          showInterests: boolean;
+          showRelationship: boolean;
+        }[];
+      };
+      my_account_details: {
+        Args: Record<string, never>;
+        Returns: {
+          email: string | null;
+          phone: string | null;
+          termsAcceptedAt: string | null;
+          privacyAcceptedAt: string | null;
+          hasProfileRow: boolean;
+          birthDate: string | null;
+          gender: string | null;
+          location: string | null;
+          website: string | null;
+          interests: string | null;
+          relationshipStatus: string | null;
+          showAge: boolean;
+          showSign: boolean;
+          showLocation: boolean;
+          showInterests: boolean;
+          showRelationship: boolean;
+        }[];
+      };
       send_friend_request: { Args: { target_user_id: string }; Returns: string };
       respond_friend_request: { Args: { requester_id: string; accept: boolean }; Returns: string };
       cancel_friend_request: { Args: { target_user_id: string }; Returns: string };
