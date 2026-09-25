@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import type { FeedPost } from "@/components/post-card";
@@ -16,7 +16,18 @@ export default async function ProfilePage({ params }: { params: { username: stri
     .eq("username", params.username.toLowerCase())
     .maybeSingle();
 
-  if (!user) notFound();
+  if (!user) {
+    // Old links may still use the initial numeric @ (the permanent Orbit ID): send them to the current @.
+    if (/^[0-9]+$/.test(params.username)) {
+      const { data: byOrbitId } = await supabase
+        .from("User")
+        .select("username")
+        .eq("orbitId", params.username)
+        .maybeSingle();
+      if (byOrbitId) redirect(`/perfil/${byOrbitId.username}`);
+    }
+    notFound();
+  }
 
   const [
     { data: followerRows },

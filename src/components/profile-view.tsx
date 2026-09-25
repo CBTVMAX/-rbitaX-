@@ -11,6 +11,7 @@ import {
   ShareProfileButton,
 } from "@/components/profile-client";
 import { presenceOf } from "@/lib/presence";
+import { relationshipLabel } from "@/lib/profile-options";
 import { PresenceStatus } from "@/components/presence-picker";
 import {
   BadgeCheck,
@@ -20,6 +21,7 @@ import {
   ChevronRight,
   Crown,
   Gem,
+  Heart,
   ImagePlus,
   Link2,
   MapPin,
@@ -42,6 +44,9 @@ export type ProfileInfo = {
   showSign: boolean;
   interests: string | null;
   website: string | null;
+  showInterests?: boolean;
+  showRelationship?: boolean;
+  relationshipStatus?: string | null;
 };
 
 export function parseInterests(raw: string | null | undefined) {
@@ -174,7 +179,9 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
   const age = info?.birthDate && (isMe || info.showAge) ? ageFrom(info.birthDate) : null;
   const sign = info?.zodiacSign && (isMe || info.showSign) ? info.zodiacSign : null;
   const location = info?.location && (isMe || info.showLocation) ? info.location : null;
-  const interests = parseInterests(info?.interests);
+  const interests = isMe || info?.showInterests !== false ? parseInterests(info?.interests) : [];
+  const relationship =
+    isMe || info?.showRelationship !== false ? relationshipLabel(info?.relationshipStatus) : null;
   const website = info?.website?.trim() || null;
   const websiteHref = website && (/^https?:\/\//i.test(website) ? website : `https://${website}`);
 
@@ -318,6 +325,7 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
     { icon: MapPin, text: location, prompt: "Adicionar cidade" },
     { icon: Cake, text: age !== null ? `${age} anos` : null, prompt: "Data de nascimento" },
     { icon: Sparkles, text: sign, prompt: "Seu signo" },
+    { icon: Heart, text: relationship, prompt: "Relacionamento" },
     { icon: Gem, text: interests.length ? interests.join(", ") : null, prompt: "Seus interesses" },
     { icon: Link2, text: website, prompt: "Site ou link" },
   ];

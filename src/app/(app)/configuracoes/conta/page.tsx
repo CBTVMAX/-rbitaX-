@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { AccountSettingsForm } from "@/components/account-settings-form";
@@ -13,28 +15,48 @@ export default async function AccountSettingsPage() {
   const supabase = createClient();
   const { data: profile } = await supabase
     .from("Profile")
-    .select("location, website, interests, showAge, showSign, showLocation")
+    .select(
+      "location, website, interests, birthDate, gender, relationshipStatus, showAge, showSign, showLocation, showInterests, showRelationship"
+    )
     .eq("userId", current.authId)
     .maybeSingle();
 
+  const user = current.profile;
+
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6">
-      <h1 className="mb-6 font-display text-2xl font-bold text-white">Conta</h1>
+    <div className="mx-auto max-w-2xl px-3 py-4 md:px-4 md:py-6">
+      <div className="mb-4 flex items-center gap-3">
+        <Link
+          href={`/perfil/${user.username}`}
+          aria-label="Voltar para o perfil"
+          className="rounded-full p-1.5 text-white/80 transition hover:bg-white/5 hover:text-white"
+        >
+          <ArrowLeft className="h-6 w-6" />
+        </Link>
+        <h1 className="font-display text-xl font-bold text-white md:text-2xl">Editar perfil</h1>
+      </div>
+
       <AccountSettingsForm
         userId={current.authId}
         initial={{
-          name: current.profile.name,
-          username: current.profile.username,
-          bio: current.profile.bio,
-          avatarUrl: current.profile.avatarUrl,
-          coverUrl: current.profile.coverUrl,
-          isPrivate: current.profile.isPrivate,
+          orbitId: user.orbitId,
+          name: user.name,
+          username: user.username,
+          bio: user.bio,
+          avatarUrl: user.avatarUrl,
+          coverUrl: user.coverUrl,
+          isPrivate: user.isPrivate,
           location: profile?.location ?? null,
           website: profile?.website ?? null,
           interests: parseInterests(profile?.interests),
+          birthDate: profile?.birthDate ?? null,
+          gender: profile?.gender ?? null,
+          relationshipStatus: profile?.relationshipStatus ?? null,
           showAge: profile?.showAge ?? true,
           showSign: profile?.showSign ?? true,
           showLocation: profile?.showLocation ?? true,
+          showInterests: profile?.showInterests ?? true,
+          showRelationship: profile?.showRelationship ?? true,
           hasProfileRow: !!profile,
         }}
       />

@@ -1,68 +1,208 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
-import { Avatar } from "@/components/post-card";
-import { Camera, ImagePlus, Loader2, Plus, X } from "lucide-react";
+import { normalizeUsername, usernameError } from "@/lib/username";
+import { zodiacFor } from "@/lib/zodiac";
+import { GENDER_OPTIONS, RELATIONSHIP_OPTIONS } from "@/lib/profile-options";
+import {
+  AtSign,
+  Calendar,
+  Camera,
+  CheckCircle2,
+  Heart,
+  ImagePlus,
+  Link2,
+  Loader2,
+  Lock,
+  MapPin,
+  PenLine,
+  Plus,
+  Shield,
+  Star,
+  User,
+  X,
+  XCircle,
+} from "lucide-react";
 
 const MAX_INTERESTS = 12;
+const BIO_MAX = 160;
+const MONTHS = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
 
-export function AccountSettingsForm({
-  userId,
-  initial,
+export type EditProfileInitial = {
+  orbitId: string | null;
+  name: string;
+  username: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  coverUrl: string | null;
+  isPrivate: boolean;
+  location: string | null;
+  website: string | null;
+  interests: string[];
+  birthDate: string | null;
+  gender: string | null;
+  relationshipStatus: string | null;
+  showAge: boolean;
+  showSign: boolean;
+  showLocation: boolean;
+  showInterests: boolean;
+  showRelationship: boolean;
+  hasProfileRow: boolean;
+};
+
+type UsernameState = "unchanged" | "invalid" | "checking" | "available" | "taken";
+
+const inputClass =
+  "w-full rounded-xl border border-white/10 bg-space-bg/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-orbit-purple/70";
+const selectClass = `${inputClass} appearance-none pr-10`;
+const dateSelectClass =
+  "w-full appearance-none rounded-xl border border-white/10 bg-space-bg/60 py-3 pl-3 pr-7 text-sm text-white outline-none transition focus:border-orbit-purple/70";
+
+function Section({ title, icon: Icon, children }: { title: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
+  return (
+    <section className="rounded-2xl border border-white/10 bg-space-surface/80 p-4 md:p-5">
+      <h2 className="mb-4 flex items-center gap-2.5 text-base font-semibold text-orbit-blue">
+        <Icon className="h-5 w-5" /> {title}
+      </h2>
+      <div className="space-y-5">{children}</div>
+    </section>
+  );
+}
+
+function Field({
+  label,
+  icon: Icon,
+  children,
 }: {
-  userId: string;
-  initial: {
-    name: string;
-    username: string;
-    bio: string | null;
-    avatarUrl: string | null;
-    coverUrl: string | null;
-    isPrivate: boolean;
-    location: string | null;
-    website: string | null;
-    interests: string[];
-    showAge: boolean;
-    showSign: boolean;
-    showLocation: boolean;
-    hasProfileRow: boolean;
-  };
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
 }) {
-  const supabase = createClient();
+  return (
+    <div className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-3">
+      <Icon className="mt-0.5 h-5 w-5 text-orbit-blue/80" />
+      <label className="mb-2 text-sm text-white/80">{label}</label>
+      <div className="col-start-2">{children}</div>
+    </div>
+  );
+}
+
+function Toggle({ checked, onChange, label, icon: Icon }: { checked: boolean; onChange: (v: boolean) => void; label: string; icon: React.ComponentType<{ className?: string }> }) {
+  return (
+    <div className="flex items-center gap-3">
+      <Icon className="h-5 w-5 shrink-0 text-orbit-blue/80" />
+      <span className="flex-1 text-sm text-white/80">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+        className={clsx(
+          "relative h-6 w-11 shrink-0 rounded-full transition",
+          checked ? "bg-orbit-gradient" : "bg-white/15"
+        )}
+      >
+        <span className={clsx("absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all", checked ? "left-[22px]" : "left-0.5")} />
+      </button>
+    </div>
+  );
+}
+
+function SelectWrap({ children, compact = false }: { children: React.ReactNode; compact?: boolean }) {
+  return (
+    <div className="relative">
+      {children}
+      <svg
+        viewBox="0 0 20 20"
+        className={clsx("pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 text-white/50", compact ? "right-2" : "right-3.5")} fill="currentColor" aria-hidden>
+        <path d="M5.3 7.3a1 1 0 0 1 1.4 0L10 10.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.4Z" />
+      </svg>
+    </div>
+  );
+}
+
+export function AccountSettingsForm({ userId, initial }: { userId: string; initial: EditProfileInitial }) {
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const avatarRef = useRef<HTMLInputElement>(null);
   const coverRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(initial.name);
+  const [username, setUsername] = useState(initial.username);
+  const [usernameState, setUsernameState] = useState<UsernameState>("unchanged");
   const [bio, setBio] = useState(initial.bio ?? "");
   const [location, setLocation] = useState(initial.location ?? "");
   const [website, setWebsite] = useState(initial.website ?? "");
-  const [isPrivate, setIsPrivate] = useState(initial.isPrivate);
-  const [avatarUrl, setAvatarUrl] = useState(initial.avatarUrl);
-  const [coverUrl, setCoverUrl] = useState(initial.coverUrl);
   const [interests, setInterests] = useState<string[]>(initial.interests);
   const [interestDraft, setInterestDraft] = useState("");
+  const [addingInterest, setAddingInterest] = useState(false);
+
+  const [birthYear, birthMonth, birthDay] = (initial.birthDate ?? "").slice(0, 10).split("-");
+  const [day, setDay] = useState(birthDay ? String(Number(birthDay)) : "");
+  const [month, setMonth] = useState(birthMonth ? String(Number(birthMonth)) : "");
+  const [year, setYear] = useState(birthYear ?? "");
+  const [gender, setGender] = useState(initial.gender ?? "");
+  const [relationship, setRelationship] = useState(initial.relationshipStatus ?? "");
+
   const [showAge, setShowAge] = useState(initial.showAge);
   const [showSign, setShowSign] = useState(initial.showSign);
   const [showLocation, setShowLocation] = useState(initial.showLocation);
+  const [showInterests, setShowInterests] = useState(initial.showInterests);
+  const [showRelationship, setShowRelationship] = useState(initial.showRelationship);
+  const [isPrivate, setIsPrivate] = useState(initial.isPrivate);
+
+  const [avatarUrl, setAvatarUrl] = useState(initial.avatarUrl);
+  const [coverUrl, setCoverUrl] = useState(initial.coverUrl);
   const [uploading, setUploading] = useState<"avatar" | "cover" | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const normalized = normalizeUsername(username);
+  const formatError = normalized === initial.username ? null : usernameError(username, initial.orbitId);
+  const profileUrlHost = typeof window === "undefined" ? "orbitax.social.br" : window.location.host;
+
+  useEffect(() => {
+    if (normalized === initial.username) {
+      setUsernameState("unchanged");
+      return;
+    }
+    if (formatError) {
+      setUsernameState("invalid");
+      return;
+    }
+    setUsernameState("checking");
+    const handle = setTimeout(async () => {
+      const { data, error: rpcError } = await supabase.rpc("username_available", { check_username: normalized });
+      setUsernameState(rpcError ? "invalid" : data ? "available" : "taken");
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [normalized, formatError, initial.username, supabase]);
+
+  const birthDate = useMemo(() => {
+    if (!day || !month || !year) return null;
+    const d = new Date(Number(year), Number(month) - 1, Number(day));
+    if (d.getMonth() !== Number(month) - 1) return "invalid";
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }, [day, month, year]);
+  const sign = birthDate && birthDate !== "invalid" ? zodiacFor(Number(month), Number(day)) : null;
+
+  const thisYear = new Date().getFullYear();
+  const years = Array.from({ length: 83 }, (_, i) => String(thisYear - 18 - i));
+
   async function uploadImage(kind: "avatar" | "cover", e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setError("Escolha um arquivo de imagem.");
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setError("A imagem precisa ter no máximo 10 MB.");
-      return;
-    }
+    if (!file.type.startsWith("image/")) return setError("Escolha um arquivo de imagem.");
+    if (file.size > 10 * 1024 * 1024) return setError("A imagem precisa ter no máximo 10 MB.");
 
     setUploading(kind);
     setError(null);
@@ -71,8 +211,7 @@ export function AccountSettingsForm({
     const { error: uploadError } = await supabase.storage.from("media").upload(path, file, { upsert: true });
     if (uploadError) {
       setUploading(null);
-      setError("Não foi possível enviar a imagem.");
-      return;
+      return setError("Não foi possível enviar a imagem.");
     }
     const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
     const { error: updateError } = await supabase
@@ -80,10 +219,7 @@ export function AccountSettingsForm({
       .update(kind === "avatar" ? { avatarUrl: pub.publicUrl } : { coverUrl: pub.publicUrl })
       .eq("id", userId);
     setUploading(null);
-    if (updateError) {
-      setError("Não foi possível salvar a imagem.");
-      return;
-    }
+    if (updateError) return setError("Não foi possível salvar a imagem.");
     if (kind === "avatar") setAvatarUrl(pub.publicUrl);
     else setCoverUrl(pub.publicUrl);
     router.refresh();
@@ -91,8 +227,8 @@ export function AccountSettingsForm({
 
   function addInterest() {
     const value = interestDraft.replace(/,/g, " ").trim().slice(0, 30);
-    if (!value) return;
     setInterestDraft("");
+    if (!value) return;
     setInterests((list) =>
       list.length >= MAX_INTERESTS || list.some((i) => i.toLowerCase() === value.toLowerCase()) ? list : [...list, value]
     );
@@ -100,22 +236,50 @@ export function AccountSettingsForm({
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
     setSaved(false);
     setError(null);
 
+    if (!name.trim()) return setError("Digite seu nome.");
+    if (formatError) return setError(formatError);
+    if (usernameState === "taken") return setError("Esse nome de usuário já está em uso.");
+    if (usernameState === "checking") return setError("Aguarde a verificação do nome de usuário.");
+    if (birthDate === "invalid") return setError("Data de nascimento inválida.");
+
+    setSaving(true);
+    const usernameChanged = normalized !== initial.username;
+
     const { error: userError } = await supabase
       .from("User")
-      .update({ name: name.trim(), bio: bio.trim() || null, isPrivate })
+      .update({
+        name: name.trim(),
+        bio: bio.trim() || null,
+        isPrivate,
+        ...(usernameChanged ? { username: normalized } : {}),
+        updatedAt: new Date().toISOString(),
+      })
       .eq("id", userId);
+
+    if (userError) {
+      setSaving(false);
+      if (userError.code === "23505") {
+        setUsernameState("taken");
+        return setError("Esse nome de usuário já está em uso.");
+      }
+      return setError(userError.code === "23514" ? userError.message : "Não foi possível salvar. Tente novamente.");
+    }
 
     const profileFields = {
       location: location.trim() || null,
       website: website.trim() || null,
       interests: interests.length ? interests.join(", ") : null,
+      gender: gender || null,
+      relationshipStatus: relationship || null,
+      ...(birthDate ? { birthDate } : {}),
       showAge,
       showSign,
       showLocation,
+      showInterests,
+      showRelationship,
       updatedAt: new Date().toISOString(),
     };
 
@@ -124,157 +288,279 @@ export function AccountSettingsForm({
       : await supabase.from("Profile").insert({ id: crypto.randomUUID(), userId, ...profileFields });
 
     setSaving(false);
-    if (userError || profileError) {
-      setError("Não foi possível salvar. Tente novamente.");
+    if (profileError) {
+      return setError(profileError.code === "23514" ? profileError.message : "Não foi possível salvar. Tente novamente.");
+    }
+
+    if (usernameChanged) {
+      window.location.href = `/perfil/${normalized}`;
       return;
     }
     setSaved(true);
     router.refresh();
   }
 
-  const inputClass =
-    "w-full rounded-lg border border-white/10 bg-space-card px-3 py-2 text-sm text-white outline-none focus:border-orbit-purple";
+  const usernameHint = {
+    unchanged: null,
+    checking: <span className="text-white/50">Verificando disponibilidade...</span>,
+    available: <span className="text-emerald-400">Disponível</span>,
+    taken: <span className="text-red-400">Esse nome de usuário já está em uso.</span>,
+    invalid: <span className="text-red-400">{formatError}</span>,
+  }[usernameState];
 
   return (
-    <form onSubmit={save} className="max-w-lg space-y-5">
-      <div>
-        <p className="mb-2 text-xs text-white/50">Capa</p>
-        <button
-          type="button"
-          onClick={() => coverRef.current?.click()}
-          disabled={uploading !== null}
-          className="relative flex h-32 w-full items-center justify-center overflow-hidden rounded-xl border border-dashed border-white/15 bg-space-card text-white/60 transition hover:border-orbit-purple/60"
-        >
-          {coverUrl && (
+    <form onSubmit={save} className="space-y-4 pb-6">
+      <section className="rounded-2xl border border-white/10 bg-space-surface/80">
+        <div className="relative h-36 overflow-hidden rounded-t-2xl md:h-44">
+          {coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            <img src={coverUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full items-center justify-center border-b border-dashed border-white/15 bg-gradient-to-br from-orbit-blue/10 via-space-card to-orbit-purple/10 text-xs text-white/50">
+              Nenhuma capa ainda
+            </div>
           )}
-          <span className="relative flex items-center gap-2 rounded-lg bg-space-bg/80 px-3 py-1.5 text-xs text-white">
-            {uploading === "cover" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-            {coverUrl ? "Trocar capa" : "Adicionar capa"}
-          </span>
-        </button>
-        <input ref={coverRef} type="file" accept="image/*" hidden onChange={(e) => uploadImage("cover", e)} />
-      </div>
-
-      <div className="flex items-center gap-4">
-        <div className="relative">
-          <Avatar name={name} url={avatarUrl} size={72} />
           <button
             type="button"
-            onClick={() => avatarRef.current?.click()}
+            onClick={() => coverRef.current?.click()}
             disabled={uploading !== null}
-            aria-label="Trocar foto"
-            className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-orbit-gradient text-white shadow-glow"
+            className="absolute bottom-3 right-3 flex items-center gap-2 rounded-xl border border-white/15 bg-space-bg/80 px-3.5 py-2 text-xs font-medium text-white backdrop-blur transition hover:bg-space-bg"
           >
-            {uploading === "avatar" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
+            {uploading === "cover" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+            {coverUrl ? "Trocar capa" : "Adicionar capa"}
           </button>
-          <input ref={avatarRef} type="file" accept="image/*" hidden onChange={(e) => uploadImage("avatar", e)} />
+          <input ref={coverRef} type="file" accept="image/*" hidden onChange={(e) => uploadImage("cover", e)} />
         </div>
-        <p className="text-xs text-white/40">@{initial.username} · toque no ícone para trocar a foto</p>
-      </div>
 
-      <div>
-        <label className="mb-1 block text-xs text-white/50">Nome</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-xs text-white/50">Bio</label>
-        <textarea
-          value={bio}
-          onChange={(e) => setBio(e.target.value)}
-          rows={3}
-          maxLength={300}
-          placeholder="Conte um pouco sobre você..."
-          className={`${inputClass} resize-none`}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-xs text-white/50">Cidade</label>
-          <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Ex.: Aracaju, BR" className={inputClass} />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs text-white/50">Link</label>
-          <input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="Ex.: linktr.ee/seunome" className={inputClass} />
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-xs text-white/50">Interesses</label>
-        <div className="flex flex-wrap gap-2">
-          {interests.map((i) => (
-            <span key={i} className="flex items-center gap-1 rounded-lg border border-orbit-purple/50 bg-orbit-purple/10 px-2.5 py-1 text-xs text-white/85">
-              {i}
-              <button
-                type="button"
-                onClick={() => setInterests((list) => list.filter((x) => x !== i))}
-                aria-label={`Remover ${i}`}
-                className="text-white/50 hover:text-white"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-        {interests.length < MAX_INTERESTS && (
-          <div className="mt-2 flex gap-2">
-            <input
-              value={interestDraft}
-              onChange={(e) => setInterestDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addInterest();
-                }
-              }}
-              placeholder="Ex.: Motocicletas, Rock, Tecnologia"
-              className={inputClass}
-            />
+        <div className="flex items-end gap-4 px-4 pb-2">
+          <div className="relative -mt-12 shrink-0">
+            <div className="h-28 w-28 rounded-full bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] p-[3px]">
+              <div className="flex h-full w-full items-end justify-center overflow-hidden rounded-full border-4 border-space-bg bg-space-card">
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarUrl} alt={name} className="h-full w-full object-cover" />
+                ) : (
+                  <User className="mb-3 h-14 w-14 text-orbit-blue/60" />
+                )}
+              </div>
+            </div>
             <button
               type="button"
-              onClick={addInterest}
-              aria-label="Adicionar interesse"
-              className="flex shrink-0 items-center justify-center rounded-lg border border-white/15 px-3 text-white/70 hover:bg-white/5 hover:text-white"
+              onClick={() => avatarRef.current?.click()}
+              disabled={uploading !== null}
+              aria-label="Trocar foto de perfil"
+              className="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full bg-orbit-gradient text-white shadow-glow"
             >
-              <Plus className="h-4 w-4" />
+              {uploading === "avatar" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
             </button>
+            <input ref={avatarRef} type="file" accept="image/*" hidden onChange={(e) => uploadImage("avatar", e)} />
           </div>
-        )}
-      </div>
+          <div className="pb-2">
+            <p className="text-sm font-medium text-white">Foto de perfil</p>
+            <p className="text-xs text-white/50">Toque para trocar sua foto</p>
+          </div>
+        </div>
 
-      <fieldset className="space-y-2 rounded-xl border border-white/10 p-4">
-        <legend className="px-1 text-xs text-white/50">Mostrar no perfil para outras pessoas</legend>
-        <label className="flex items-center gap-2 text-sm text-white/70">
-          <input type="checkbox" checked={showAge} onChange={(e) => setShowAge(e.target.checked)} /> Idade
-        </label>
-        <label className="flex items-center gap-2 text-sm text-white/70">
-          <input type="checkbox" checked={showSign} onChange={(e) => setShowSign(e.target.checked)} /> Signo
-        </label>
-        <label className="flex items-center gap-2 text-sm text-white/70">
-          <input type="checkbox" checked={showLocation} onChange={(e) => setShowLocation(e.target.checked)} /> Cidade
-        </label>
-      </fieldset>
+        <div className="space-y-5 p-4 md:p-5">
+          <Field label="Nome" icon={User}>
+            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} className={inputClass} />
+          </Field>
 
-      <label className="flex items-center gap-2 text-sm text-white/70">
-        <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} />
-        Conta privada (perfil visível apenas para seguidores aprovados)
-      </label>
+          <Field label="Nome de usuário" icon={AtSign}>
+            <div className="relative">
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                maxLength={31}
+                className={clsx(inputClass, "pr-11")}
+              />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2">
+                {usernameState === "checking" && <Loader2 className="h-5 w-5 animate-spin text-white/50" />}
+                {(usernameState === "available" || usernameState === "unchanged") && <CheckCircle2 className="h-5 w-5 text-emerald-400" />}
+                {(usernameState === "taken" || usernameState === "invalid") && <XCircle className="h-5 w-5 text-red-400" />}
+              </span>
+            </div>
+            <p className="mt-2 break-all text-xs text-orbit-blue">
+              https://{profileUrlHost}/@{normalized || initial.username}
+            </p>
+            <p className="mt-1.5 text-xs text-white/50">
+              {usernameHint ?? "Você pode alterar seu nome de usuário. Ele precisa ser único. Seu Orbit ID não muda."}
+            </p>
+          </Field>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+          <Field label="Bio" icon={PenLine}>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value.slice(0, BIO_MAX))}
+              rows={3}
+              placeholder="Conte um pouco sobre você..."
+              className={clsx(inputClass, "resize-none")}
+            />
+            <p className="mt-1 text-right text-xs text-white/40">
+              {bio.length}/{BIO_MAX}
+            </p>
+          </Field>
 
-      <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-full bg-orbit-gradient px-6 py-2 text-sm font-semibold text-white shadow-glow disabled:opacity-50"
-        >
-          {saving ? "Salvando..." : "Salvar alterações"}
-        </button>
-        {saved && <span className="text-xs text-emerald-400">Salvo!</span>}
-      </div>
+          <Field label="Cidade" icon={MapPin}>
+            <input value={location} onChange={(e) => setLocation(e.target.value)} maxLength={80} placeholder="Ex.: Aracaju, Sergipe, Brasil" className={inputClass} />
+          </Field>
+
+          <Field label="Link" icon={Link2}>
+            <div className="relative">
+              <input value={website} onChange={(e) => setWebsite(e.target.value)} maxLength={200} placeholder="Ex.: linktr.ee/seunome" className={clsx(inputClass, "pr-10")} />
+              {website && (
+                <button
+                  type="button"
+                  onClick={() => setWebsite("")}
+                  aria-label="Limpar link"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/15 p-0.5 text-white/70 hover:text-white"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          </Field>
+
+          <Field label="Interesses" icon={Star}>
+            <div className="flex flex-wrap gap-2">
+              {interests.map((i) => (
+                <span key={i} className="flex items-center gap-1.5 rounded-full border border-orbit-purple/60 bg-orbit-purple/10 px-3 py-1.5 text-xs text-white/90">
+                  {i}
+                  <button type="button" onClick={() => setInterests((l) => l.filter((x) => x !== i))} aria-label={`Remover ${i}`} className="text-white/60 hover:text-white">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </span>
+              ))}
+              {interests.length < MAX_INTERESTS &&
+                (addingInterest ? (
+                  <input
+                    autoFocus
+                    value={interestDraft}
+                    onChange={(e) => setInterestDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        addInterest();
+                      }
+                      if (e.key === "Escape") setAddingInterest(false);
+                    }}
+                    onBlur={() => {
+                      addInterest();
+                      setAddingInterest(false);
+                    }}
+                    placeholder="Digite e pressione Enter"
+                    className="w-48 rounded-full border border-orbit-purple/60 bg-space-bg/60 px-3 py-1.5 text-xs text-white outline-none"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setAddingInterest(true)}
+                    className="flex items-center gap-1.5 rounded-full border border-orbit-purple/60 px-3 py-1.5 text-xs text-white/85 transition hover:bg-orbit-purple/10"
+                  >
+                    <Plus className="h-3.5 w-3.5" /> Adicionar interesse
+                  </button>
+                ))}
+            </div>
+          </Field>
+        </div>
+      </section>
+
+      <Section title="Informações pessoais" icon={User}>
+        <Field label="Data de nascimento" icon={Calendar}>
+          <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_5.75rem] gap-2">
+            <SelectWrap compact>
+              <select value={day} onChange={(e) => setDay(e.target.value)} aria-label="Dia" className={dateSelectClass}>
+                <option value="">Dia</option>
+                {Array.from({ length: 31 }, (_, i) => String(i + 1)).map((d) => (
+                  <option key={d} value={d}>{d.padStart(2, "0")}</option>
+                ))}
+              </select>
+            </SelectWrap>
+            <SelectWrap compact>
+              <select value={month} onChange={(e) => setMonth(e.target.value)} aria-label="Mês" className={dateSelectClass}>
+                <option value="">Mês</option>
+                {MONTHS.map((m, i) => (
+                  <option key={m} value={String(i + 1)}>{m}</option>
+                ))}
+              </select>
+            </SelectWrap>
+            <SelectWrap compact>
+              <select value={year} onChange={(e) => setYear(e.target.value)} aria-label="Ano" className={dateSelectClass}>
+                <option value="">Ano</option>
+                {years.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </SelectWrap>
+          </div>
+          <p className="mt-2 text-xs text-white/50">
+            {showAge ? "Sua idade será exibida no seu perfil." : "Sua idade não será exibida publicamente."}
+          </p>
+        </Field>
+
+        <Field label="Signo" icon={Star}>
+          <div className={clsx(inputClass, "text-white/80")}>{sign ?? "Preencha a data de nascimento"}</div>
+          <p className="mt-2 text-xs text-white/50">Calculado automaticamente pela data de nascimento.</p>
+        </Field>
+
+        <Field label="Gênero" icon={User}>
+          <SelectWrap>
+            <select value={gender} onChange={(e) => setGender(e.target.value)} className={selectClass}>
+              <option value="">Não informar</option>
+              {GENDER_OPTIONS.map((g) => (
+                <option key={g.value} value={g.value}>{g.label}</option>
+              ))}
+            </select>
+          </SelectWrap>
+        </Field>
+      </Section>
+
+      <Section title="Relacionamento" icon={Heart}>
+        <Field label="Status de relacionamento" icon={User}>
+          <SelectWrap>
+            <select value={relationship} onChange={(e) => setRelationship(e.target.value)} className={selectClass}>
+              <option value="">Não informar</option>
+              {RELATIONSHIP_OPTIONS.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+          </SelectWrap>
+        </Field>
+      </Section>
+
+      <Section title="Privacidade" icon={Shield}>
+        <div className="space-y-4">
+          <Toggle label="Mostrar minha idade no perfil" icon={Calendar} checked={showAge} onChange={setShowAge} />
+          <Toggle label="Mostrar meu signo no perfil" icon={Star} checked={showSign} onChange={setShowSign} />
+          <Toggle label="Mostrar minha cidade no perfil" icon={MapPin} checked={showLocation} onChange={setShowLocation} />
+          <Toggle label="Mostrar meus interesses no perfil" icon={Heart} checked={showInterests} onChange={setShowInterests} />
+          <Toggle label="Mostrar meu relacionamento no perfil" icon={Heart} checked={showRelationship} onChange={setShowRelationship} />
+          <Toggle label="Conta privada (apenas seguidores aprovados)" icon={Lock} checked={isPrivate} onChange={setIsPrivate} />
+        </div>
+      </Section>
+
+      {error && (
+        <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          {error}
+        </p>
+      )}
+      {saved && (
+        <p role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+          Alterações salvas.
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={saving || uploading !== null}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-orbit-gradient py-3.5 text-base font-semibold text-white shadow-glow transition hover:opacity-90 disabled:opacity-60"
+      >
+        {saving && <Loader2 className="h-5 w-5 animate-spin" />}
+        {saving ? "Salvando..." : "Salvar alterações"}
+      </button>
     </form>
   );
 }
