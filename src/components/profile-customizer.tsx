@@ -53,6 +53,10 @@ type Props = {
   coverUrl: string | null;
   initialColor: string;
   initialFrame: string | null;
+  /** Premium frames this member owns (Órbita X Store → UserInventory). */
+  ownedFrames?: string[];
+  /** Store price of each premium frame on sale. */
+  framePrices?: Record<string, number>;
 };
 
 const GRADIENTS = [
@@ -228,14 +232,20 @@ function FrameCatalog({
   avatarUrl,
   selected,
   onSelect,
+  owned,
+  prices,
 }: {
   avatarUrl: string | null;
   selected: string | null;
   onSelect: (id: string | null) => void;
+  owned: Set<string>;
+  prices: Record<string, number>;
 }) {
+  const router = useRouter();
   const [tier, setTier] = useState<FrameTier>(() => getFrame(selected)?.tier ?? "gratuita");
   const frames = AVATAR_FRAMES.filter((f) => f.tier === tier);
   const free = FRAME_TIERS[tier].free;
+  const onSale = frames.some((f) => prices[f.id] !== undefined);
 
   const photo = avatarUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
@@ -273,7 +283,17 @@ function FrameCatalog({
       {!free && (
         <p className="mb-3 flex items-center gap-2 rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-xs text-amber-200/90">
           <Crown className="h-4 w-4 shrink-0 text-amber-400" />
-          Coleção {FRAME_TIERS[tier].label.toLowerCase()}: disponível em breve com as Órbita Coins.
+          {onSale ? (
+            <span>
+              Coleção {FRAME_TIERS[tier].label.toLowerCase()}: na{" "}
+              <Link href="/loja?categoria=molduras" className="font-semibold underline">
+                Órbita X Store
+              </Link>
+              , com Órbita Coins. As que você já tem ficam liberadas aqui.
+            </span>
+          ) : (
+            <>Coleção {FRAME_TIERS[tier].label.toLowerCase()}: disponível em breve com as Órbita Coins.</>
+          )}
         </p>
       )}
 
@@ -301,25 +321,31 @@ function FrameCatalog({
         )}
         {frames.map((f) => {
           const isSel = selected === f.id;
+          const mine = owned.has(f.id);
+          const usable = free || mine;
+          const price = prices[f.id];
           return (
             <button
               key={f.id}
               type="button"
-              title={free ? f.tagline : `${f.tagline} · Em breve`}
-              onClick={() => free && onSelect(f.id)}
+              title={usable ? f.tagline : price !== undefined ? `${f.tagline} · Ver na Órbita X Store` : `${f.tagline} · Em breve`}
+              onClick={() => {
+                if (usable) onSelect(f.id);
+                else if (price !== undefined) router.push(`/loja?categoria=molduras&produto=frame-${f.id}`);
+              }}
               aria-pressed={isSel}
-              aria-disabled={!free}
+              aria-disabled={!usable && price === undefined}
               className={clsx(
                 "group flex flex-col items-center gap-1.5 rounded-xl border p-2 transition",
                 isSel ? "border-orbit-purple bg-orbit-purple/10 shadow-[0_0_18px_rgba(139,92,246,0.3)]" : "border-white/10",
-                free ? "hover:border-white/25" : "cursor-default"
+                usable || price !== undefined ? "hover:border-white/25" : "cursor-default"
               )}
             >
               <span className="relative block aspect-square w-full overflow-hidden rounded-lg bg-[#0b0e1c]">
                 {avatar}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={frameSrc(f.id, true)} alt="" loading="lazy" className="absolute inset-0 h-full w-full" />
-                {!free && (
+                {!usable && (
                   <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white/80">
                     <Lock className="h-3 w-3" />
                   </span>
@@ -332,12 +358,12 @@ function FrameCatalog({
               </span>
               <span className="w-full truncate text-center text-[11px] font-medium text-white/85">{f.name}</span>
               <span className={clsx("rounded-full border px-2 py-px text-[9px] font-semibold uppercase tracking-wide", FRAME_TIERS[f.tier].className)}>
-                {free ? (isSel ? "Em uso" : "Grátis") : FRAME_TIERS[f.tier].badge}
+                {isSel ? "Em uso" : free ? "Grátis" : mine ? "Sua" : FRAME_TIERS[f.tier].badge}
               </span>
-              {f.price && (
+              {!usable && price !== undefined && (
                 <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-300">
                   <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-amber-200 to-amber-500" />
-                  {f.price.toLocaleString("pt-BR")}
+                  {price.toLocaleString("pt-BR")}
                 </span>
               )}
             </button>
@@ -350,6 +376,7 @@ function FrameCatalog({
 
 export function ProfileCustomizer(props: Props) {
   const router = useRouter();
+  const ownedFrames = useMemo(() => new Set(props.ownedFrames ?? []), [props.ownedFrames]);
   const [saved, setSaved] = useState({ color: props.initialColor, frame: props.initialFrame });
   const [color, setColor] = useState(props.initialColor);
   const [frameId, setFrameId] = useState<string | null>(props.initialFrame);
@@ -523,7 +550,13 @@ export function ProfileCustomizer(props: Props) {
           pill={<Pill tone="free">Gratuitas liberadas</Pill>}
           subtitle="Destaque sua foto com uma moldura. As coleções especiais chegam com as Órbita Coins."
         >
-          <FrameCatalog avatarUrl={props.avatarUrl} selected={frameId} onSelect={setFrameId} />
+          <FrameCatalog
+            avatarUrl={props.avatarUrl}
+            selected={frameId}
+            onSelect={setFrameId}
+            owned={ownedFrames}
+            prices={props.framePrices ?? {}}
+          />
         </Block>
 
         <Block step={5} title="Efeitos, decorativos e badges" pill={<><Pill tone="premium">Premium</Pill><Pill tone="soon">Em breve</Pill></>}>

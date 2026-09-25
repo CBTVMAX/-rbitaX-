@@ -77,7 +77,7 @@ export function messagePreview(type: MessageType | string, content: string, meta
     case "file":
       return `📎 ${attachments[0]?.name ?? "Arquivo"}`;
     case "voice":
-      return "🎤 Mensagem de voz";
+      return attachments[0]?.duration ? `🎙️ Áudio · ${formatDuration(attachments[0].duration)}` : "🎙️ Áudio";
     case "music":
       return `🎵 ${meta.title || attachments[0]?.name || "Música"}`;
     case "gif":
@@ -90,6 +90,8 @@ export function messagePreview(type: MessageType | string, content: string, meta
       return `👤 Contato: ${meta.name ?? ""}`;
     case "poll":
       return `📊 ${meta.question ?? "Enquete"}`;
+    case "gift":
+      return `🎁 Presente: ${meta.giftName ?? "Presente"}`;
     default:
       return content;
   }

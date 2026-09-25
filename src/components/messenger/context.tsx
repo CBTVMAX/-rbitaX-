@@ -14,7 +14,10 @@ export type MessengerContextValue = {
   /** Reloads the list from the database (after any change that affects it). */
   reloadConversations: () => Promise<void>;
   patchConversation: (id: string, patch: Partial<Conversation>) => void;
-  openConversation: (id: string) => void;
+  /** Opens a chat; with `messageId`, scrolls to that message (search results). */
+  openConversation: (id: string, messageId?: string) => void;
+  /** The member's private "Salvos" conversation. */
+  savedId: string | null;
   /** Direct chat with a friend (created if needed). */
   startDirect: (user: ChatUser) => Promise<void>;
 };

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { clsx } from "clsx";
-import { Users, X } from "lucide-react";
+import { Bookmark, Users, X } from "lucide-react";
 import { initials } from "@/lib/format";
 import { frameBackdropStyle, frameSrc, getFrame } from "@/lib/avatar-frames";
 import { PresenceDot } from "@/components/presence-picker";
@@ -75,7 +75,21 @@ export function ChatAvatar({
   );
 }
 
+/** "Salvos": the member's own space — a bookmark in the brand gradient, never a person. */
+export function SavedAvatar({ size = 48 }: { size?: number }) {
+  return (
+    <span
+      className="relative inline-flex shrink-0 items-center justify-center rounded-full bg-orbit-gradient text-snow shadow-[0_0_18px_rgb(var(--app-accent,139_92_246)/0.35)] ring-1 ring-inset ring-white/20"
+      style={{ width: size, height: size }}
+    >
+      <Bookmark style={{ width: size * 0.42, height: size * 0.42 }} strokeWidth={2.2} />
+      <span className="sr-only">Salvos</span>
+    </span>
+  );
+}
+
 export function ConversationAvatar({ c, size = 48, ringClass }: { c: Conversation; size?: number; ringClass?: string }) {
+  if (c.isSaved) return <SavedAvatar size={size} />;
   return c.isGroup ? (
     <ChatAvatar name={c.name ?? "Grupo"} url={c.avatarUrl} size={size} group />
   ) : (

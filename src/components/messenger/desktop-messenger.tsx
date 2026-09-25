@@ -56,6 +56,7 @@ export function MobileChat({ children }: { children: React.ReactNode }) {
 function normalizeRow(row: Record<string, unknown>): Conversation {
   return {
     ...(row as unknown as Conversation),
+    isSaved: Boolean(row.isSaved),
     otherUser: (row.otherUser as ChatUser | null) ?? null,
     lastMessage: (row.lastMessage as Conversation["lastMessage"]) ?? null,
   };
@@ -80,6 +81,7 @@ export function DesktopMessenger({
   const [activeId, setActiveId] = useState<string | null>(initialActiveId);
   const [banner, setBanner] = useState<string | null>(notice);
   const [newOpen, setNewOpen] = useState(false);
+  const [jump, setJump] = useState<{ conversationId: string; messageId: string } | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const phone = useIsPhone();
   const split = useIsSplit();
@@ -113,7 +115,8 @@ export function DesktopMessenger({
 
   // URL keeps the open conversation (?c=…): refresh, sharing a link and the phone's back button work.
   const openConversation = useCallback(
-    (id: string) => {
+    (id: string, messageId?: string) => {
+      setJump(messageId ? { conversationId: id, messageId } : null);
       setActiveId(id);
       const url = `/mensagens?c=${encodeURIComponent(id)}`;
       if (window.matchMedia("(max-width: 1023px)").matches) window.history.pushState({ chat: id }, "", url);
@@ -177,14 +180,22 @@ export function DesktopMessenger({
   }, [supabase, me.id, scheduleReload]);
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
+  const savedId = conversations.find((c) => c.isSaved)?.id ?? null;
 
   const ctx: MessengerContextValue = useMemo(
-    () => ({ me, supabase, conversations, toast, reloadConversations, patchConversation, openConversation, startDirect }),
-    [me, supabase, conversations, toast, reloadConversations, patchConversation, openConversation, startDirect]
+    () => ({ me, supabase, conversations, toast, reloadConversations, patchConversation, openConversation, startDirect, savedId }),
+    [me, supabase, conversations, toast, reloadConversations, patchConversation, openConversation, startDirect, savedId]
   );
 
   const chat = active ? (
-    <ChatView key={active.id} c={active} visible={split || !!activeId} showBack={!split} onBack={closeConversation} />
+    <ChatView
+      key={active.id}
+      c={active}
+      visible={split || !!activeId}
+      showBack={!split}
+      onBack={closeConversation}
+      jumpToMessageId={jump?.conversationId === active.id ? jump.messageId : null}
+    />
   ) : null;
 
   return (
@@ -212,7 +223,7 @@ export function DesktopMessenger({
           <main className={clsx("h-full min-h-0 min-w-0 flex-1", !active && !split && "hidden")}>
             {chat ?? (
               <div className="chat-space-bg relative flex h-full flex-col items-center justify-center px-6 text-center">
-                {conversations.length === 0 ? (
+                {conversations.every((c) => c.isSaved) ? (
                   <EmptyUniverse onFind={() => setNewOpen(true)} />
                 ) : (
                   <>

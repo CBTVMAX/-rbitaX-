@@ -11,7 +11,8 @@ export type MessageType =
   | "location"
   | "contact"
   | "poll"
-  | "system";
+  | "system"
+  | "gift";
 
 export type AttachmentKind = "image" | "video" | "file" | "audio";
 
@@ -32,8 +33,30 @@ export type Attachment = {
   waveform?: number[];
 };
 
+/** Where a message kept in "Salvos" came from (written only by the database: save_to_saved). */
+export type SavedFrom = {
+  messageId: string;
+  conversationId: string;
+  chatTitle: string;
+  isGroup: boolean;
+  senderId: string;
+  senderName: string;
+  senderAvatarUrl?: string | null;
+  senderAvatarFrame?: string | null;
+  sentAt: string;
+};
+
 export type MessageMeta = {
   forwarded?: boolean;
+  savedFrom?: SavedFrom;
+  /** Virtual gift (written only by the database: send_gift). */
+  gift?: string;
+  giftProductId?: string;
+  giftName?: string;
+  giftImage?: string;
+  priceCoins?: number;
+  recipientId?: string;
+  recipientName?: string;
   sticker?: string;
   lat?: number;
   lng?: number;
@@ -98,6 +121,8 @@ export type SendStatus = "ok" | "not_member" | "not_friends" | "blocked";
 export type Conversation = {
   id: string;
   isGroup: boolean;
+  /** The member's own private space ("Salvos"). */
+  isSaved: boolean;
   name: string | null;
   avatarUrl: string | null;
   description: string | null;
@@ -147,5 +172,6 @@ export function isMuted(c: Pick<Conversation, "mutedUntil">) {
 }
 
 export function conversationTitle(c: Conversation) {
+  if (c.isSaved) return "Salvos";
   return c.isGroup ? c.name ?? "Grupo" : c.otherUser?.name ?? "Conversa";
 }

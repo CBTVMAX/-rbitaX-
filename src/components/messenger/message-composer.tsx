@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { Ban, Lock, Mic, Plus, Send, Smile, Trash2, UserMinus, X } from "lucide-react";
+import { Ban, Keyboard, Lock, Mic, Plus, Send, Smile, Trash2, UserMinus, X } from "lucide-react";
 import { formatDuration, messagePreview } from "@/lib/messenger/format";
 import type { Attachment, ChatMessage, SendStatus } from "@/lib/messenger/types";
 import { AttachmentMenu, type AttachmentChoice } from "./attachment-menu";
-import { StickerPanel } from "./sticker-panel";
+import { StickerPanel, type PanelTab } from "./sticker-panel";
 
 export type ComposerApi = {
   text: (text: string) => void;
@@ -21,9 +21,13 @@ export type ComposerApi = {
   openPoll: () => void;
   openLocation: () => void;
   openContact: () => void;
+  openLink: () => void;
+  openGift: () => void;
+  openSave: () => void;
 };
 
 const drafts = new Map<string, string>();
+let lastTab: PanelTab = "stickers";
 const MAX_RECORD_SECONDS = 5 * 60;
 
 function pickRecorderMime() {
@@ -69,16 +73,18 @@ export function MessageComposer({
   replyName,
   onCancelReply,
   api,
+  inSaved = false,
 }: {
   conversationId: string;
   replyTo: ChatMessage | null;
   replyName: string | null;
   onCancelReply: () => void;
   api: ComposerApi;
+  inSaved?: boolean;
 }) {
   const [text, setText] = useState(() => drafts.get(conversationId) ?? "");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [panel, setPanel] = useState<null | "emoji" | "gif">(null);
+  const [panel, setPanel] = useState<null | PanelTab>(null);
   const [pending, setPending] = useState<{ file: File; url: string }[]>([]);
   const [recording, setRecording] = useState<null | { started: number }>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -173,16 +179,31 @@ export function MessageComposer({
     switch (c.kind) {
       case "media":
       case "camera":
+      case "video":
         addPending(c.files);
         break;
-      case "file":
-        api.files(c.files);
+      case "file": {
+        // Audio files get the compact player; anything else is a document.
+        const audio = c.files.filter((f) => f.type.startsWith("audio/"));
+        const docs = c.files.filter((f) => !f.type.startsWith("audio/"));
+        audio.forEach(api.music);
+        if (docs.length) api.files(docs);
         break;
-      case "music":
-        c.files.forEach(api.music);
-        break;
+      }
       case "gif":
-        setPanel("gif");
+        setPanel((lastTab = "gif"));
+        break;
+      case "sticker":
+        setPanel((lastTab = "stickers"));
+        break;
+      case "link":
+        api.openLink();
+        break;
+      case "gift":
+        api.openGift();
+        break;
+      case "save":
+        api.openSave();
         break;
       case "location":
         api.openLocation();
@@ -256,9 +277,11 @@ export function MessageComposer({
   return (
     <div ref={wrap} className="relative z-10 border-t border-white/10 bg-space-surface/80 px-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-xl md:px-4">
       {panel && (
-        <div className="absolute bottom-full left-2 right-2 mb-2 md:left-auto md:right-4 md:w-[380px]">
+        <div className="animate-sheet-up absolute bottom-full left-0 right-0 md:bottom-full md:left-auto md:right-4 md:mb-2 md:w-[400px]">
           <StickerPanel
             initialTab={panel}
+            onTabChange={(t) => (lastTab = t)}
+            onClose={() => setPanel(null)}
             onEmoji={insertEmoji}
             onSticker={(id) => {
               setPanel(null);
@@ -357,7 +380,7 @@ export function MessageComposer({
               >
                 <Plus className="h-5 w-5 transition-transform" />
               </button>
-              <AttachmentMenu open={menuOpen} onClose={() => setMenuOpen(false)} onChoose={choose} />
+              <AttachmentMenu open={menuOpen} onClose={() => setMenuOpen(false)} onChoose={choose} inSaved={inSaved} />
             </div>
 
             <div className="flex min-h-11 min-w-0 flex-1 items-end rounded-[22px] border border-white/10 bg-white/[0.05] transition focus-within:border-chat/60 focus-within:bg-white/[0.07]">
@@ -375,36 +398,46 @@ export function MessageComposer({
               />
               <button
                 type="button"
-                onClick={() => setPanel((p) => (p ? null : "emoji"))}
-                aria-label="Emoji, figurinhas e GIF"
-                className={clsx("mb-0.5 mr-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition", panel ? "text-chat" : "text-white/55 hover:text-white")}
+                onClick={() => {
+                  if (panel) {
+                    setPanel(null);
+                    input.current?.focus();
+                  } else {
+                    input.current?.blur();
+                    setPanel(lastTab);
+                  }
+                }}
+                aria-label={panel ? "Voltar ao teclado" : "Stickers, emoji e GIF"}
+                title={panel ? "Teclado" : "Stickers, emoji e GIF"}
+                className={clsx(
+                  "mb-0.5 mr-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition",
+                  panel ? "bg-chat/15 text-chat" : "text-white/55 hover:text-white"
+                )}
               >
-                <Smile className="h-[22px] w-[22px]" />
+                {panel ? <Keyboard className="h-[21px] w-[21px]" /> : <Smile className="h-[22px] w-[22px]" />}
               </button>
             </div>
 
-            <button
-              type="button"
-              onClick={startRecording}
-              aria-label="Gravar mensagem de voz"
-              title="Gravar áudio"
-              className={clsx(round, "text-white/70 hover:bg-white/[0.06] hover:text-white", canSend && "hidden sm:flex")}
-            >
-              <Mic className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={submit}
-              disabled={!canSend}
-              aria-label="Enviar"
-              className={clsx(
-                round,
-                "bg-chat-bubble text-snow shadow-glow disabled:opacity-40 disabled:shadow-none",
-                !canSend && "hidden sm:flex"
-              )}
-            >
-              <Send className="h-5 w-5 translate-x-[1px]" />
-            </button>
+            {canSend ? (
+              <button
+                type="button"
+                onClick={submit}
+                aria-label="Enviar"
+                className={clsx(round, "animate-pop-in bg-chat-bubble text-snow shadow-[0_0_18px_rgb(var(--chat-accent,139_92_246)/0.45)]")}
+              >
+                <Send className="h-5 w-5 translate-x-[1px]" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={startRecording}
+                aria-label="Gravar mensagem de voz"
+                title="Gravar áudio"
+                className={clsx(round, "border border-white/10 bg-white/[0.05] text-white/80 hover:border-chat/40 hover:text-white")}
+              >
+                <Mic className="h-5 w-5" />
+              </button>
+            )}
           </>
         )}
       </div>

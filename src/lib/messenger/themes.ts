@@ -1,8 +1,8 @@
 import type { CSSProperties } from "react";
 
 /**
- * Per-conversation themes (Messenger → Tema da conversa). Independent from the app appearance
- * (Configurações → Aparência): they change the chat background glow, accents, sent bubbles and buttons.
+ * Per-conversation colors (Messenger → Cores da conversa): background glow, accents, sent bubbles
+ * and buttons. Light/dark is never chosen here: the chat follows Configurações → Aparência.
  */
 export type ChatTheme = {
   id: string;
@@ -82,14 +82,6 @@ export const CHAT_THEMES: ChatTheme[] = [
     accent: "148 163 184",
     bubble: "linear-gradient(135deg, #334155 0%, #475569 55%, #64748b 100%)",
     glow: ["148 163 184", "100 116 139"],
-  },
-  {
-    id: "claro",
-    label: "Claro",
-    accent: "43 108 255",
-    bubble: "linear-gradient(135deg, #2b6cff 0%, #5b8cff 60%, #8b5cf6 100%)",
-    glow: ["43 108 255", "139 92 246"],
-    light: true,
   },
 ];
 

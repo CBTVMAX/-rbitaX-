@@ -593,6 +593,47 @@ export function ConversationInfo({
     reloadConversations();
   }
 
+  if (c.isSaved) {
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="flex items-center justify-between px-4 pb-1 pt-3">
+          <span className="text-sm font-semibold text-white/80">Salvos</span>
+          {onClose && (
+            <button type="button" onClick={onClose} aria-label="Fechar informações" className="rounded-full p-1.5 text-white/50 hover:bg-white/5 hover:text-white">
+              <X className="h-5 w-5" />
+            </button>
+          )}
+        </div>
+        <div className="orbit-scrollbar min-h-0 flex-1 overflow-y-auto pb-6">
+          <div className="flex flex-col items-center px-5 pb-5 pt-4 text-center">
+            <ConversationAvatar c={c} size={88} />
+            <h2 className="mt-4 font-display text-xl font-bold text-white">Salvos</h2>
+            <p className="mt-0.5 text-sm text-white/50">Seu espaço pessoal</p>
+            <p className="mt-3 max-w-xs text-xs leading-relaxed text-white/45">
+              Só você vê o que está aqui. Use “Salvar nos meus salvos” no menu de qualquer mensagem.
+            </p>
+            <button
+              type="button"
+              onClick={onSearch}
+              className="mt-4 flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-2 text-xs font-medium text-white/75 transition hover:border-chat/40 hover:text-white"
+            >
+              <Search className="h-4 w-4 text-chat" /> Buscar nos Salvos
+            </button>
+          </div>
+          <Section title="Mídia, links e arquivos">
+            <SharedContent conversationId={c.id} onOpenMedia={onOpenMedia} onJump={onJump} compact />
+          </Section>
+          <Section>
+            <FavoritesList conversationId={c.id} onJump={onJump} version={favoritesVersion} />
+          </Section>
+          <Section title="Papel de parede">
+            <WallpaperSelector value={c.wallpaper} onChange={(id) => setting({ wallpaper: id }, { wallpaper: id })} />
+          </Section>
+        </div>
+      </div>
+    );
+  }
+
   const sortedMembers = [...members].sort(
     (a, b) => ["owner", "admin", "member"].indexOf(a.role) - ["owner", "admin", "member"].indexOf(b.role) || a.name.localeCompare(b.name)
   );
@@ -693,9 +734,9 @@ export function ConversationInfo({
           </div>
         </Section>
 
-        <Section title="Tema da conversa">
+        <Section title="Cores da conversa">
           <div className="mb-3 flex items-center gap-2 text-xs text-white/45">
-            <Palette className="h-3.5 w-3.5" /> Muda só esta conversa, para você.
+            <Palette className="h-3.5 w-3.5" /> Muda só esta conversa, para você. Claro/escuro fica em Configurações → Aparência.
           </div>
           <ThemeSelector value={c.theme} onChange={(id) => setting({ theme: id }, { theme: id })} />
           <p className="mb-3 mt-5 text-[11px] font-semibold uppercase tracking-wider text-white/40">Papel de parede</p>

@@ -181,15 +181,15 @@ export function FileCard({ a, mine, sending }: { a: Attachment; mine: boolean; s
   }
 
   return (
-    <div className="flex w-[min(290px,66vw)] items-center gap-3 p-1">
+    <div className="flex w-[min(270px,66vw)] items-center gap-2.5 p-0.5">
       <span
         className={clsx(
-          "flex h-12 w-11 shrink-0 flex-col items-center justify-center rounded-xl",
+          "flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl",
           mine ? "bg-white/20 text-snow" : "bg-chat/15 text-chat"
         )}
       >
-        <Icon className="h-5 w-5" />
-        {ext && <span className="mt-0.5 text-[9px] font-bold tracking-wide">{ext}</span>}
+        <Icon className="h-[18px] w-[18px]" />
+        {ext && <span className="text-[8px] font-bold leading-tight tracking-wide">{ext}</span>}
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium">{a.name ?? "Arquivo"}</span>
@@ -201,11 +201,11 @@ export function FileCard({ a, mine, sending }: { a: Attachment; mine: boolean; s
         disabled={busy || sending}
         aria-label="Baixar arquivo"
         className={clsx(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition",
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition",
           mine ? "bg-white/20 hover:bg-white/30" : "bg-white/[0.08] hover:bg-white/[0.14]"
         )}
       >
-        {busy || sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+        {busy || sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
       </button>
     </div>
   );
@@ -213,7 +213,21 @@ export function FileCard({ a, mine, sending }: { a: Attachment; mine: boolean; s
 
 const SPEEDS = [1, 1.5, 2];
 
-export function VoicePlayer({ message, mine }: { message: ChatMessage; mine: boolean }) {
+/** Downsamples the recorded peaks to the number of bars that fit the player. */
+function resample(peaks: number[] | undefined, n: number) {
+  if (!peaks?.length) return Array.from({ length: n }, (_, i) => 0.3 + 0.45 * Math.abs(Math.sin(i * 1.7)));
+  return Array.from({ length: n }, (_, i) => {
+    const a = Math.floor((i * peaks.length) / n);
+    const b = Math.max(a + 1, Math.floor(((i + 1) * peaks.length) / n));
+    return Math.max(...peaks.slice(a, b));
+  });
+}
+
+/**
+ * Voice message: compact, the size of a normal bubble. Play · waveform (tap to seek) · speed,
+ * and below the time played/duration with the message time and ticks (`meta`).
+ */
+export function VoicePlayer({ message, mine, meta }: { message: ChatMessage; mine: boolean; meta?: React.ReactNode }) {
   const a = message.attachments[0];
   const local = message.localUrls?.[0];
   const signed = useSignedUrl(local ? null : a?.path);
@@ -225,7 +239,11 @@ export function VoicePlayer({ message, mine }: { message: ChatMessage; mine: boo
   const [current, setCurrent] = useState(0);
   const [speed, setSpeed] = useState(1);
   const duration = a?.duration || 0;
-  const bars = useMemo(() => (a?.waveform?.length ? a.waveform : Array.from({ length: 40 }, (_, i) => 0.25 + 0.5 * Math.abs(Math.sin(i * 1.7)))), [a]);
+  // Longer audio → a little wider, never more than a normal bubble.
+  const width = Math.round(176 + Math.min(duration, 60) * 1.1);
+  const count = Math.round((width - 96) / 4.2);
+  const bars = useMemo(() => resample(a?.waveform, count), [a, count]);
+  const sending = message.status === "sending";
 
   function toggle() {
     const el = audio.current;
@@ -237,54 +255,65 @@ export function VoicePlayer({ message, mine }: { message: ChatMessage; mine: boo
     } else el.pause();
   }
 
-  function seek(e: React.MouseEvent<HTMLDivElement>) {
+  function seekTo(fraction: number) {
     const el = audio.current;
-    if (!el || !el.duration) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    el.currentTime = ((e.clientX - r.left) / r.width) * el.duration;
+    const d = el?.duration && Number.isFinite(el.duration) ? el.duration : duration;
+    if (!el || !d) return;
+    el.currentTime = Math.min(Math.max(fraction, 0), 0.999) * d;
+    setProgress(el.currentTime / d);
+    setCurrent(el.currentTime);
   }
 
   return (
-    <div className="flex w-[min(280px,66vw)] items-center gap-3 py-1 pl-1 pr-2">
+    <div className="flex items-center gap-2.5 py-0.5 pl-0.5 pr-1" style={{ width: `min(${width}px, 64vw)` }}>
       <button
         type="button"
         onClick={toggle}
-        disabled={!src || message.status === "sending"}
-        aria-label={playing ? "Pausar" : "Ouvir mensagem de voz"}
+        disabled={!src || sending}
+        aria-label={playing ? "Pausar áudio" : "Ouvir áudio"}
         className={clsx(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition active:scale-95 disabled:opacity-60",
-          mine ? "bg-snow text-orbit-purple" : "bg-chat text-snow"
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition active:scale-95 disabled:opacity-60",
+          mine ? "bg-snow text-orbit-purple" : "bg-chat text-snow shadow-[0_0_12px_rgb(var(--chat-accent,139_92_246)/0.35)]"
         )}
       >
-        {message.status === "sending" || src === undefined ? (
+        {sending || src === undefined ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : playing ? (
-          <Pause className="h-4 w-4 fill-current" />
+          <Pause className="h-3.5 w-3.5 fill-current" />
         ) : (
-          <Play className="ml-0.5 h-4 w-4 fill-current" />
+          <Play className="ml-0.5 h-3.5 w-3.5 fill-current" />
         )}
       </button>
       <div className="min-w-0 flex-1">
-        <div className="flex h-8 cursor-pointer items-center gap-[2px]" onClick={seek} role="slider" aria-label="Posição" aria-valuenow={Math.round(progress * 100)}>
-          {bars.map((b, i) => (
-            <span
-              key={i}
-              className={clsx(
-                "w-[3px] flex-1 rounded-full transition-colors",
-                i / bars.length <= progress
-                  ? mine
-                    ? "bg-snow"
-                    : "bg-chat"
-                  : mine
-                    ? "bg-snow/40"
-                    : "bg-white/25"
-              )}
-              style={{ height: `${Math.max(12, b * 100)}%` }}
-            />
-          ))}
-        </div>
-        <div className={clsx("mt-0.5 flex items-center justify-between text-[11px]", mine ? "text-snow/75" : "text-white/50")}>
-          <span>{formatDuration(playing || current ? current : duration)}</span>
+        <div className="flex items-center gap-2">
+          <div
+            className="flex h-6 min-w-0 flex-1 cursor-pointer items-center gap-[2px]"
+            onClick={(e) => {
+              const r = e.currentTarget.getBoundingClientRect();
+              seekTo((e.clientX - r.left) / r.width);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowRight") seekTo(progress + 0.05);
+              if (e.key === "ArrowLeft") seekTo(progress - 0.05);
+            }}
+            role="slider"
+            tabIndex={0}
+            aria-label="Posição do áudio"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(progress * 100)}
+          >
+            {bars.map((b, i) => (
+              <span
+                key={i}
+                className={clsx(
+                  "w-[2.5px] shrink-0 rounded-full transition-colors",
+                  i / bars.length < progress ? (mine ? "bg-snow" : "bg-chat") : mine ? "bg-snow/45" : "bg-white/30"
+                )}
+                style={{ height: `${Math.max(16, b * 100)}%` }}
+              />
+            ))}
+          </div>
           <button
             type="button"
             onClick={() => {
@@ -292,11 +321,15 @@ export function VoicePlayer({ message, mine }: { message: ChatMessage; mine: boo
               setSpeed(next);
               if (audio.current) audio.current.playbackRate = next;
             }}
-            className={clsx("rounded-full px-1.5 font-semibold", mine ? "bg-white/20" : "bg-white/10")}
-            aria-label="Velocidade"
+            className={clsx("shrink-0 rounded-full px-1.5 py-px text-[10px] font-bold tabular-nums", mine ? "bg-white/20 text-snow" : "bg-white/10 text-white/80")}
+            aria-label={`Velocidade ${speed}×`}
           >
             {speed}×
           </button>
+        </div>
+        <div className={clsx("mt-0.5 flex items-center justify-between gap-2 text-[11px] tabular-nums", mine ? "text-snow/75" : "text-white/50")}>
+          <span>{formatDuration(playing || current ? current : duration)}</span>
+          {meta}
         </div>
       </div>
       {src && (
@@ -323,7 +356,8 @@ export function VoicePlayer({ message, mine }: { message: ChatMessage; mine: boo
   );
 }
 
-export function MusicCard({ message, mine }: { message: ChatMessage; mine: boolean }) {
+/** Audio files (MP3, M4A, WAV, OGG…): compact card — play, name, size · duration, download. */
+export function MusicCard({ message, mine, meta }: { message: ChatMessage; mine: boolean; meta?: React.ReactNode }) {
   const a = message.attachments[0];
   const local = message.localUrls?.[0];
   const signed = useSignedUrl(local ? null : a?.path);
@@ -332,24 +366,24 @@ export function MusicCard({ message, mine }: { message: ChatMessage; mine: boole
   const announce = useExclusiveAudio(audio, message.id);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [current, setCurrent] = useState(0);
-  const title = message.meta.title || a?.name?.replace(/\.[^.]+$/, "") || "Música";
+  const [busy, setBusy] = useState(false);
+  const name = a?.name || `${message.meta.title || "Áudio"}`;
+  const sending = message.status === "sending";
+
+  async function download() {
+    if (!a) return;
+    setBusy(true);
+    const url = await downloadUrl(a.path, a.name);
+    setBusy(false);
+    if (url) window.location.href = url;
+  }
 
   return (
-    <div className="w-[min(290px,66vw)] p-1">
-      <div className="flex items-center gap-3">
-        <span className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-orbit-blue via-orbit-purple to-orbit-pink text-snow shadow-glow">
-          <Music2 className={clsx("h-6 w-6", playing && "animate-pulse")} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold">{title}</span>
-          <span className={clsx("block truncate text-xs", mine ? "text-snow/70" : "text-white/50")}>
-            {message.meta.artist || "Música compartilhada"}
-          </span>
-        </span>
+    <div className="w-[min(270px,66vw)] px-0.5 pt-0.5">
+      <div className="flex items-center gap-2.5">
         <button
           type="button"
-          disabled={!src || message.status === "sending"}
+          disabled={!src || sending}
           onClick={() => {
             const el = audio.current;
             if (!el) return;
@@ -358,30 +392,56 @@ export function MusicCard({ message, mine }: { message: ChatMessage; mine: boole
               el.play().catch(() => {});
             } else el.pause();
           }}
-          aria-label={playing ? "Pausar" : "Tocar"}
+          aria-label={playing ? `Pausar ${name}` : `Tocar ${name}`}
           className={clsx(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition active:scale-95 disabled:opacity-60",
-            mine ? "bg-snow text-orbit-purple" : "bg-chat text-snow"
+            "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition active:scale-95 disabled:opacity-60",
+            mine ? "bg-white/20 text-snow" : "bg-chat/15 text-chat"
           )}
         >
-          {!src ? <Loader2 className="h-4 w-4 animate-spin" /> : playing ? <Pause className="h-4 w-4 fill-current" /> : <Play className="ml-0.5 h-4 w-4 fill-current" />}
+          {sending || !src ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : playing ? (
+            <Pause className="h-4 w-4 fill-current" />
+          ) : (
+            <>
+              <Music2 className="h-[18px] w-[18px]" />
+              <span className={clsx("absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full", mine ? "bg-snow text-orbit-purple" : "bg-chat text-snow")}>
+                <Play className="ml-px h-2 w-2 fill-current" />
+              </span>
+            </>
+          )}
+        </button>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium">{name}</span>
+          <span className={clsx("block truncate text-[11px] tabular-nums", mine ? "text-snow/70" : "text-white/50")}>
+            {formatBytes(a?.size)}
+            {a?.duration ? ` · ${formatDuration(a.duration)}` : ""}
+          </span>
+        </span>
+        <button
+          type="button"
+          onClick={download}
+          disabled={busy || sending}
+          aria-label={`Baixar ${name}`}
+          className={clsx("flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition", mine ? "bg-white/20 hover:bg-white/30" : "bg-white/[0.08] hover:bg-white/[0.14]")}
+        >
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
         </button>
       </div>
-      <div
-        className={clsx("mt-2.5 h-1 cursor-pointer overflow-hidden rounded-full", mine ? "bg-white/25" : "bg-white/10")}
-        onClick={(e) => {
-          const el = audio.current;
-          if (!el?.duration) return;
-          const r = e.currentTarget.getBoundingClientRect();
-          el.currentTime = ((e.clientX - r.left) / r.width) * el.duration;
-        }}
-      >
-        <div className={clsx("h-full rounded-full", mine ? "bg-snow" : "bg-chat")} style={{ width: `${progress * 100}%` }} />
-      </div>
-      <div className={clsx("mt-1 flex justify-between text-[11px]", mine ? "text-snow/70" : "text-white/45")}>
-        <span>{formatDuration(current)}</span>
-        <span>{formatDuration(a?.duration)}</span>
-      </div>
+      {(playing || progress > 0) && (
+        <div
+          className={clsx("mt-2 h-1 cursor-pointer overflow-hidden rounded-full", mine ? "bg-white/25" : "bg-white/10")}
+          onClick={(e) => {
+            const el = audio.current;
+            if (!el?.duration) return;
+            const r = e.currentTarget.getBoundingClientRect();
+            el.currentTime = ((e.clientX - r.left) / r.width) * el.duration;
+          }}
+        >
+          <div className={clsx("h-full rounded-full", mine ? "bg-snow" : "bg-chat")} style={{ width: `${progress * 100}%` }} />
+        </div>
+      )}
+      {meta && <div className="mt-1 flex justify-end">{meta}</div>}
       {src && (
         <audio
           ref={audio}
@@ -389,14 +449,40 @@ export function MusicCard({ message, mine }: { message: ChatMessage; mine: boole
           preload="none"
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
-          onEnded={() => setPlaying(false)}
+          onEnded={() => {
+            setPlaying(false);
+            setProgress(0);
+          }}
           onTimeUpdate={(e) => {
             const el = e.currentTarget;
-            setCurrent(el.currentTime);
             setProgress(el.duration ? el.currentTime / el.duration : 0);
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** Virtual gift: compact, animated artwork + who it is for. */
+export function GiftCard({ message, mine }: { message: ChatMessage; mine: boolean }) {
+  const { giftName = "Presente", giftImage, recipientName } = message.meta;
+  return (
+    <div className="flex w-[min(250px,64vw)] items-center gap-3 p-1">
+      <span className="relative flex h-16 w-16 shrink-0 items-center justify-center">
+        <span aria-hidden className={clsx("absolute inset-1 rounded-full blur-md", mine ? "bg-white/25" : "bg-chat/30")} />
+        {giftImage && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={giftImage} alt="" className="animate-pop-in relative h-16 w-16 object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.35)]" />
+        )}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className={clsx("block text-[10px] font-bold uppercase tracking-wider", mine ? "text-snow/75" : "text-chat")}>🎁 Presente</span>
+        <span className="block truncate text-[15px] font-semibold">{giftName}</span>
+        <span className={clsx("block truncate text-xs", mine ? "text-snow/75" : "text-white/55")}>
+          {mine ? `para ${recipientName?.split(" ")[0] ?? "seu amigo"}` : "para você"}
+        </span>
+        {message.content && <span className={clsx("mt-1 block break-words text-[13px] italic", mine ? "text-snow/90" : "text-white/75")}>“{message.content}”</span>}
+      </span>
     </div>
   );
 }

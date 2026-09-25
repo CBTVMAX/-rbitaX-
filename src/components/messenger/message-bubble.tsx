@@ -2,12 +2,13 @@
 
 import { memo, useRef } from "react";
 import { clsx } from "clsx";
-import { AlertCircle, Ban, Clock, CornerUpRight, Star, Timer } from "lucide-react";
+import { AlertCircle, Ban, Bookmark, Clock, CornerUpRight, Star, Timer } from "lucide-react";
 import { formatTime, isEmojiOnly, messagePreview, URL_PATTERN } from "@/lib/messenger/format";
 import type { ChatMessage, Member, PollVote, Reaction } from "@/lib/messenger/types";
 import {
   ContactCard,
   FileCard,
+  GiftCard,
   GifView,
   LocationCard,
   MediaGrid,
@@ -99,10 +100,21 @@ export type BubbleProps = {
   onVote: (m: ChatMessage, indexes: number[]) => void;
   onJump: (id: string) => void;
   onRetry: (m: ChatMessage) => void;
+  /** Opens the chat a saved message came from ("Salvo de …"). */
+  onOpenOrigin?: (conversationId: string, messageId: string) => void;
+  /** The chat is the member's "Salvos": no delivery ticks, copies show where they came from. */
+  savedSpace?: boolean;
 };
 
 export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
-  const { m, mine, group, sender, firstInRun, lastInRun, reactions, favorite, state } = p;
+  const { m, group, firstInRun, lastInRun, reactions, favorite } = p;
+  // In "Salvos", a copy of someone else's message keeps their side and avatar.
+  const origin = p.savedSpace ? m.meta.savedFrom : undefined;
+  const mine = origin ? origin.senderId === p.meId : p.mine;
+  const state: DeliveryState = p.savedSpace && (p.state === "sent" || p.state === "delivered" || p.state === "seen") ? "sent" : p.state;
+  const sender: Member | undefined = origin && !mine
+    ? { id: origin.senderId, name: origin.senderName, username: "", avatarUrl: origin.senderAvatarUrl ?? null, avatarFrame: origin.senderAvatarFrame ?? null, role: "member", lastReadAt: null }
+    : p.sender;
   const press = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   if (m.type === "system") {
@@ -120,7 +132,8 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
   const bare = !deleted && (m.type === "sticker" || m.type === "gif" || emojiOnly);
   const media = !deleted && m.type === "media";
   const caption = media && m.content.trim();
-  const card = !deleted && ["file", "voice", "music", "location", "contact", "poll"].includes(m.type);
+  const card = !deleted && ["file", "voice", "music", "location", "contact", "poll", "gift"].includes(m.type);
+  const inlineMeta = !deleted && (m.type === "voice" || m.type === "music");
   const myReaction = reactions.find((r) => r.userId === p.meId)?.emoji ?? null;
 
   const grouped = new Map<string, { count: number; mine: boolean }>();
@@ -165,6 +178,25 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
     </button>
   );
 
+  const savedHeader = origin && !deleted && (
+    <button
+      type="button"
+      onClick={() => p.onOpenOrigin?.(origin.conversationId, origin.messageId)}
+      title={`Abrir em ${origin.chatTitle}`}
+      className={clsx(
+        "mb-1 flex max-w-full items-center gap-1 text-left text-[11px] font-medium transition hover:underline",
+        mine ? "text-snow/80" : "text-chat",
+        (media || card) && "px-2.5 pt-2"
+      )}
+    >
+      <Bookmark className="h-3 w-3 shrink-0 fill-current" />
+      <span className="truncate">
+        Salvo de {origin.senderId === p.meId ? "você" : origin.senderName}
+        {origin.isGroup || origin.senderId === p.meId ? ` · ${origin.chatTitle}` : ""}
+      </span>
+    </button>
+  );
+
   const forwarded = m.meta.forwarded && !deleted && (
     <span className={clsx("mb-1 flex items-center gap-1 text-[11px] italic", mine ? "text-snow/75" : "text-white/45", (media || card) && "px-2.5 pt-2")}>
       <CornerUpRight className="h-3 w-3" /> Encaminhada
@@ -183,8 +215,9 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
   else if (emojiOnly) body = <span className="text-5xl leading-tight">{m.content.trim()}</span>;
   else if (media) body = <MediaGrid message={m} onOpen={(i) => p.onOpenMedia(m, i)} />;
   else if (m.type === "file") body = <div className="space-y-1">{m.attachments.map((a) => <FileCard key={a.path} a={a} mine={mine} sending={m.status === "sending"} />)}</div>;
-  else if (m.type === "voice") body = <VoicePlayer message={m} mine={mine} />;
-  else if (m.type === "music") body = <MusicCard message={m} mine={mine} />;
+  else if (m.type === "voice") body = <VoicePlayer message={m} mine={mine} meta={<Meta m={m} mine={mine} state={state} favorite={favorite} />} />;
+  else if (m.type === "music") body = <MusicCard message={m} mine={mine} meta={<Meta m={m} mine={mine} state={state} favorite={favorite} />} />;
+  else if (m.type === "gift") body = <GiftCard message={m} mine={mine} />;
   else if (m.type === "location") body = <LocationCard message={m} mine={mine} />;
   else if (m.type === "contact") body = <ContactCard message={m} mine={mine} />;
   else if (m.type === "poll") body = <PollCard message={m} mine={mine} votes={p.votes} meId={p.meId} onVote={(ix) => p.onVote(m, ix)} />;
@@ -195,7 +228,7 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
       </span>
     );
 
-  const showAvatarColumn = group && !mine;
+  const showAvatarColumn = (group || !!origin) && !mine;
 
   return (
     <div
@@ -214,7 +247,7 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
       )}
 
       <div className={clsx("flex min-w-0 max-w-[82%] flex-col md:max-w-[68%]", mine ? "items-end" : "items-start")}>
-        {group && !mine && firstInRun && (
+        {group && !origin && !mine && firstInRun && (
           <span className={clsx("mb-1 ml-3 text-xs font-semibold", nameColor(m.senderId))}>{sender?.name ?? "Ex-membro"}</span>
         )}
 
@@ -241,15 +274,18 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
                     : "border border-white/[0.08] bg-white/[0.07] text-white backdrop-blur-md",
                   lastInRun && (mine ? "rounded-br-md" : "rounded-bl-md"),
                   media || card ? "overflow-hidden" : "px-3.5 py-2",
-                  card && !media && "p-2",
+                  card && !media && (inlineMeta ? "px-2 py-1.5" : "p-2"),
+                  m.type === "gift" && !mine && "border-chat/30 shadow-[0_0_24px_rgb(var(--chat-accent,139_92_246)/0.18)]",
                   state === "failed" && "cursor-pointer ring-1 ring-red-400/60"
                 )
           )}
         >
+          {!bare && savedHeader}
           {!bare && forwarded}
           {!bare && replyBlock}
-          {bare && !deleted && (m.replyToId || m.meta.forwarded) && (
+          {bare && !deleted && (m.replyToId || m.meta.forwarded || origin) && (
             <div className={clsx("mb-1 max-w-[240px] rounded-2xl px-3 py-2", mine ? "bg-chat-bubble text-snow" : "border border-white/[0.08] bg-white/[0.07]")}>
+              {savedHeader}
               {forwarded}
               {replyBlock}
             </div>
@@ -263,7 +299,7 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
             </span>
           )}
 
-          {emojiOnly || m.type === "sticker" ? (
+          {inlineMeta ? null : emojiOnly || m.type === "sticker" ? (
             <span className={clsx("mt-0.5 flex", mine ? "justify-end" : "justify-start")}>
               <Meta m={m} mine={mine} state={state} favorite={favorite} overlay />
             </span>
@@ -310,6 +346,7 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
         mine={mine}
         favorite={favorite}
         myReaction={myReaction}
+        inSaved={p.savedSpace}
         onReact={(e) => p.onReact(m, e)}
         onAction={(a) => p.onAction(m, a)}
       />

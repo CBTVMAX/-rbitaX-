@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { ChevronDown, Loader2, Lock } from "lucide-react";
+import { Bookmark, ChevronDown, Loader2, Lock } from "lucide-react";
 import { dayLabel, sameDay, toDate } from "@/lib/messenger/format";
 import type { ChatMessage, Member, PollVote, Reaction } from "@/lib/messenger/types";
 import { MessageBubble, type BubbleProps } from "./message-bubble";
@@ -17,7 +17,10 @@ export function deliveryState(m: ChatMessage, othersReadAt: string | null): Deli
   return m.deliveredAt ? "delivered" : "sent";
 }
 
-type Handlers = Pick<BubbleProps, "onReact" | "onAction" | "onLongPress" | "onOpenMedia" | "onVote" | "onJump" | "onRetry">;
+type Handlers = Pick<BubbleProps, "onReact" | "onAction" | "onLongPress" | "onOpenMedia" | "onVote" | "onJump" | "onRetry" | "onOpenOrigin">;
+
+/** Whose bubble it looks like: in "Salvos", a saved copy keeps the original author. */
+const authorOf = (m: ChatMessage) => m.meta.savedFrom?.senderId ?? m.senderId;
 
 export function MessageList({
   conversationKey,
@@ -39,6 +42,7 @@ export function MessageList({
   unreadFromId,
   intro,
   handlers,
+  savedSpace = false,
 }: {
   conversationKey: string;
   messages: ChatMessage[];
@@ -59,6 +63,7 @@ export function MessageList({
   unreadFromId: string | null;
   intro?: React.ReactNode;
   handlers: Handlers;
+  savedSpace?: boolean;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const top = useRef<HTMLDivElement>(null);
@@ -157,7 +162,7 @@ export function MessageList({
               !!b &&
               a.type !== "system" &&
               b.type !== "system" &&
-              a.senderId === b.senderId &&
+              (savedSpace ? authorOf(a) === authorOf(b) : a.senderId === b.senderId) &&
               sameDay(a.createdAt, b.createdAt) &&
               Math.abs(toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime()) < RUN_GAP_MS;
             const firstInRun = newDay || !joins(before, m) || m.id === unreadFromId;
@@ -195,6 +200,7 @@ export function MessageList({
                   favorite={favorites.has(m.id)}
                   state={m.senderId === meId ? deliveryState(m, othersReadAt) : "sent"}
                   highlight={m.id === highlightId}
+                  savedSpace={savedSpace}
                   {...handlers}
                 />
               </Fragment>
@@ -235,6 +241,26 @@ export function ChatIntro({ title, subtitle, privateNote }: { title: string; sub
           <Lock className="h-3 w-3" /> Conversa visível só para quem está nela
         </p>
       )}
+    </div>
+  );
+}
+
+/** Top of "Salvos": what the space is for, and that nobody else sees it. */
+export function SavedIntro() {
+  return (
+    <div className="mx-auto mb-4 mt-5 max-w-md px-4">
+      <div className="flex items-start gap-3 rounded-2xl border border-white/10 bg-space-surface/70 px-4 py-3 backdrop-blur">
+        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-chat/15 text-chat">
+          <Bookmark className="h-4 w-4" />
+        </span>
+        <p className="text-[13px] leading-relaxed text-white/70">
+          Aqui você pode salvar mensagens, fotos, vídeos, links, documentos e tudo o que quiser.{" "}
+          <span className="inline-flex items-center gap-1 font-medium text-white/85">
+            <Lock className="h-3 w-3" /> Só você tem acesso.
+          </span>{" "}
+          ✨
+        </p>
+      </div>
     </div>
   );
 }

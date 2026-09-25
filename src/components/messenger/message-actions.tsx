@@ -2,13 +2,13 @@
 
 import { useRef, useState } from "react";
 import { clsx } from "clsx";
-import { Copy, Forward, MoreHorizontal, Reply, SmilePlus, Star, Trash2 } from "lucide-react";
+import { Bookmark, Copy, Download, Forward, MoreHorizontal, Reply, SmilePlus, Star, Trash2 } from "lucide-react";
 import { QUICK_REACTIONS } from "@/lib/messenger/emoji";
 import { formatTime, toDate } from "@/lib/messenger/format";
 import type { ChatMessage } from "@/lib/messenger/types";
 import { GhostButton, MenuItem, Modal, Popover } from "./ui";
 
-export type MessageAction = "reply" | "copy" | "forward" | "favorite" | "delete";
+export type MessageAction = "reply" | "copy" | "forward" | "favorite" | "delete" | "save" | "download";
 
 export type DeliveryState = "sending" | "sent" | "delivered" | "seen" | "failed";
 
@@ -25,7 +25,11 @@ export function canCopy(m: ChatMessage) {
 }
 
 export function canForward(m: ChatMessage) {
-  return !m.deletedAt && !m.status && m.type !== "system";
+  return !m.deletedAt && !m.status && m.type !== "system" && m.type !== "gift";
+}
+
+export function canDownload(m: ChatMessage) {
+  return !m.deletedAt && !m.status && m.attachments.length > 0;
 }
 
 export function ReactionBar({
@@ -61,11 +65,13 @@ function MenuEntries({
   m,
   mine,
   favorite,
+  inSaved,
   onAction,
 }: {
   m: ChatMessage;
   mine: boolean;
   favorite: boolean;
+  inSaved?: boolean;
   onAction: (a: MessageAction) => void;
 }) {
   const live = !m.deletedAt && !m.status;
@@ -73,10 +79,14 @@ function MenuEntries({
     <>
       {live && <MenuItem icon={Reply} label="Responder" onClick={() => onAction("reply")} />}
       {canCopy(m) && <MenuItem icon={Copy} label="Copiar texto" onClick={() => onAction("copy")} />}
+      {!inSaved && live && m.type !== "system" && m.type !== "gift" && (
+        <MenuItem icon={Bookmark} label="Salvar nos meus salvos" onClick={() => onAction("save")} />
+      )}
       {canForward(m) && <MenuItem icon={Forward} label="Encaminhar" onClick={() => onAction("forward")} />}
       {live && (
         <MenuItem icon={Star} label={favorite ? "Remover dos favoritos" : "Favoritar"} onClick={() => onAction("favorite")} />
       )}
+      {canDownload(m) && <MenuItem icon={Download} label={m.attachments.length > 1 ? "Baixar arquivos" : "Baixar"} onClick={() => onAction("download")} />}
       {!m.status && <MenuItem icon={Trash2} label="Apagar" danger onClick={() => onAction("delete")} />}
       {m.status === "failed" && mine && <MenuItem icon={Trash2} label="Descartar" danger onClick={() => onAction("delete")} />}
     </>
@@ -89,6 +99,7 @@ export function HoverActions({
   mine,
   favorite,
   myReaction,
+  inSaved,
   onReact,
   onAction,
 }: {
@@ -96,6 +107,7 @@ export function HoverActions({
   mine: boolean;
   favorite: boolean;
   myReaction: string | null;
+  inSaved?: boolean;
   onReact: (emoji: string) => void;
   onAction: (a: MessageAction) => void;
 }) {
@@ -106,7 +118,14 @@ export function HoverActions({
   const live = !m.deletedAt && !m.status;
   const openAny = reactOpen || menuOpen;
   // Open over the bubble (never toward the screen edge), and downward near the top of the chat.
-  const place = () => setBelow((bar.current?.getBoundingClientRect().top ?? 999) < 320);
+  const place = () => {
+    const el = bar.current;
+    if (!el) return;
+    // Room above inside the message area (not the window): the menu has up to 7 entries.
+    const top = el.getBoundingClientRect().top;
+    const area = el.closest(".orbit-scrollbar")?.getBoundingClientRect().top ?? 0;
+    setBelow(top - area < 300);
+  };
 
   return (
     <div
@@ -177,6 +196,7 @@ export function HoverActions({
           m={m}
           mine={mine}
           favorite={favorite}
+          inSaved={inSaved}
           onAction={(a) => {
             setMenuOpen(false);
             onAction(a);
@@ -194,6 +214,7 @@ export function MessageActionSheet({
   favorite,
   myReaction,
   state,
+  inSaved,
   onClose,
   onReact,
   onAction,
@@ -203,6 +224,7 @@ export function MessageActionSheet({
   favorite: boolean;
   myReaction: string | null;
   state: DeliveryState | null;
+  inSaved?: boolean;
   onClose: () => void;
   onReact: (emoji: string) => void;
   onAction: (a: MessageAction) => void;
@@ -226,13 +248,14 @@ export function MessageActionSheet({
         )}
         <p className="px-5 pb-1 pt-3 text-xs text-white/45">
           {d.toLocaleDateString("pt-BR", { day: "numeric", month: "long" })} às {formatTime(d)}
-          {mine && state && ` · ${STATE_LABEL[state]}`}
+          {mine && state && !inSaved && ` · ${STATE_LABEL[state]}`}
           {m.expiresAt && ` · some às ${formatTime(m.expiresAt)}`}
         </p>
         <MenuEntries
           m={m}
           mine={mine}
           favorite={favorite}
+          inSaved={inSaved}
           onAction={(a) => {
             onClose();
             onAction(a);
@@ -246,15 +269,30 @@ export function MessageActionSheet({
 export function DeleteDialog({
   m,
   mine,
+  inSaved,
   onClose,
   onDelete,
 }: {
   m: ChatMessage | null;
   mine: boolean;
+  inSaved?: boolean;
   onClose: () => void;
   onDelete: (forEveryone: boolean) => void;
 }) {
   if (!m) return null;
+  if (inSaved) {
+    return (
+      <Modal open onClose={onClose} title="Remover dos Salvos?" size="sm">
+        <p className="text-sm text-white/60">O item sai do seu espaço pessoal, com os arquivos. A mensagem original continua onde estava.</p>
+        <div className="mt-5 flex flex-col gap-2">
+          <button type="button" onClick={() => onDelete(true)} className="rounded-full bg-red-500/90 py-2.5 text-sm font-semibold text-snow transition hover:bg-red-500">
+            Remover
+          </button>
+          <GhostButton onClick={onClose}>Cancelar</GhostButton>
+        </div>
+      </Modal>
+    );
+  }
   const canEveryone = mine && !m.deletedAt && !m.status;
   return (
     <Modal open onClose={onClose} title="Apagar mensagem?" size="sm">

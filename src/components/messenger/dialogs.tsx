@@ -325,7 +325,7 @@ export function ForwardDialog({
     }
   }, [open]);
   const list = conversations.filter(
-    (c) => c.sendStatus === "ok" && (!q || normalize(conversationTitle(c)).includes(normalize(q)))
+    (c) => c.sendStatus === "ok" && !c.isSaved && (!q || normalize(conversationTitle(c)).includes(normalize(q)))
   );
   const toggle = (c: Conversation) =>
     setSelected((s) => (s.includes(c.id) ? s.filter((x) => x !== c.id) : s.length >= 10 ? s : [...s, c.id]));

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { CoinIcon, formatCoins } from "@/components/coins";
+import { useCoinBalance } from "@/components/store/coin-balance";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { disablePush } from "@/lib/push-client";
@@ -31,6 +33,7 @@ import {
   Plus,
   Search,
   Settings,
+  ShoppingBag,
   Smile,
   Store,
   User,
@@ -258,21 +261,41 @@ export function AppSidebar({ username }: { username: string; name: string; avata
         )}
       </nav>
 
-      <div className="m-3 rounded-2xl border border-white/10 bg-space-surface/80 p-4">
-        <p className="flex items-center gap-2 text-sm font-semibold text-white">
-          <Coins className="h-5 w-5 text-amber-400" /> Órbita Coins
-        </p>
-        <p className="mt-2 text-sm font-semibold text-amber-400">0 Coins</p>
-        <button
-          type="button"
-          disabled
-          title="Em breve"
-          className="mt-3 w-full rounded-xl bg-orbit-gradient py-2 text-sm font-semibold text-snow shadow-glow disabled:cursor-default"
-        >
-          Comprar Coins
-        </button>
-      </div>
+      <CoinsCard />
     </aside>
+  );
+}
+
+function CoinBadge() {
+  const balance = useCoinBalance();
+  return balance === null ? null : (
+    <span className="ml-auto flex items-center gap-1 text-xs font-semibold tabular-nums text-amber-400">
+      <CoinIcon className="h-3.5 w-3.5" />
+      {formatCoins(balance)}
+    </span>
+  );
+}
+
+/** Real balance (CoinWallet) and the way into the Órbita X Store. */
+function CoinsCard() {
+  const balance = useCoinBalance();
+  return (
+    <div className="m-3 rounded-2xl border border-white/10 bg-space-surface/80 p-4">
+      <p className="flex items-center gap-2 text-sm font-semibold text-white">
+        <Coins className="h-5 w-5 text-amber-400" /> Órbita Coins
+      </p>
+      <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold tabular-nums text-amber-400">
+        <CoinIcon className="h-4 w-4" />
+        {balance === null ? "…" : `${formatCoins(balance)} Coins`}
+      </p>
+      <Link
+        href="/loja"
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-orbit-gradient py-2 text-sm font-semibold text-snow shadow-glow transition hover:opacity-95"
+      >
+        <ShoppingBag className="h-4 w-4" /> Órbita X Store
+      </Link>
+      <p className="mt-2 text-center text-[11px] text-white/40">Compra de Coins em breve</p>
+    </div>
   );
 }
 
@@ -333,6 +356,14 @@ export function MobileHeader({ userId, username, presence }: { userId: string; u
               </span>
             )
           )}
+          <Link
+            href="/loja"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/80 hover:bg-white/5"
+          >
+            <ShoppingBag className="h-5 w-5" /> Órbita X Store
+            <CoinBadge />
+          </Link>
           <Link
             href="/configuracoes"
             onClick={() => setOpen(false)}

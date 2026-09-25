@@ -8,6 +8,7 @@ import {
   chatFilePath,
   compressImage,
   copyChatFile,
+  downloadUrl,
   extensionOf,
   MAX_UPLOAD_BYTES,
   registerLocalUrl,
@@ -18,6 +19,7 @@ import {
   voiceWaveform,
 } from "@/lib/messenger/media";
 import { chatThemeStyle } from "@/lib/messenger/themes";
+import { ensureSavedId, saveMessageToSaved } from "@/lib/messenger/saved";
 import { isWallpaper, wallpaperStyle } from "@/lib/messenger/wallpapers";
 import { messagePreview, toDate } from "@/lib/messenger/format";
 import {
@@ -37,11 +39,12 @@ import {
 } from "@/lib/messenger/types";
 import { useMessenger } from "./context";
 import { ChatHeader } from "./chat-header";
-import { ChatIntro, deliveryState, MessageList } from "./message-list";
+import { ChatIntro, deliveryState, MessageList, SavedIntro } from "./message-list";
 import { ComposerLocked, MessageComposer, type ComposerApi } from "./message-composer";
 import { DeleteDialog, MessageActionSheet, type MessageAction } from "./message-actions";
 import { ConversationInfo } from "./conversation-info";
 import { ContactDialog, ForwardDialog, LocationDialog, PollDialog } from "./dialogs";
+import { GiftDialog, LinkDialog, SaveToSavedDialog } from "./extra-dialogs";
 import { MediaViewer } from "./media-viewer";
 import { ProfileCard } from "./profile-card";
 import { GhostButton, Modal } from "./ui";
@@ -69,14 +72,17 @@ export function ChatView({
   visible,
   showBack,
   onBack,
+  jumpToMessageId = null,
 }: {
   c: Conversation;
   /** The chat is on screen (on phones the list and the chat are separate screens). */
   visible: boolean;
   showBack: boolean;
   onBack: () => void;
+  /** Opened from a search result: scroll to this message. */
+  jumpToMessageId?: string | null;
 }) {
-  const { supabase, me, toast, patchConversation, reloadConversations } = useMessenger();
+  const { supabase, me, toast, patchConversation, reloadConversations, savedId, conversations, openConversation } = useMessenger();
   const { refresh: refreshCounts } = useLiveCounts();
   const wide = useMediaQuery("(min-width: 1280px)");
 
@@ -100,7 +106,7 @@ export function ChatView({
   const [sheetFor, setSheetFor] = useState<ChatMessage | null>(null);
   const [deleteFor, setDeleteFor] = useState<ChatMessage | null>(null);
   const [forwardFor, setForwardFor] = useState<ChatMessage | null>(null);
-  const [dialog, setDialog] = useState<null | "poll" | "location" | "contact">(null);
+  const [dialog, setDialog] = useState<null | "poll" | "location" | "contact" | "link" | "gift" | "save">(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [viewer, setViewer] = useState<{ items: Attachment[]; locals?: string[]; index: number; caption?: string } | null>(null);
   const outgoing = useRef(new Map<string, Outgoing>());
@@ -226,6 +232,10 @@ export function ChatView({
       .then(({ data }) => !cancel && setFavorites(new Set((data ?? []).map((f) => f.messageId))));
     loadLatest().then((list) => {
       if (cancel) return;
+      if (jumpToMessageId) {
+        setUnreadFromId(null);
+        return;
+      }
       // "Novas mensagens" marker above the first unread message.
       let n = unreadAtOpen.current;
       if (n > 0) {
@@ -241,6 +251,12 @@ export function ChatView({
       cancel = true;
     };
   }, [c.id, supabase, me.id, loadLatest, loadMembers]);
+
+  // Search result → open the history around that message once the chat is loaded.
+  const pendingJump = useRef<string | null>(null);
+  useEffect(() => {
+    pendingJump.current = jumpToMessageId;
+  }, [jumpToMessageId]);
 
   const loadOlder = useCallback(async () => {
     if (loadingMore || !hasMore) return;
@@ -303,6 +319,13 @@ export function ChatView({
     },
     [messages, supabase, c.id, loadExtras, toast]
   );
+
+  useEffect(() => {
+    const id = pendingJump.current;
+    if (!id || loading) return;
+    pendingJump.current = null;
+    jumpTo(id);
+  }, [loading, jumpTo, jumpToMessageId]);
 
   // ── Reading ────────────────────────────────────────────────────────────────
   const readTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -593,6 +616,9 @@ export function ChatView({
     openPoll: () => setDialog("poll"),
     openLocation: () => setDialog("location"),
     openContact: () => setDialog("contact"),
+    openLink: () => setDialog("link"),
+    openGift: () => setDialog("gift"),
+    openSave: () => setDialog("save"),
   };
 
   // ── Message actions ─────────────────────────────────────────────────────────
@@ -638,6 +664,32 @@ export function ChatView({
         }
       }
       if (a === "forward") setForwardFor(m);
+      if (a === "save") {
+        try {
+          const id = savedId ?? (await ensureSavedId(supabase));
+          await saveMessageToSaved(supabase, id, me.id, m);
+          toast("Salvo nos seus Salvos. 🔖");
+          reloadConversations();
+        } catch (e) {
+          const msg = (e as { message?: string } | null)?.message ?? "";
+          toast(
+            /invalid_sticker/.test(msg) ? "Esta figurinha é de um pacote que você não tem." : "Não foi possível salvar esta mensagem.",
+            "error"
+          );
+        }
+      }
+      if (a === "download") {
+        for (const att of m.attachments) {
+          const url = await downloadUrl(att.path, att.name ?? att.path.split("/").pop());
+          if (!url) continue;
+          const link = document.createElement("a");
+          link.href = url;
+          link.rel = "noopener";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        }
+      }
       if (a === "favorite") {
         const { data, error } = await supabase.rpc("toggle_favorite", { message_id: m.id });
         if (error) return toast("Não foi possível favoritar.", "error");
@@ -657,7 +709,7 @@ export function ChatView({
         } else setDeleteFor(m);
       }
     },
-    [supabase, toast]
+    [supabase, toast, savedId, me.id, reloadConversations]
   );
 
   async function doDelete(forEveryone: boolean) {
@@ -667,9 +719,15 @@ export function ChatView({
     const { data, error } = await supabase.rpc("delete_message", { message_id: m.id, for_everyone: forEveryone });
     if (error) return toast("Não foi possível apagar.", "error");
     if (forEveryone) {
-      setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, deletedAt: new Date().toISOString(), content: "", attachments: [], meta: {} } : x)));
       const paths = (Array.isArray(data) ? data : []).filter((p): p is string => typeof p === "string");
       removeChatFiles(paths).catch(() => {});
+      if (c.isSaved) {
+        // In "Salvos" a removed item simply disappears (no "Mensagem apagada" placeholder).
+        await supabase.rpc("delete_message", { message_id: m.id, for_everyone: false });
+        setMessages((prev) => prev.filter((x) => x.id !== m.id));
+      } else {
+        setMessages((prev) => prev.map((x) => (x.id === m.id ? { ...x, deletedAt: new Date().toISOString(), content: "", attachments: [], meta: {} } : x)));
+      }
     } else setMessages((prev) => prev.filter((x) => x.id !== m.id));
     reloadConversations();
   }
@@ -744,8 +802,12 @@ export function ChatView({
       onVote: vote,
       onJump: (id: string) => jumpTo(id),
       onRetry: (m: ChatMessage) => deliver(m.id),
+      onOpenOrigin: (conversationId: string, messageId: string) => {
+        if (conversations.some((x) => x.id === conversationId)) openConversation(conversationId, messageId);
+        else toast("Você não participa mais da conversa de origem. A cópia continua aqui nos seus Salvos.");
+      },
     }),
-    [react, action, openMedia, vote, jumpTo, deliver]
+    [react, action, openMedia, vote, jumpTo, deliver, conversations, openConversation, toast]
   );
 
   const replyName = replyTo ? (replyTo.senderId === me.id ? "você mesmo" : memberMap.get(replyTo.senderId)?.name ?? "mensagem") : null;
@@ -775,7 +837,7 @@ export function ChatView({
       <section
         className={clsx("relative flex h-full min-h-0 min-w-0 flex-1 flex-col", !isWallpaper(c.wallpaper) && "chat-space-bg")}
         style={isWallpaper(c.wallpaper) ? wallpaperStyle(c.wallpaper) : undefined}
-        aria-label={`Conversa com ${title}`}
+        aria-label={c.isSaved ? "Salvos, seu espaço pessoal" : `Conversa com ${title}`}
       >
         <ChatHeader
           c={c}
@@ -825,7 +887,11 @@ export function ChatView({
           onJumpToLatest={loadLatest}
           highlightId={highlightId}
           unreadFromId={unreadFromId}
+          savedSpace={c.isSaved}
           intro={
+            c.isSaved ? (
+              <SavedIntro />
+            ) : (
             <ChatIntro
               title={c.isGroup ? title : `Você e ${c.otherUser?.name.split(" ")[0] ?? "seu amigo"} são amigos no ÓrbitaX`}
               subtitle={
@@ -837,12 +903,13 @@ export function ChatView({
               }
               privateNote
             />
+            )
           }
           handlers={handlers}
         />
 
         {c.sendStatus === "ok" ? (
-          <MessageComposer conversationId={c.id} replyTo={replyTo} replyName={replyName} onCancelReply={() => setReplyTo(null)} api={api} />
+          <MessageComposer conversationId={c.id} replyTo={replyTo} replyName={replyName} onCancelReply={() => setReplyTo(null)} api={api} inSaved={c.isSaved} />
         ) : (
           <ComposerLocked status={c.sendStatus} username={c.otherUser?.username} name={c.otherUser?.name} />
         )}
@@ -879,11 +946,24 @@ export function ChatView({
         favorite={!!sheetFor && favorites.has(sheetFor.id)}
         myReaction={sheetFor ? reactions.find((r) => r.messageId === sheetFor.id && r.userId === me.id)?.emoji ?? null : null}
         state={sheetFor ? deliveryState(sheetFor, othersReadAt) : null}
+        inSaved={c.isSaved}
         onClose={() => setSheetFor(null)}
         onReact={(e) => sheetFor && react(sheetFor, e)}
         onAction={(a) => sheetFor && action(sheetFor, a)}
       />
-      <DeleteDialog m={deleteFor} mine={deleteFor?.senderId === me.id} onClose={() => setDeleteFor(null)} onDelete={doDelete} />
+      <DeleteDialog m={deleteFor} mine={deleteFor?.senderId === me.id} inSaved={c.isSaved} onClose={() => setDeleteFor(null)} onDelete={doDelete} />
+      <LinkDialog
+        open={dialog === "link"}
+        onClose={() => setDialog(null)}
+        onSend={(text) => {
+          setDialog(null);
+          queue({ type: "text", content: text, attachments: [], meta: {}, uploads: [] });
+        }}
+      />
+      {!c.isSaved && (
+        <GiftDialog open={dialog === "gift"} onClose={() => setDialog(null)} c={c} members={members} onSent={reloadConversations} />
+      )}
+      <SaveToSavedDialog open={dialog === "save"} onClose={() => setDialog(null)} />
       <ForwardDialog open={!!forwardFor} onClose={() => setForwardFor(null)} onForward={forward} currentId={c.id} />
       <PollDialog
         open={dialog === "poll"}

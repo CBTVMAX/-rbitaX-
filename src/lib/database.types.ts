@@ -30,7 +30,7 @@ type CommunityMemberRow = { communityId: string; createdAt: string; id: string; 
 type CommunityMemberInsert = { communityId: string; createdAt?: string; id: string; role?: string; userId: string };
 type CommunityMemberUpdate = Partial<CommunityMemberInsert>;
 
-type ConversationRow = { createdAt: string; id: string; updatedAt: string; isGroup: boolean; name: string | null; avatarUrl: string | null; description: string | null; createdById: string | null; messageTtlSeconds: number | null; lastMessageAt: string | null };
+type ConversationRow = { createdAt: string; id: string; updatedAt: string; isGroup: boolean; isSaved: boolean; name: string | null; avatarUrl: string | null; description: string | null; createdById: string | null; messageTtlSeconds: number | null; lastMessageAt: string | null };
 type ConversationInsert = { createdAt?: string; id: string; updatedAt?: string };
 type ConversationUpdate = Partial<ConversationInsert>;
 
@@ -58,7 +58,13 @@ type PollVoteRow = { id: string; messageId: string; conversationId: string; user
 type MessageFavoriteRow = { messageId: string; userId: string; conversationId: string; createdAt: string };
 type MessageHiddenRow = { messageId: string; userId: string; createdAt: string };
 type ConversationSettingRow = { conversationId: string; userId: string; archivedAt: string | null; mutedUntil: string | null; theme: string | null; wallpaper: string | null; clearedAt: string | null; updatedAt: string };
-type StickerPackRow = { id: string; name: string; tier: string; priceCoins: number | null; isAdult: boolean; sortOrder: number; cover: string; stickers: string[]; labels: string[] | null; active: boolean; createdAt: string };
+type StickerPackRow = { id: string; name: string; tier: string; priceCoins: number | null; isAdult: boolean; sortOrder: number; cover: string; stickers: string[]; labels: string[] | null; active: boolean; createdAt: string; section: string; category: string | null; animated: boolean };
+type StickerFavoriteRow = { userId: string; sticker: string; createdAt: string };
+type CoinWalletRow = { userId: string; balance: number; updatedAt: string };
+type CoinTransactionRow = { id: string; userId: string; amount: number; balanceAfter: number; kind: string; productId: string | null; referenceId: string | null; description: string; createdAt: string };
+type StoreProductRow = { id: string; kind: string; refId: string; name: string; description: string; image: string; priceCoins: number; tier: string; isAdult: boolean; badge: string | null; sortOrder: number; active: boolean; meta: Json; createdAt: string };
+type UserInventoryRow = { userId: string; productId: string; source: string; isFavorite: boolean; acquiredAt: string };
+type VirtualGiftRow = { id: string; productId: string; senderId: string; recipientId: string; conversationId: string | null; messageId: string | null; priceCoins: number; note: string | null; createdAt: string };
 type UserStickerPackRow = { userId: string; packId: string; acquiredAt: string };
 type ReadOnly<R> = { Row: R; Insert: never; Update: never; Relationships: [] };
 type MessageUpdate = Partial<MessageInsert>;
@@ -166,6 +172,18 @@ export type Database = {
       ConversationSetting: ReadOnly<ConversationSettingRow>;
       StickerPack: ReadOnly<StickerPackRow>;
       UserStickerPack: ReadOnly<UserStickerPackRow>;
+      StickerFavorite: ReadOnly<StickerFavoriteRow>;
+      CoinWallet: ReadOnly<CoinWalletRow>;
+      CoinTransaction: ReadOnly<CoinTransactionRow>;
+      StoreProduct: ReadOnly<StoreProductRow>;
+      UserInventory: { Row: UserInventoryRow; Insert: never; Update: never; Relationships: [
+        { foreignKeyName: "UserInventory_productId_fkey"; columns: ["productId"]; isOneToOne: false; referencedRelation: "StoreProduct"; referencedColumns: ["id"] }
+      ] };
+      VirtualGift: { Row: VirtualGiftRow; Insert: never; Update: never; Relationships: [
+        { foreignKeyName: "VirtualGift_productId_fkey"; columns: ["productId"]; isOneToOne: false; referencedRelation: "StoreProduct"; referencedColumns: ["id"] },
+        { foreignKeyName: "VirtualGift_senderId_fkey"; columns: ["senderId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
+        { foreignKeyName: "VirtualGift_recipientId_fkey"; columns: ["recipientId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
+      ] };
       Moment: { Row: MomentRow; Insert: MomentInsert; Update: MomentUpdate; Relationships: [
         { foreignKeyName: "Moment_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
       ] };
@@ -284,6 +302,7 @@ export type Database = {
         Returns: {
           id: string;
           isGroup: boolean;
+          isSaved: boolean;
           name: string | null;
           avatarUrl: string | null;
           description: string | null;
@@ -316,6 +335,33 @@ export type Database = {
       remove_group_member: { Args: { p_conversation_id: string; p_user_id: string }; Returns: undefined };
       set_group_admin: { Args: { p_conversation_id: string; p_user_id: string; p_admin: boolean }; Returns: undefined };
       set_conversation_ttl: { Args: { p_conversation_id: string; p_seconds: number | null }; Returns: undefined };
+      ensure_saved_chat: { Args: Record<string, never>; Returns: string };
+      save_to_saved: { Args: { p_message_id: string; p_attachments: Json }; Returns: string };
+      toggle_sticker_favorite: { Args: { p_sticker: string }; Returns: boolean };
+      my_recent_stickers: { Args: { p_limit?: number }; Returns: { sticker: string; lastUsedAt: string }[] };
+      popular_stickers: { Args: { p_limit?: number }; Returns: { sticker: string; uses: number }[] };
+      my_coin_balance: { Args: Record<string, never>; Returns: number };
+      acquire_product: { Args: { p_product_id: string }; Returns: Json };
+      toggle_inventory_favorite: { Args: { p_product_id: string }; Returns: boolean };
+      remove_inventory_item: { Args: { p_product_id: string }; Returns: undefined };
+      send_gift: { Args: { p_conversation_id: string; p_product_id: string; p_recipient_id?: string | null; p_note?: string | null }; Returns: string };
+      search_messenger: {
+        Args: { p_query?: string | null; p_kind?: string; p_before?: string | null; p_limit?: number };
+        Returns: {
+          id: string;
+          conversationId: string;
+          chatTitle: string | null;
+          isGroup: boolean;
+          isSaved: boolean;
+          senderId: string;
+          senderName: string | null;
+          type: string;
+          content: string;
+          preview: string;
+          attachments: Json;
+          createdAt: string;
+        }[];
+      };
       public_posts: {
         Args: { limit_count?: number; search_query?: string | null };
         Returns: {

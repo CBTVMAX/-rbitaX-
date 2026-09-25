@@ -64,7 +64,7 @@ function ChatSearch({ c, onClose, onJump }: { c: Conversation; onClose: () => vo
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Escape" && onClose()}
-          placeholder="Buscar nesta conversa"
+          placeholder={c.isSaved ? "Buscar nos Salvos" : "Buscar nesta conversa"}
           className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/40"
         />
         {busy ? (
@@ -151,6 +151,28 @@ export function ChatHeader({
 
       {searchOpen ? (
         <ChatSearch c={c} onClose={onToggleSearch} onJump={onJump} />
+      ) : c.isSaved ? (
+        <>
+          <button
+            type="button"
+            onClick={onToggleInfo}
+            className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-1.5 py-1 text-left transition hover:bg-white/[0.04]"
+          >
+            <ConversationAvatar c={c} size={42} />
+            <span className="min-w-0">
+              <span className="block truncate text-[15px] font-semibold text-white">Salvos</span>
+              <span className="block truncate text-xs text-white/50">Seu espaço pessoal</span>
+            </span>
+          </button>
+          <div className="flex shrink-0 items-center">
+            <IconButton label="Buscar nos Salvos" onClick={onToggleSearch}>
+              <Search className="h-[19px] w-[19px]" />
+            </IconButton>
+            <IconButton label={infoOpen ? "Fechar mídia e arquivos" : "Mídia e arquivos salvos"} onClick={onToggleInfo} active={infoOpen}>
+              {infoOpen ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
+            </IconButton>
+          </div>
+        </>
       ) : (
         <>
           <button

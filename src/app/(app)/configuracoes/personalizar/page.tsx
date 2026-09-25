@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowLeft, Eye } from "lucide-react";
 import { getCurrentUser } from "@/lib/current-user";
+import { createClient } from "@/lib/supabase/server";
 import { ProfileCustomizer } from "@/components/profile-customizer";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,18 @@ export default async function CustomizeProfilePage() {
   const current = await getCurrentUser();
   if (!current) redirect("/entrar");
   const user = current.profile;
+
+  // Premium frames: the ones this member owns and the ones on sale in the Órbita X Store.
+  const supabase = createClient();
+  const [{ data: onSale }, { data: owned }] = await Promise.all([
+    supabase.from("StoreProduct").select("refId, priceCoins").eq("kind", "frame"),
+    supabase.from("UserInventory").select("product:StoreProduct(kind, refId)"),
+  ]);
+  const framePrices = Object.fromEntries((onSale ?? []).map((p) => [p.refId, p.priceCoins]));
+  const ownedFrames = (owned ?? [])
+    .map((i) => (i as unknown as { product: { kind: string; refId: string } | null }).product)
+    .filter((p): p is { kind: string; refId: string } => p?.kind === "frame")
+    .map((p) => p.refId);
 
   return (
     <div className="mx-auto max-w-2xl px-3 py-4 md:px-4 md:py-6 lg:max-w-6xl lg:px-6">
@@ -43,6 +56,8 @@ export default async function CustomizeProfilePage() {
         coverUrl={user.coverUrl}
         initialColor={user.profileColor ?? "orbita"}
         initialFrame={user.avatarFrame ?? null}
+        ownedFrames={ownedFrames}
+        framePrices={framePrices}
       />
     </div>
   );

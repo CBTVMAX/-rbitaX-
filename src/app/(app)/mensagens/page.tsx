@@ -25,6 +25,9 @@ export default async function MensagensPage({ searchParams }: { searchParams: { 
     }
   }
 
+  // Every member has a private "Salvos" (created the first time the Messenger opens).
+  await supabase.rpc("ensure_saved_chat");
+
   // Whole list in one round trip (last message, unread, settings, who can write).
   const { data: rows } = await supabase.rpc("my_conversations");
   const conversations = (rows ?? []) as unknown as Record<string, unknown>[];
