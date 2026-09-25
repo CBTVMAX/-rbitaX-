@@ -201,6 +201,7 @@ export type Database = {
       my_badge_counts: { Args: Record<string, never>; Returns: { messages: number; friendRequests: number; notifications: number }[] };
       mark_conversation_read: { Args: { conversation_id: string }; Returns: undefined };
       mark_friend_requests_seen: { Args: Record<string, never>; Returns: undefined };
+      create_community: { Args: { p_name: string; p_description?: string | null; p_category?: string | null }; Returns: string };
       public_profile_details: {
         Args: { target_user_id: string };
         Returns: {

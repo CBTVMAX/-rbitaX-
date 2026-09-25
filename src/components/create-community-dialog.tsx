@@ -6,17 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { COMMUNITY_CATEGORIES } from "@/lib/community-categories";
 import { Plus, X } from "lucide-react";
 
-function slugify(v: string) {
-  return v
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
-    .slice(0, 40);
-}
-
-export function CreateCommunityDialog({ userId }: { userId: string }) {
+// userId is kept in the props for the callers; the database uses the signed-in account.
+export function CreateCommunityDialog(_props: { userId: string }) {
   const supabase = createClient();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -32,29 +23,22 @@ export function CreateCommunityDialog({ userId }: { userId: string }) {
     setBusy(true);
     setError(null);
 
-    const slug = slugify(name);
-    const id = crypto.randomUUID();
-
-    const { error: createError } = await supabase.from("Community").insert({
-      id,
-      name: name.trim(),
-      slug,
-      description: description.trim() || null,
-      category: category || null,
+    // The database builds a unique address and makes the creator the owner in one step.
+    const { data: slug, error: createError } = await supabase.rpc("create_community", {
+      p_name: name,
+      p_description: description,
+      p_category: category,
     });
 
-    if (createError) {
-      setError(createError.message.includes("duplicate") ? "Já existe uma comunidade com esse nome." : createError.message);
+    if (createError || !slug) {
+      setError(
+        createError?.message.includes("entre 3 e 60")
+          ? "O nome da comunidade deve ter entre 3 e 60 caracteres."
+          : "Não foi possível criar a comunidade agora. Tente novamente."
+      );
       setBusy(false);
       return;
     }
-
-    await supabase.from("CommunityMember").insert({
-      id: crypto.randomUUID(),
-      communityId: id,
-      userId,
-      role: "owner",
-    });
 
     setBusy(false);
     setOpen(false);
