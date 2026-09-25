@@ -42,6 +42,7 @@ export default async function CustomizeProfilePage() {
         avatarUrl={user.avatarUrl}
         coverUrl={user.coverUrl}
         initialColor={user.profileColor ?? "orbita"}
+        initialFrame={user.avatarFrame ?? null}
       />
     </div>
   );

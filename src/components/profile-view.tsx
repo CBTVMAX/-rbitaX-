@@ -12,6 +12,7 @@ import {
 } from "@/components/profile-client";
 import { presenceOf } from "@/lib/presence";
 import { relationshipLabel } from "@/lib/profile-options";
+import { frameBackdropStyle, frameSrc, getFrame, type AvatarFrame } from "@/lib/avatar-frames";
 import { hasCustomAccent, profileAccentStyle, profileColorHex, profileColorLabel } from "@/lib/profile-colors";
 import { PresenceDot, PresenceStatus } from "@/components/presence-picker";
 import {
@@ -84,6 +85,7 @@ function ProfileAvatar({
   isMe,
   online,
   accent,
+  frame,
   className,
 }: {
   name: string;
@@ -92,37 +94,58 @@ function ProfileAvatar({
   isMe: boolean;
   online: boolean;
   accent: boolean;
+  frame: AvatarFrame | null;
   className: string;
 }) {
+  const photo = (
+    <div className="flex h-full w-full items-end justify-center overflow-hidden rounded-full bg-space-card">
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={url} alt={name} className="h-full w-full object-cover" />
+      ) : (
+        <Silhouette className="h-[78%] w-[78%] text-orbit-blue/55" />
+      )}
+    </div>
+  );
+
   return (
     <div className={`relative shrink-0 ${className}`}>
-      <div
-        className={`h-full w-full rounded-full p-[4px] ${
-          accent
-            ? "bg-pa shadow-[0_0_34px_rgb(var(--pa)/0.6)]"
-            : "bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] shadow-[0_0_32px_rgba(139,92,246,0.45)]"
-        }`}
-      >
-        <div className="flex h-full w-full items-end justify-center overflow-hidden rounded-full border-4 border-space-bg bg-space-card">
-          {url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={url} alt={name} className="h-full w-full object-cover" />
-          ) : (
-            <Silhouette className="h-[78%] w-[78%] text-orbit-blue/55" />
-          )}
+      {frame ? (
+        <>
+          <div aria-hidden className="pointer-events-none absolute -inset-[30%]" style={frameBackdropStyle(frame)} />
+          <div className="relative h-full w-full">{photo}</div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={frameSrc(frame.id)}
+            alt=""
+            aria-hidden
+            className="pointer-events-none absolute -inset-[30%] h-[160%] w-[160%] max-w-none select-none"
+          />
+        </>
+      ) : (
+        <div
+          className={`h-full w-full rounded-full p-[4px] ${
+            accent
+              ? "bg-pa shadow-[0_0_34px_rgb(var(--pa)/0.6)]"
+              : "bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] shadow-[0_0_32px_rgba(139,92,246,0.45)]"
+          }`}
+        >
+          <div className="h-full w-full rounded-full border-4 border-space-bg">{photo}</div>
         </div>
-      </div>
+      )}
       {online && (
-        <span className="absolute right-[9%] top-[58%] h-3.5 w-3.5 rounded-full border-2 border-space-bg bg-emerald-400" />
+        <span className="absolute right-[9%] top-[58%] z-10 h-3.5 w-3.5 rounded-full border-2 border-space-bg bg-emerald-400" />
       )}
       {isMe && (
         <ProfileImageUpload
           userId={userId}
           field="avatarUrl"
           ariaLabel="Alterar foto"
-          className="absolute bottom-[3%] right-[3%] flex h-10 w-10 items-center justify-center rounded-full border-2 border-pa bg-space-bg/90 text-white shadow-glow transition hover:bg-space-card md:h-12 md:w-12"
+          className={`absolute z-10 flex items-center justify-center rounded-full border-2 border-pa bg-space-bg/90 text-white shadow-glow transition hover:bg-space-card ${
+            frame ? "bottom-0 right-0 h-8 w-8 md:h-10 md:w-10" : "bottom-[3%] right-[3%] h-10 w-10 md:h-12 md:w-12"
+          }`}
         >
-          <Camera className="h-5 w-5" />
+          <Camera className={frame ? "h-4 w-4 md:h-5 md:w-5" : "h-5 w-5"} />
         </ProfileImageUpload>
       )}
     </div>
@@ -151,6 +174,7 @@ export type ProfileViewProps = {
     avatarUrl: string | null;
     coverUrl: string | null;
     profileColor: string;
+    avatarFrame: string | null;
   };
   info: ProfileInfo | null | undefined;
   current: { authId: string; profile: { name: string; avatarUrl: string | null } } | null;
@@ -208,6 +232,7 @@ export function ProfileView({
   const presence = presenceOf(user.presence);
   const online = presence === "online";
   const accent = hasCustomAccent(user.profileColor);
+  const frame = getFrame(user.avatarFrame);
 
   const age = info?.birthDate && (isMe || info.showAge) ? ageFrom(info.birthDate) : null;
   const sign = info?.zodiacSign && (isMe || info.showSign) ? info.zodiacSign : null;
@@ -681,7 +706,7 @@ export function ProfileView({
 
           {/* Desktop */}
           <div className="hidden gap-6 px-6 pb-5 md:flex">
-            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} isMe={isMe} online={online} accent={accent} className="-mt-24 h-44 w-44" />
+            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} isMe={isMe} online={online} accent={accent} frame={frame} className={`-mt-24 h-44 w-44 ${frame ? "mx-8 mb-8" : ""}`} />
             <div className="min-w-0 flex-1 pt-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">{identity}</div>
@@ -704,7 +729,7 @@ export function ProfileView({
 
           {/* Mobile */}
           <div className="px-4 pb-4 md:hidden">
-            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} isMe={isMe} online={online} accent={accent} className="-mt-12 h-28 w-28" />
+            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} isMe={isMe} online={online} accent={accent} frame={frame} className={`-mt-12 h-28 w-28 ${frame ? "mb-6 ml-5" : ""}`} />
             <div className="mt-3">{identity}</div>
             {bioAndMeta}
             <div className="mt-4 flex items-center gap-2">

@@ -27,6 +27,15 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { ProfileImageUpload } from "@/components/profile-client";
 import {
+  AVATAR_FRAMES,
+  FRAME_TIERS,
+  canEquipFrame,
+  frameBackdropStyle,
+  frameSrc,
+  getFrame,
+  type FrameTier,
+} from "@/lib/avatar-frames";
+import {
   DEFAULT_PROFILE_COLOR,
   PROFILE_COLORS,
   hexToChannels,
@@ -43,6 +52,7 @@ type Props = {
   avatarUrl: string | null;
   coverUrl: string | null;
   initialColor: string;
+  initialFrame: string | null;
 };
 
 const GRADIENTS = [
@@ -67,16 +77,6 @@ const THEMES = [
   { name: "Romântico", icon: Heart, bg: "linear-gradient(135deg,#2a0716,#be185d 55%,#f472b6)" },
 ];
 
-const FRAMES = [
-  { name: "Padrão", free: true, ring: "border-2 border-white/40" },
-  { name: "Neon", free: true, ring: "border-2 border-[#2b6cff] shadow-[0_0_14px_#2b6cff]" },
-  { name: "Cristal", free: false, ring: "border-[3px] border-dotted border-[#a5b4fc] shadow-[0_0_12px_#818cf8]" },
-  { name: "Fogo", free: false, ring: "border-[3px] border-[#f97316] shadow-[0_0_16px_#ef4444]" },
-  { name: "Galáxia", free: false, ring: "border-[3px] border-[#8b5cf6] shadow-[0_0_16px_#6366f1]" },
-  { name: "Coração", free: false, ring: "border-[3px] border-[#ec4899] shadow-[0_0_16px_#ec4899]" },
-  { name: "Dragão", free: false, ring: "border-[3px] border-double border-[#dc2626] shadow-[0_0_14px_#dc2626]" },
-  { name: "Lobo", free: false, ring: "border-[3px] border-dashed border-[#60a5fa] shadow-[0_0_14px_#3b82f6]" },
-];
 
 const EFFECTS = ["Estrelas", "Partículas", "Aurora", "Fumaça", "Energia Neon"];
 const BADGES = ["Astronauta", "Planetas", "Asas", "Coroa"];
@@ -133,8 +133,9 @@ function Silhouette({ className }: { className?: string }) {
 }
 
 /** Live preview of the profile header with the selected color (same rules as the real profile). */
-function Preview({ color, props }: { color: string; props: Props }) {
+function Preview({ color, frameId, props }: { color: string; frameId: string | null; props: Props }) {
   const accent = color !== DEFAULT_PROFILE_COLOR;
+  const frame = getFrame(frameId);
   const style = accent ? ({ ["--pa" as string]: hexToChannels(profileColorHex(color)) } as React.CSSProperties) : undefined;
 
   return (
@@ -153,22 +154,36 @@ function Preview({ color, props }: { color: string; props: Props }) {
         )}
       </div>
       <div className="px-4 pb-4">
-        <div
-          className={clsx(
-            "relative -mt-10 h-20 w-20 rounded-full p-[3px]",
-            accent
-              ? "bg-pa shadow-[0_0_24px_rgb(var(--pa)/0.6)]"
-              : "bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] shadow-[0_0_24px_rgba(139,92,246,0.45)]"
-          )}
-        >
-          <div className="flex h-full w-full items-end justify-center overflow-hidden rounded-full border-[3px] border-space-surface bg-space-card">
-            {props.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={props.avatarUrl} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <Silhouette className="h-[78%] w-[78%] text-orbit-blue/55" />
+        <div className={clsx("relative h-20 w-20", frame ? "-mt-8 mb-6 ml-4" : "-mt-10")}>
+          {frame && <div aria-hidden className="pointer-events-none absolute -inset-[30%]" style={frameBackdropStyle(frame)} />}
+          <div
+            className={clsx(
+              "relative h-full w-full rounded-full",
+              !frame && "p-[3px]",
+              !frame &&
+                (accent
+                  ? "bg-pa shadow-[0_0_24px_rgb(var(--pa)/0.6)]"
+                  : "bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] shadow-[0_0_24px_rgba(139,92,246,0.45)]")
             )}
+          >
+            <div
+              className={clsx(
+                "flex h-full w-full items-end justify-center overflow-hidden rounded-full bg-space-card",
+                !frame && "border-[3px] border-space-surface"
+              )}
+            >
+              {props.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={props.avatarUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <Silhouette className="h-[78%] w-[78%] text-orbit-blue/55" />
+              )}
+            </div>
           </div>
+          {frame && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={frameSrc(frame.id)} alt="" aria-hidden className="pointer-events-none absolute -inset-[30%] h-[160%] w-[160%] max-w-none" />
+          )}
         </div>
         <div className="mt-2 flex items-center gap-1.5">
           <p className="truncate font-display text-lg font-bold text-white">{props.name}</p>
@@ -207,34 +222,155 @@ function Preview({ color, props }: { color: string; props: Props }) {
   );
 }
 
+const TIER_ORDER: FrameTier[] = ["gratuita", "rara", "epica", "mistica", "lendaria", "fantasia"];
+
+function FrameCatalog({
+  avatarUrl,
+  selected,
+  onSelect,
+}: {
+  avatarUrl: string | null;
+  selected: string | null;
+  onSelect: (id: string | null) => void;
+}) {
+  const [tier, setTier] = useState<FrameTier>(() => getFrame(selected)?.tier ?? "gratuita");
+  const frames = AVATAR_FRAMES.filter((f) => f.tier === tier);
+  const free = FRAME_TIERS[tier].free;
+
+  const photo = avatarUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+  ) : (
+    <Silhouette className="h-[78%] w-[78%] text-[#2b6cff]/55" />
+  );
+  const avatar = (
+    <span className="absolute inset-[18.75%] flex items-end justify-center overflow-hidden rounded-full bg-[#11152a]">
+      {photo}
+    </span>
+  );
+
+  return (
+    <div>
+      <div className="orbit-scrollbar -mx-1 mb-4 flex gap-1.5 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Coleções de molduras">
+        {TIER_ORDER.map((t) => (
+          <button
+            key={t}
+            type="button"
+            role="tab"
+            aria-selected={tier === t}
+            onClick={() => setTier(t)}
+            className={clsx(
+              "flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium transition",
+              tier === t ? "border-orbit-purple bg-orbit-purple/15 text-white" : "border-white/10 text-white/60 hover:text-white"
+            )}
+          >
+            {!FRAME_TIERS[t].free && <Lock className="h-3 w-3 opacity-70" />}
+            {FRAME_TIERS[t].label}
+          </button>
+        ))}
+      </div>
+
+      {!free && (
+        <p className="mb-3 flex items-center gap-2 rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-xs text-amber-200/90">
+          <Crown className="h-4 w-4 shrink-0 text-amber-400" />
+          Coleção {FRAME_TIERS[tier].label.toLowerCase()}: disponível em breve com as Órbita Coins.
+        </p>
+      )}
+
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-5">
+        {free && (
+          <button
+            type="button"
+            onClick={() => onSelect(null)}
+            aria-pressed={selected === null}
+            className={clsx(
+              "flex flex-col items-center gap-1.5 rounded-xl border p-2 transition",
+              selected === null ? "border-orbit-purple bg-orbit-purple/10" : "border-white/10 hover:border-white/25"
+            )}
+          >
+            <span className="relative block aspect-square w-full overflow-hidden rounded-lg bg-[#0b0e1c]">
+              <span className="absolute inset-[18.75%] rounded-full bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] p-[3px]">
+                <span className="flex h-full w-full items-end justify-center overflow-hidden rounded-full border-2 border-[#0b0e1c] bg-[#11152a]">
+                  {photo}
+                </span>
+              </span>
+            </span>
+            <span className="w-full truncate text-center text-[11px] font-medium text-white/85">Sem moldura</span>
+            <span className="text-[10px] text-white/45">Anel padrão</span>
+          </button>
+        )}
+        {frames.map((f) => {
+          const isSel = selected === f.id;
+          return (
+            <button
+              key={f.id}
+              type="button"
+              title={free ? f.tagline : `${f.tagline} · Em breve`}
+              onClick={() => free && onSelect(f.id)}
+              aria-pressed={isSel}
+              aria-disabled={!free}
+              className={clsx(
+                "group flex flex-col items-center gap-1.5 rounded-xl border p-2 transition",
+                isSel ? "border-orbit-purple bg-orbit-purple/10 shadow-[0_0_18px_rgba(139,92,246,0.3)]" : "border-white/10",
+                free ? "hover:border-white/25" : "cursor-default"
+              )}
+            >
+              <span className="relative block aspect-square w-full overflow-hidden rounded-lg bg-[#0b0e1c]">
+                {avatar}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={frameSrc(f.id, true)} alt="" loading="lazy" className="absolute inset-0 h-full w-full" />
+                {!free && (
+                  <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white/80">
+                    <Lock className="h-3 w-3" />
+                  </span>
+                )}
+                {isSel && (
+                  <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-orbit-gradient text-snow">
+                    <Check className="h-3.5 w-3.5" />
+                  </span>
+                )}
+              </span>
+              <span className="w-full truncate text-center text-[11px] font-medium text-white/85">{f.name}</span>
+              <span className={clsx("rounded-full border px-2 py-px text-[9px] font-semibold uppercase tracking-wide", FRAME_TIERS[f.tier].className)}>
+                {free ? (isSel ? "Em uso" : "Grátis") : FRAME_TIERS[f.tier].badge}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function ProfileCustomizer(props: Props) {
   const router = useRouter();
-  const [saved, setSaved] = useState(props.initialColor);
+  const [saved, setSaved] = useState({ color: props.initialColor, frame: props.initialFrame });
   const [color, setColor] = useState(props.initialColor);
+  const [frameId, setFrameId] = useState<string | null>(props.initialFrame);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const customRef = useRef<HTMLInputElement>(null);
 
   const isCustom = color.startsWith("#");
-  const dirty = color !== saved;
+  const dirty = color !== saved.color || frameId !== saved.frame;
   const customHex = useMemo(() => (isCustom ? color : profileColorHex(color)), [color, isCustom]);
 
   async function apply() {
-    if (!isValidProfileColor(color)) return;
+    if (!isValidProfileColor(color) || (frameId && !canEquipFrame(frameId))) return;
     setSaving(true);
     setMessage(null);
     const supabase = createClient();
     const { error } = await supabase
       .from("User")
-      .update({ profileColor: color, updatedAt: new Date().toISOString() })
+      .update({ profileColor: color, avatarFrame: frameId, updatedAt: new Date().toISOString() })
       .eq("id", props.userId);
     setSaving(false);
     if (error) {
       setMessage({ ok: false, text: "Não foi possível aplicar agora. Tente novamente." });
       return;
     }
-    setSaved(color);
-    setMessage({ ok: true, text: "Pronto! Seu perfil já está com a nova cor." });
+    setSaved({ color, frame: frameId });
+    setMessage({ ok: true, text: "Pronto! Seu perfil já está atualizado." });
     router.refresh();
   }
 
@@ -266,7 +402,7 @@ export function ProfileCustomizer(props: Props) {
         {/* Mobile preview */}
         <div className="lg:hidden">
           <p className="mb-2 px-1 text-xs font-medium text-white/55">Pré-visualização</p>
-          <Preview color={color} props={props} />
+          <Preview color={color} frameId={frameId} props={props} />
         </div>
 
         <Block step={1} title="Cor do perfil" pill={<Pill tone="free">Gratuito</Pill>} subtitle="Escolha a cor que combina com você. Ela aparece para todos que visitam seu perfil.">
@@ -375,28 +511,13 @@ export function ProfileCustomizer(props: Props) {
           </div>
         </Block>
 
-        <Block step={4} title="Molduras de avatar" pill={<Pill tone="soon">Em breve</Pill>} subtitle="Destaque sua foto com uma moldura.">
-          <div className="orbit-scrollbar flex gap-2 overflow-x-auto pb-1">
-            {FRAMES.map(({ name, free, ring }, i) => (
-              <div
-                key={name}
-                title={i === 0 ? "Em uso" : "Em breve"}
-                className={clsx(
-                  "flex w-[4.75rem] shrink-0 cursor-default flex-col items-center gap-1.5 rounded-xl border p-2.5",
-                  i === 0 ? "border-orbit-purple/60 bg-orbit-purple/10" : "border-white/10 bg-space-bg/40"
-                )}
-              >
-                <span className="relative">
-                  <span className={clsx("block h-11 w-11 rounded-full", ring)} />
-                  {!free && <Crown className="absolute -right-1.5 -top-1.5 h-3.5 w-3.5 text-amber-400" />}
-                </span>
-                <span className="text-[11px] text-white/75">{name}</span>
-                <span className={clsx("text-[10px]", i === 0 ? "text-orbit-purple" : free ? "text-emerald-400" : "text-amber-400")}>
-                  {i === 0 ? "Em uso" : free ? "Grátis" : "Premium"}
-                </span>
-              </div>
-            ))}
-          </div>
+        <Block
+          step={4}
+          title="Molduras de avatar"
+          pill={<Pill tone="free">Gratuitas liberadas</Pill>}
+          subtitle="Destaque sua foto com uma moldura. As coleções especiais chegam com as Órbita Coins."
+        >
+          <FrameCatalog avatarUrl={props.avatarUrl} selected={frameId} onSelect={setFrameId} />
         </Block>
 
         <Block step={5} title="Efeitos, decorativos e badges" pill={<><Pill tone="premium">Premium</Pill><Pill tone="soon">Em breve</Pill></>}>
@@ -426,7 +547,7 @@ export function ProfileCustomizer(props: Props) {
       {/* Desktop preview */}
       <aside className="sticky top-20 hidden space-y-3 lg:block">
         <p className="px-1 text-xs font-medium text-white/55">Pré-visualização</p>
-        <Preview color={color} props={props} />
+        <Preview color={color} frameId={frameId} props={props} />
         {applyButton("w-full")}
         {feedback}
         <Link href={`/perfil/${props.username}`} className="block text-center text-xs text-orbit-blue hover:underline">
