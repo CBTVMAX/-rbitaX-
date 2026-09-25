@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import {
   Camera,
   Link2,
+  Loader2,
   LogOut,
   MessageCircle,
   MoreHorizontal,
@@ -244,5 +246,88 @@ export function OrbitIcon({ className }: { className?: string }) {
       <circle cx="32" cy="32" r="15" stroke="url(#orbit-icon-grad)" strokeWidth="3" />
       <ellipse cx="32" cy="32" rx="29" ry="9" transform="rotate(-20 32 32)" stroke="url(#orbit-icon-grad)" strokeWidth="3" />
     </svg>
+  );
+}
+
+export function ProfileImageUpload({
+  userId,
+  field,
+  className,
+  ariaLabel,
+  children,
+}: {
+  userId: string;
+  field: "avatarUrl" | "coverUrl";
+  className: string;
+  ariaLabel: string;
+  children: React.ReactNode;
+}) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Escolha um arquivo de imagem.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError("A imagem precisa ter no máximo 10 MB.");
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    const supabase = createClient();
+    const ext = file.name.split(".").pop() || "jpg";
+    const folder = field === "avatarUrl" ? "avatar" : "cover";
+    const path = `${userId}/${folder}/${crypto.randomUUID()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage.from("media").upload(path, file, { upsert: true });
+    if (uploadError) {
+      setBusy(false);
+      setError("Não foi possível enviar a imagem.");
+      return;
+    }
+    const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
+    const { error: updateError } = await supabase
+      .from("User")
+      .update(field === "avatarUrl" ? { avatarUrl: pub.publicUrl } : { coverUrl: pub.publicUrl })
+      .eq("id", userId);
+    setBusy(false);
+    if (updateError) {
+      setError("Não foi possível salvar a imagem.");
+      return;
+    }
+    router.refresh();
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={busy}
+        aria-label={ariaLabel}
+        className={className}
+      >
+        {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : children}
+      </button>
+      <input ref={inputRef} type="file" accept="image/*" hidden onChange={onPick} />
+      {error && (
+        <button
+          type="button"
+          role="alert"
+          onClick={() => setError(null)}
+          className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-red-500/95 px-4 py-2.5 text-sm font-medium text-white shadow-2xl md:bottom-6"
+        >
+          {error}
+        </button>
+      )}
+    </>
   );
 }

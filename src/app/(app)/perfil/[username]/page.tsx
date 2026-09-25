@@ -38,16 +38,29 @@ export default async function ProfilePage({ params }: { params: { username: stri
   const followingIds = (followingRows ?? []).map((f) => f.followingId);
   const friendCount = followingIds.filter((id) => followerIds.has(id)).length;
 
-  const { data: posts } = await supabase
+  const postSelect =
+    "id, content, createdAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url)" as const;
+
+  const { data: recentPosts } = await supabase
     .from("Post")
-    .select(
-      "id, content, createdAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url)"
-    )
+    .select(postSelect)
     .eq("authorId", user.id)
     .order("createdAt", { ascending: false })
     .limit(20);
 
-  const postIds = (posts ?? []).map((p) => p.id);
+  let posts = recentPosts ?? [];
+  if (user.pinnedPostId && !posts.some((p) => p.id === user.pinnedPostId)) {
+    const { data: pinnedRow } = await supabase
+      .from("Post")
+      .select(postSelect)
+      .eq("id", user.pinnedPostId)
+      .eq("authorId", user.id)
+      .maybeSingle();
+    if (pinnedRow) posts = [pinnedRow, ...posts];
+  }
+  const pinnedPostId = user.pinnedPostId && posts.some((p) => p.id === user.pinnedPostId) ? user.pinnedPostId : null;
+
+  const postIds = posts.map((p) => p.id);
   const [{ data: likeRows }, { data: myLikes }, { data: commentRows }] = await Promise.all([
     postIds.length ? supabase.from("Like").select("postId").in("postId", postIds) : Promise.resolve({ data: [] as { postId: string }[] }),
     postIds.length && current
@@ -62,7 +75,7 @@ export default async function ProfilePage({ params }: { params: { username: stri
   const commentCountByPost = new Map<string, number>();
   (commentRows ?? []).forEach((c) => commentCountByPost.set(c.postId, (commentCountByPost.get(c.postId) ?? 0) + 1));
 
-  const feed: FeedPost[] = (posts ?? []).map((p) => ({
+  const feed: FeedPost[] = posts.map((p) => ({
     id: p.id,
     content: p.content,
     createdAt: p.createdAt,
@@ -91,6 +104,7 @@ export default async function ProfilePage({ params }: { params: { username: stri
         communities: communityCount ?? 0,
       }}
       feed={feed}
+      pinnedPostId={pinnedPostId}
     />
   );
 }

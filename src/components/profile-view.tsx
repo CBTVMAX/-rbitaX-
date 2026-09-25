@@ -3,8 +3,8 @@ import { PostCard, type FeedPost } from "@/components/post-card";
 import { PostComposer } from "@/components/post-composer";
 import { ProfileTabs } from "@/components/profile-tabs";
 import { FollowButton } from "@/components/follow-button";
-import { OrbitIcon, ProfileMoreMenu, ProfileRightRail, ShareProfileButton } from "@/components/profile-client";
-import { BadgeCheck, Cake, Camera, ImagePlus, MapPin, MessageCircle, Sparkles } from "lucide-react";
+import { OrbitIcon, ProfileImageUpload, ProfileMoreMenu, ProfileRightRail, ShareProfileButton } from "@/components/profile-client";
+import { BadgeCheck, Cake, Camera, ImagePlus, Link2, MapPin, MessageCircle, Plus, Sparkles } from "lucide-react";
 
 export type ProfileInfo = {
   birthDate: string | null;
@@ -13,7 +13,16 @@ export type ProfileInfo = {
   showAge: boolean;
   showLocation: boolean;
   showSign: boolean;
+  interests: string | null;
+  website: string | null;
 };
+
+export function parseInterests(raw: string | null | undefined) {
+  return (raw ?? "")
+    .split(",")
+    .map((i) => i.trim())
+    .filter(Boolean);
+}
 
 function ageFrom(birthDate: string) {
   const b = new Date(birthDate);
@@ -36,12 +45,14 @@ function Silhouette({ className }: { className?: string }) {
 function ProfileAvatar({
   name,
   url,
+  userId,
   isMe,
   online,
   className,
 }: {
   name: string;
   url: string | null;
+  userId: string;
   isMe: boolean;
   online: boolean;
   className: string;
@@ -62,13 +73,14 @@ function ProfileAvatar({
         <span className="absolute right-[9%] top-[58%] h-3.5 w-3.5 rounded-full border-2 border-space-bg bg-emerald-400" />
       )}
       {isMe && (
-        <Link
-          href="/configuracoes/conta"
-          aria-label="Alterar foto"
+        <ProfileImageUpload
+          userId={userId}
+          field="avatarUrl"
+          ariaLabel="Alterar foto"
           className="absolute bottom-[3%] right-[3%] flex h-10 w-10 items-center justify-center rounded-full border-2 border-orbit-purple bg-space-bg/90 text-white shadow-glow transition hover:bg-space-card md:h-12 md:w-12"
         >
           <Camera className="h-5 w-5" />
-        </Link>
+        </ProfileImageUpload>
       )}
     </div>
   );
@@ -100,9 +112,10 @@ export type ProfileViewProps = {
   isFollowing: boolean;
   stats: { posts: number; friends: number; followers: number; following: number; communities: number };
   feed: FeedPost[];
+  pinnedPostId: string | null;
 };
 
-export function ProfileView({ user, info, current, isFollowing, stats, feed }: ProfileViewProps) {
+export function ProfileView({ user, info, current, isFollowing, stats, feed, pinnedPostId }: ProfileViewProps) {
   const isMe = current?.authId === user.id;
 
   const online =
@@ -111,6 +124,9 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed }: P
   const age = info?.birthDate && (isMe || info.showAge) ? ageFrom(info.birthDate) : null;
   const sign = info?.zodiacSign && (isMe || info.showSign) ? info.zodiacSign : null;
   const location = info?.location && (isMe || info.showLocation) ? info.location : null;
+  const interests = parseInterests(info?.interests);
+  const website = info?.website?.trim() || null;
+  const websiteHref = website && (/^https?:\/\//i.test(website) ? website : `https://${website}`);
 
   const identity = (
     <>
@@ -140,7 +156,7 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed }: P
           </Link>
         )
       )}
-      {(age !== null || sign || location) && (
+      {(age !== null || sign || location || website) && (
         <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-white/65 md:text-sm">
           {age !== null && (
             <span className="flex items-center gap-1.5">
@@ -156,6 +172,35 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed }: P
             <span className="flex items-center gap-1.5">
               <MapPin className="h-4 w-4" /> {location}
             </span>
+          )}
+          {website && websiteHref && (
+            <a
+              href={websiteHref}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              className="flex max-w-[16rem] items-center gap-1.5 truncate text-orbit-blue hover:underline"
+            >
+              <Link2 className="h-4 w-4 shrink-0" /> <span className="truncate">{website.replace(/^https?:\/\//i, "")}</span>
+            </a>
+          )}
+        </div>
+      )}
+      {(interests.length > 0 || isMe) && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {interests.map((i) => (
+            <span key={i} className="rounded-lg border border-orbit-purple/50 bg-orbit-purple/10 px-3 py-1 text-xs text-white/85">
+              {i}
+            </span>
+          ))}
+          {isMe && (
+            <Link
+              href="/configuracoes/conta"
+              aria-label="Adicionar interesses"
+              className="flex items-center gap-1 rounded-lg border border-white/15 px-2.5 py-1 text-xs text-white/60 transition hover:bg-white/5 hover:text-white"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {interests.length === 0 && "Adicionar interesses"}
+            </Link>
           )}
         </div>
       )}
@@ -203,10 +248,19 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed }: P
     </div>
   );
 
+  const pinnedPost = pinnedPostId ? feed.find((p) => p.id === pinnedPostId) : undefined;
+  const orderedFeed = pinnedPost ? [pinnedPost, ...feed.filter((p) => p.id !== pinnedPostId)] : feed;
+
   const feedList = feed.length ? (
     <div className="space-y-4">
-      {feed.map((post) => (
-        <PostCard key={post.id} post={post} currentUserId={current?.authId ?? ""} />
+      {orderedFeed.map((post) => (
+        <PostCard
+          key={post.id}
+          post={post}
+          currentUserId={current?.authId ?? ""}
+          pinned={post.id === pinnedPostId}
+          canPin={isMe}
+        />
       ))}
     </div>
   ) : (
@@ -236,18 +290,20 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed }: P
               <div className="h-full bg-gradient-to-br from-orbit-blue/25 via-space-card to-orbit-purple/25" />
             )}
             {isMe && (
-              <Link
-                href="/configuracoes/conta"
+              <ProfileImageUpload
+                userId={user.id}
+                field="coverUrl"
+                ariaLabel="Editar capa"
                 className="absolute bottom-3 right-3 flex items-center gap-2 rounded-xl border border-white/15 bg-space-bg/80 px-3.5 py-2 text-xs font-medium text-white backdrop-blur transition hover:bg-space-bg md:bottom-auto md:right-4 md:top-4 md:text-sm"
               >
                 <Camera className="h-4 w-4" /> Editar capa
-              </Link>
+              </ProfileImageUpload>
             )}
           </div>
 
           {/* Desktop */}
           <div className="hidden gap-6 px-6 pb-5 md:flex">
-            <ProfileAvatar name={user.name} url={user.avatarUrl} isMe={isMe} online={online} className="-mt-24 h-44 w-44" />
+            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} isMe={isMe} online={online} className="-mt-24 h-44 w-44" />
             <div className="min-w-0 flex-1 pt-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">{identity}</div>
@@ -269,7 +325,7 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed }: P
 
           {/* Mobile */}
           <div className="px-4 pb-4 md:hidden">
-            <ProfileAvatar name={user.name} url={user.avatarUrl} isMe={isMe} online={online} className="-mt-20 h-36 w-36" />
+            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} isMe={isMe} online={online} className="-mt-20 h-36 w-36" />
             <div className="mt-3">{identity}</div>
             {bioAndMeta}
             <div className="mt-4 flex items-center gap-2">

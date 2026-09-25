@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo, initials } from "@/lib/format";
-import { Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff } from "lucide-react";
 import { clsx } from "clsx";
 
 export type FeedPost = {
@@ -26,8 +27,32 @@ type CommentRow = {
   user: { name: string; username: string; avatarUrl: string | null };
 };
 
-export function PostCard({ post, currentUserId }: { post: FeedPost; currentUserId: string }) {
+export function PostCard({
+  post,
+  currentUserId,
+  pinned = false,
+  canPin = false,
+}: {
+  post: FeedPost;
+  currentUserId: string;
+  pinned?: boolean;
+  canPin?: boolean;
+}) {
   const supabase = createClient();
+  const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [pinBusy, setPinBusy] = useState(false);
+
+  async function togglePin() {
+    setPinBusy(true);
+    const { error } = await supabase
+      .from("User")
+      .update({ pinnedPostId: pinned ? null : post.id })
+      .eq("id", currentUserId);
+    setPinBusy(false);
+    setMenuOpen(false);
+    if (!error) router.refresh();
+  }
   const [liked, setLiked] = useState(post.likedByMe);
   const [likeCount, setLikeCount] = useState(post.likeCount);
   const [showComments, setShowComments] = useState(false);
@@ -84,6 +109,11 @@ export function PostCard({ post, currentUserId }: { post: FeedPost; currentUserI
 
   return (
     <article className="rounded-2xl border border-white/10 bg-space-card p-4 md:p-5">
+      {pinned && (
+        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-orbit-cyan">
+          <Pin className="h-3.5 w-3.5" /> Publicação fixada
+        </p>
+      )}
       <div className="mb-3 flex items-center gap-3">
         <Link href={`/perfil/${post.author.username}`}>
           <Avatar name={post.author.name} url={post.author.avatarUrl} />
@@ -96,6 +126,31 @@ export function PostCard({ post, currentUserId }: { post: FeedPost; currentUserI
             @{post.author.username} · {timeAgo(post.createdAt)}
           </p>
         </div>
+        {canPin && (
+          <div className="relative ml-auto">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label="Opções da publicação"
+              className="rounded-lg p-1.5 text-white/50 transition hover:bg-white/5 hover:text-white"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+            {menuOpen && (
+              <div className="absolute right-0 top-9 z-10 w-52 overflow-hidden rounded-xl border border-white/10 bg-space-surface shadow-2xl">
+                <button
+                  type="button"
+                  onClick={togglePin}
+                  disabled={pinBusy}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-white/80 hover:bg-white/5 disabled:opacity-50"
+                >
+                  {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                  {pinned ? "Desafixar do perfil" : "Fixar no perfil"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {post.content && <p className="mb-3 whitespace-pre-wrap text-sm text-white/90">{post.content}</p>}

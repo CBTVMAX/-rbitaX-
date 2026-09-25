@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { AccountSettingsForm } from "@/components/account-settings-form";
+import { parseInterests } from "@/components/profile-view";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export default async function AccountSettingsPage() {
   const supabase = createClient();
   const { data: profile } = await supabase
     .from("Profile")
-    .select("location, website")
+    .select("location, website, interests, showAge, showSign, showLocation")
     .eq("userId", current.authId)
     .maybeSingle();
 
@@ -30,6 +31,11 @@ export default async function AccountSettingsPage() {
           isPrivate: current.profile.isPrivate,
           location: profile?.location ?? null,
           website: profile?.website ?? null,
+          interests: parseInterests(profile?.interests),
+          showAge: profile?.showAge ?? true,
+          showSign: profile?.showSign ?? true,
+          showLocation: profile?.showLocation ?? true,
+          hasProfileRow: !!profile,
         }}
       />
     </div>
