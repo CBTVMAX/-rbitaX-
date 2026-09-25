@@ -104,9 +104,12 @@ export function LiveActivityProvider({
         async (payload) => {
           refresh();
           const n = payload.new as { type: string; message: string; title: string; actorId: string | null; href: string | null };
-          if (pathRef.current === "/notificacoes") router.refresh();
-          if (n.type === "friend_request" || n.type === "friend_accept") {
-            if (pathRef.current.startsWith("/perfil/") || pathRef.current === "/amigos") router.refresh();
+          // Already looking at the list: show it and count it as seen right away.
+          if (pathRef.current === "/notificacoes" || (n.type === "friend_request" && pathRef.current === "/amigos")) {
+            router.refresh();
+            setTimeout(load, 1500);
+          } else if (n.type.startsWith("friend") && (pathRef.current.startsWith("/perfil/") || pathRef.current === "/amigos")) {
+            router.refresh();
           }
           const actor = await person(n.actorId);
           pushToast({

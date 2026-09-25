@@ -6,6 +6,7 @@ import { clsx } from "clsx";
 import { Check, Clock, Loader2, UserCheck, UserMinus, UserPlus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { parseFriendState, type FriendState } from "@/lib/friends";
+import { useLiveCounts } from "@/components/live-activity";
 
 
 type Action = "send" | "cancel" | "accept" | "decline" | "remove";
@@ -44,6 +45,7 @@ export function FriendButton({
   className?: string;
 }) {
   const router = useRouter();
+  const { refresh: refreshCounts } = useLiveCounts();
   const [state, setState] = useState<FriendState>(initialState);
   const [busy, setBusy] = useState<Action | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -73,6 +75,7 @@ export function FriendButton({
     }
     setState(next);
     router.refresh();
+    refreshCounts();
   }
 
   if (state === "self") return null;
@@ -151,6 +154,7 @@ export function FriendButton({
 /** Compact Aceitar / Recusar pair for request lists (notifications, profile). */
 export function FriendRequestActions({ requesterId }: { requesterId: string }) {
   const router = useRouter();
+  const { refresh: refreshCounts } = useLiveCounts();
   const [busy, setBusy] = useState<Action | null>(null);
   const [done, setDone] = useState<FriendState | null>(null);
 
@@ -161,6 +165,7 @@ export function FriendRequestActions({ requesterId }: { requesterId: string }) {
     if (next) {
       setDone(next);
       router.refresh();
+      refreshCounts();
     }
   }
 

@@ -204,6 +204,7 @@ export type Database = {
       };
       my_badge_counts: { Args: Record<string, never>; Returns: { messages: number; friendRequests: number; notifications: number }[] };
       mark_conversation_read: { Args: { conversation_id: string }; Returns: undefined };
+      mark_friend_requests_seen: { Args: Record<string, never>; Returns: undefined };
       send_friend_request: { Args: { target_user_id: string }; Returns: string };
       respond_friend_request: { Args: { requester_id: string; accept: boolean }; Returns: string };
       cancel_friend_request: { Args: { target_user_id: string }; Returns: string };

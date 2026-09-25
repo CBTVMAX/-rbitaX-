@@ -7,7 +7,7 @@ import { timeAgo } from "@/lib/format";
 import Link from "next/link";
 import { ArrowLeft, Lock, MessageCircle, Search, Send, X } from "lucide-react";
 import { PresenceDot, PresenceStatus } from "@/components/presence-picker";
-import { CountBadge } from "@/components/live-activity";
+import { CountBadge, useLiveCounts } from "@/components/live-activity";
 import { PRESENCE, presenceOf } from "@/lib/presence";
 import { clsx } from "clsx";
 
@@ -73,12 +73,14 @@ export function MessengerApp({
   // On phones the list and the chat are separate screens: only an open chat counts as read.
   const chatVisible = () => mobileChatOpenRef.current || window.matchMedia("(min-width: 768px)").matches;
 
+  const { refresh: refreshCounts } = useLiveCounts();
   const markRead = useCallback(
-    (conversationId: string) => {
+    async (conversationId: string) => {
       setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unread: 0 } : c)));
-      supabase.rpc("mark_conversation_read", { conversation_id: conversationId });
+      await supabase.rpc("mark_conversation_read", { conversation_id: conversationId });
+      refreshCounts(); // the menu counter clears as soon as the conversation is seen
     },
-    [supabase]
+    [supabase, refreshCounts]
   );
 
   // Messages of the open conversation; opening it marks the other side's messages as read.

@@ -40,6 +40,9 @@ export default async function AmigosPage() {
   const me = current.authId;
   const supabase = createClient();
 
+  // Seen: the Amigos counter clears (pending requests stay listed until answered).
+  await supabase.rpc("mark_friend_requests_seen");
+
   const { data: rows } = await supabase
     .from("Friendship")
     .select("requesterId, addresseeId, status, createdAt")
