@@ -18,6 +18,7 @@ import {
   voiceWaveform,
 } from "@/lib/messenger/media";
 import { chatThemeStyle } from "@/lib/messenger/themes";
+import { isWallpaper, wallpaperStyle } from "@/lib/messenger/wallpapers";
 import { messagePreview, toDate } from "@/lib/messenger/format";
 import {
   conversationTitle,
@@ -771,7 +772,11 @@ export function ChatView({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1" style={chatThemeStyle(c.theme)}>
-      <section className="chat-space-bg relative flex h-full min-h-0 min-w-0 flex-1 flex-col" aria-label={`Conversa com ${title}`}>
+      <section
+        className={clsx("relative flex h-full min-h-0 min-w-0 flex-1 flex-col", !isWallpaper(c.wallpaper) && "chat-space-bg")}
+        style={isWallpaper(c.wallpaper) ? wallpaperStyle(c.wallpaper) : undefined}
+        aria-label={`Conversa com ${title}`}
+      >
         <ChatHeader
           c={c}
           members={members}

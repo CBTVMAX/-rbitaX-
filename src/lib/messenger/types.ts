@@ -105,6 +105,7 @@ export type Conversation = {
   archivedAt: string | null;
   mutedUntil: string | null;
   theme: string | null;
+  wallpaper: string | null;
   messageTtlSeconds: number | null;
   othersReadAt: string | null;
   otherUser: ChatUser | null;

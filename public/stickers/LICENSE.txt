@@ -1,4 +1,10 @@
-ÓrbitaX sticker packs "Órbita" e "Reações"
-Arte: Noto Animated Emoji, © Google — licença Creative Commons Attribution 4.0 (CC BY 4.0)
-https://googlefonts.github.io/noto-emoji-animation/
+Figurinhas do ÓrbitaX
+
+Pacotes "Órbita" e "Reações": Noto Animated Emoji, © Google — licença Creative Commons
+Attribution 4.0 (CC BY 4.0), https://googlefonts.github.io/noto-emoji-animation/.
 Arquivos redimensionados e otimizados (WebP animado) pelo ÓrbitaX.
+
+Pacotes "Fofura", "Atitude", "Clássicos", "Clássicos 2" e "Hot · Ela/Ele/Casal/Mix":
+artes fornecidas pelo ÓrbitaX, recortadas e otimizadas para o Messenger.
+
+Papéis de parede em /wallpapers: artes fornecidas pelo ÓrbitaX.

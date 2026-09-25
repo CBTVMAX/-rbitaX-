@@ -57,7 +57,9 @@ type MessageReactionRow = { id: string; messageId: string; conversationId: strin
 type PollVoteRow = { id: string; messageId: string; conversationId: string; userId: string; optionIndex: number; createdAt: string };
 type MessageFavoriteRow = { messageId: string; userId: string; conversationId: string; createdAt: string };
 type MessageHiddenRow = { messageId: string; userId: string; createdAt: string };
-type ConversationSettingRow = { conversationId: string; userId: string; archivedAt: string | null; mutedUntil: string | null; theme: string | null; clearedAt: string | null; updatedAt: string };
+type ConversationSettingRow = { conversationId: string; userId: string; archivedAt: string | null; mutedUntil: string | null; theme: string | null; wallpaper: string | null; clearedAt: string | null; updatedAt: string };
+type StickerPackRow = { id: string; name: string; tier: string; priceCoins: number | null; isAdult: boolean; sortOrder: number; cover: string; stickers: string[]; labels: string[] | null; active: boolean; createdAt: string };
+type UserStickerPackRow = { userId: string; packId: string; acquiredAt: string };
 type ReadOnly<R> = { Row: R; Insert: never; Update: never; Relationships: [] };
 type MessageUpdate = Partial<MessageInsert>;
 
@@ -162,6 +164,8 @@ export type Database = {
       MessageFavorite: ReadOnly<MessageFavoriteRow>;
       MessageHidden: ReadOnly<MessageHiddenRow>;
       ConversationSetting: ReadOnly<ConversationSettingRow>;
+      StickerPack: ReadOnly<StickerPackRow>;
+      UserStickerPack: ReadOnly<UserStickerPackRow>;
       Moment: { Row: MomentRow; Insert: MomentInsert; Update: MomentUpdate; Relationships: [
         { foreignKeyName: "Moment_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
       ] };
@@ -288,6 +292,7 @@ export type Database = {
           archivedAt: string | null;
           mutedUntil: string | null;
           theme: string | null;
+          wallpaper: string | null;
           messageTtlSeconds: number | null;
           othersReadAt: string | null;
           otherUser: Json | null;

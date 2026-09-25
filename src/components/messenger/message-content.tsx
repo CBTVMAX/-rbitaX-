@@ -556,7 +556,7 @@ export function PollCard({
 export function StickerView({ id }: { id: string }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={stickerSrc(id)} alt="Figurinha" loading="lazy" className="h-32 w-32 select-none object-contain drop-shadow-[0_6px_18px_rgba(0,0,0,0.35)]" draggable={false} />
+    <img src={stickerSrc(id)} alt="Figurinha" loading="lazy" className="h-36 w-36 select-none object-contain drop-shadow-[0_6px_18px_rgba(0,0,0,0.35)] md:h-40 md:w-40" draggable={false} />
   );
 }
 

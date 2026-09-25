@@ -37,7 +37,7 @@ import { conversationTitle, isMuted, toMessage, type Attachment, type ChatMessag
 import { useMessenger } from "./context";
 import { AddMembersDialog } from "./dialogs";
 import { uploadGroupPhoto } from "./new-conversation";
-import { ThemeSelector } from "./theme-selector";
+import { ThemeSelector, WallpaperSelector } from "./theme-selector";
 import { ChatAvatar, ConversationAvatar, GhostButton, MenuItem, Modal, Popover, PrimaryButton } from "./ui";
 
 const TTL_OPTIONS: { value: number | null; label: string }[] = [
@@ -698,6 +698,8 @@ export function ConversationInfo({
             <Palette className="h-3.5 w-3.5" /> Muda só esta conversa, para você.
           </div>
           <ThemeSelector value={c.theme} onChange={(id) => setting({ theme: id }, { theme: id })} />
+          <p className="mb-3 mt-5 text-[11px] font-semibold uppercase tracking-wider text-white/40">Papel de parede</p>
+          <WallpaperSelector value={c.wallpaper} onChange={(id) => setting({ wallpaper: id }, { wallpaper: id })} />
         </Section>
 
         {c.isGroup && (
