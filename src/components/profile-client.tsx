@@ -5,12 +5,10 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
-import { PRESENCE, type Presence } from "@/lib/presence";
 import {
   Archive,
   BarChart3,
   Camera,
-  ChevronDown,
   Image as ImageIcon,
   Link2,
   Loader2,
@@ -186,60 +184,6 @@ export function ProfileMoreMenu({
               </button>
             </>
           )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export function PresenceStatus({ userId, initial, editable }: { userId: string; initial: Presence; editable: boolean }) {
-  const [presence, setPresence] = useState<Presence>(initial);
-  const [open, setOpen] = useState(false);
-  const current = PRESENCE[presence];
-
-  async function choose(next: Presence) {
-    setOpen(false);
-    if (next === presence) return;
-    const previous = presence;
-    setPresence(next);
-    const supabase = createClient();
-    const { error } = await supabase.from("User").update({ presence: next }).eq("id", userId);
-    if (error) setPresence(previous);
-  }
-
-  const label = (
-    <>
-      <span className={clsx("h-2.5 w-2.5 rounded-full", current.dot)} />
-      <span className={current.text}>{current.label}</span>
-    </>
-  );
-
-  if (!editable) return <p className="mt-1.5 flex items-center gap-2 text-sm">{label}</p>;
-
-  return (
-    <div className="relative mt-1.5 inline-block">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-label="Alterar status"
-        className="flex items-center gap-2 rounded-lg text-sm transition hover:opacity-80"
-      >
-        {label}
-        <ChevronDown className="h-3.5 w-3.5 text-white/40" />
-      </button>
-      {open && (
-        <div className="absolute left-0 top-7 z-30 w-52 overflow-hidden rounded-xl border border-white/10 bg-space-surface py-1 shadow-2xl">
-          {(Object.keys(PRESENCE) as Presence[]).map((key) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => choose(key)}
-              className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-white/80 hover:bg-white/5"
-            >
-              <span className={clsx("h-2.5 w-2.5 rounded-full", PRESENCE[key].dot)} />
-              {key === "offline" ? "Definir como offline" : PRESENCE[key].label}
-            </button>
-          ))}
         </div>
       )}
     </div>

@@ -23,7 +23,7 @@ export default async function MensagensPage() {
   if (conversationIds.length) {
     const { data: members } = await supabase
       .from("ConversationMember")
-      .select("conversationId, user:User(id, name, username, avatarUrl)")
+      .select("conversationId, user:User(id, name, username, avatarUrl, presence)")
       .in("conversationId", conversationIds);
 
     const { data: lastMessages } = await supabase
@@ -61,6 +61,7 @@ export default async function MensagensPage() {
     <MessengerApp
       currentUserId={current.authId}
       currentUserName={current.profile.name}
+      currentUserPresence={current.profile.presence}
       initialConversations={conversations}
     />
   );

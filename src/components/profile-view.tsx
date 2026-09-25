@@ -5,13 +5,13 @@ import { ProfileTabs } from "@/components/profile-tabs";
 import { FollowButton } from "@/components/follow-button";
 import {
   OrbitIcon,
-  PresenceStatus,
   ProfileImageUpload,
   ProfileMoreMenu,
   ProfileRightRail,
   ShareProfileButton,
 } from "@/components/profile-client";
 import { presenceOf } from "@/lib/presence";
+import { PresenceStatus } from "@/components/presence-picker";
 import {
   BadgeCheck,
   Cake,
@@ -188,7 +188,7 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
         @{user.username}
         {user.orbitId && <span className="text-white/60"> &nbsp;·&nbsp; Orbit ID #{user.orbitId}</span>}
       </p>
-      <PresenceStatus userId={user.id} initial={presence} editable={isMe} />
+      <PresenceStatus userId={user.id} initial={user.presence} editable={isMe} className="mt-1.5" />
     </>
   );
 

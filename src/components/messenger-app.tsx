@@ -4,12 +4,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/post-card";
 import { timeAgo } from "@/lib/format";
-import { Search, Send, X } from "lucide-react";
+import { ArrowLeft, Search, Send, X } from "lucide-react";
+import { PresenceDot, PresenceStatus } from "@/components/presence-picker";
+import { PRESENCE, presenceOf } from "@/lib/presence";
 import { clsx } from "clsx";
 
 export type ConversationSummary = {
   id: string;
-  otherUser: { id: string; name: string; username: string; avatarUrl: string | null } | null;
+  otherUser: { id: string; name: string; username: string; avatarUrl: string | null; presence?: string } | null;
   lastMessage: { content: string; createdAt: string } | null;
 };
 
@@ -21,15 +23,17 @@ type MessageRow = {
   createdAt: string;
 };
 
-type UserResult = { id: string; name: string; username: string; avatarUrl: string | null };
+type UserResult = { id: string; name: string; username: string; avatarUrl: string | null; presence: string };
 
 export function MessengerApp({
   currentUserId,
   currentUserName,
+  currentUserPresence,
   initialConversations,
 }: {
   currentUserId: string;
   currentUserName: string;
+  currentUserPresence: string;
   initialConversations: ConversationSummary[];
 }) {
   const supabase = useMemo(() => createClient(), []);
@@ -40,6 +44,7 @@ export function MessengerApp({
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserResult[]>([]);
+  const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
@@ -86,7 +91,7 @@ export function MessengerApp({
     const handle = setTimeout(async () => {
       const { data } = await supabase
         .from("User")
-        .select("id, name, username, avatarUrl")
+        .select("id, name, username, avatarUrl, presence")
         .ilike("username", `%${query.trim()}%`)
         .neq("id", currentUserId)
         .limit(8);
@@ -124,15 +129,19 @@ export function MessengerApp({
       return [{ id: conversationId, otherUser: user, lastMessage: null }, ...prev];
     });
     setActiveId(conversationId);
+    setMobileChatOpen(true);
     setSearchOpen(false);
     setQuery("");
   }
 
   return (
     <div className="flex h-[calc(100dvh-9.5rem)] md:h-[calc(100vh-4rem)]">
-      <div className="flex w-full flex-col border-r border-white/10 md:w-80">
+      <div className={clsx("w-full flex-col border-r border-white/10 md:flex md:w-80", mobileChatOpen ? "hidden" : "flex")}>
         <div className="flex items-center justify-between border-b border-white/10 p-4">
-          <h1 className="font-display text-lg font-bold text-white">Mensagens</h1>
+          <div>
+            <h1 className="font-display text-lg font-bold text-white">Mensagens</h1>
+            <PresenceStatus userId={currentUserId} initial={currentUserPresence} editable className="mt-1" />
+          </div>
           <button
             onClick={() => setSearchOpen(true)}
             className="rounded-full bg-orbit-gradient p-2 text-white shadow-glow"
@@ -151,13 +160,19 @@ export function MessengerApp({
           {conversations.map((c) => (
             <button
               key={c.id}
-              onClick={() => setActiveId(c.id)}
+              onClick={() => {
+                setActiveId(c.id);
+                setMobileChatOpen(true);
+              }}
               className={clsx(
                 "flex w-full items-center gap-3 border-b border-white/5 p-3 text-left transition",
                 activeId === c.id ? "bg-white/10" : "hover:bg-white/5"
               )}
             >
-              <Avatar name={c.otherUser?.name ?? "?"} url={c.otherUser?.avatarUrl ?? null} />
+              <span className="relative shrink-0">
+                <Avatar name={c.otherUser?.name ?? "?"} url={c.otherUser?.avatarUrl ?? null} />
+                <PresenceDot value={c.otherUser?.presence} className="absolute -bottom-0.5 -right-0.5 h-3 w-3 border-2 border-space-bg" />
+              </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-white">{c.otherUser?.name}</p>
                 <p className="truncate text-xs text-white/40">
@@ -172,14 +187,31 @@ export function MessengerApp({
         </div>
       </div>
 
-      <div className="hidden flex-1 flex-col md:flex">
+      <div className={clsx("min-w-0 flex-1 flex-col md:flex", mobileChatOpen ? "flex" : "hidden")}>
         {active ? (
           <>
             <div className="flex items-center gap-3 border-b border-white/10 p-4">
-              <Avatar name={active.otherUser?.name ?? "?"} url={active.otherUser?.avatarUrl ?? null} />
-              <div>
-                <p className="text-sm font-semibold text-white">{active.otherUser?.name}</p>
-                <p className="text-xs text-white/40">@{active.otherUser?.username}</p>
+              <button
+                type="button"
+                onClick={() => setMobileChatOpen(false)}
+                aria-label="Voltar para conversas"
+                className="-ml-1 rounded-full p-1.5 text-white/70 hover:bg-white/5 md:hidden"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <span className="relative shrink-0">
+                <Avatar name={active.otherUser?.name ?? "?"} url={active.otherUser?.avatarUrl ?? null} />
+                <PresenceDot value={active.otherUser?.presence} className="absolute -bottom-0.5 -right-0.5 h-3 w-3 border-2 border-space-bg" />
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white">{active.otherUser?.name}</p>
+                <div className="flex items-center gap-2 text-xs text-white/40">
+                  <span className="truncate">@{active.otherUser?.username}</span>
+                  <span>·</span>
+                  <span className={PRESENCE[presenceOf(active.otherUser?.presence)].text}>
+                    {PRESENCE[presenceOf(active.otherUser?.presence)].label}
+                  </span>
+                </div>
               </div>
             </div>
 

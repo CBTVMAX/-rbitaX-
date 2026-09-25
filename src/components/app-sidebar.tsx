@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { OrbitWordmarkImage } from "@/components/orbit-logo";
+import { PresenceDot, PresenceList } from "@/components/presence-picker";
 import {
   Bell,
   CalendarDays,
@@ -109,7 +110,19 @@ function SearchBox({ className }: { className?: string }) {
   );
 }
 
-export function AppTopBar({ username, name, avatarUrl }: { username: string; name: string; avatarUrl: string | null }) {
+export function AppTopBar({
+  userId,
+  username,
+  name,
+  avatarUrl,
+  presence,
+}: {
+  userId: string;
+  username: string;
+  name: string;
+  avatarUrl: string | null;
+  presence: string;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -148,11 +161,16 @@ export function AppTopBar({ username, name, avatarUrl }: { username: string; nam
           className="flex items-center gap-1.5 rounded-full p-0.5 text-white/60 transition hover:text-white"
           aria-label="Menu da conta"
         >
-          <UserAvatar name={name} avatarUrl={avatarUrl} />
+          <span className="relative">
+            <UserAvatar name={name} avatarUrl={avatarUrl} />
+            <PresenceDot value={presence} className="absolute -bottom-0.5 -right-0.5 h-3 w-3 border-2 border-space-bg" />
+          </span>
           <ChevronDown className="h-4 w-4" />
         </button>
         {open && (
-          <div className="absolute right-0 top-12 w-52 overflow-hidden rounded-xl border border-white/10 bg-space-surface shadow-2xl">
+          <div className="absolute right-0 top-12 w-56 overflow-hidden rounded-xl border border-white/10 bg-space-surface shadow-2xl">
+            <PresenceList userId={userId} initial={presence} />
+            <div className="my-1 border-t border-white/10" />
             <Link href={`/perfil/${username}`} className="flex items-center gap-2 px-4 py-2.5 text-sm text-white/80 hover:bg-white/5">
               <UserRound className="h-4 w-4" /> Meu perfil
             </Link>
@@ -245,7 +263,7 @@ export function AppSidebar({ username }: { username: string; name: string; avata
   );
 }
 
-export function MobileHeader({ username }: { username: string }) {
+export function MobileHeader({ userId, username, presence }: { userId: string; username: string; presence: string }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -261,14 +279,23 @@ export function MobileHeader({ username }: { username: string }) {
           <Link href="/notificacoes" aria-label="Notificações">
             <Bell className="h-5 w-5" />
           </Link>
-          <button type="button" onClick={() => setOpen((v) => !v)} aria-label={open ? "Fechar menu" : "Abrir menu"}>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? "Fechar menu" : "Abrir menu"}
+            className="relative"
+          >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {!open && <PresenceDot value={presence} className="absolute -right-1 -top-1 h-2.5 w-2.5 border-2 border-space-bg" />}
           </button>
         </div>
       </div>
 
       {open && (
-        <nav className="max-h-[70vh] space-y-0.5 overflow-y-auto border-t border-white/10 px-3 py-3">
+        <nav className="max-h-[75vh] space-y-0.5 overflow-y-auto border-t border-white/10 px-3 py-3">
+          <div className="-mx-3 mb-2 border-b border-white/10 pb-2">
+            <PresenceList userId={userId} initial={presence} />
+          </div>
           {sidebarItems(username).map(({ href, label, icon: Icon }) =>
             href ? (
               <Link
