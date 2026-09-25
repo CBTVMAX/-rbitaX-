@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import {
   Bell,
   ChevronRight,
+  Download,
   CircleHelp,
   FileText,
   Lock,
@@ -83,7 +84,7 @@ export default async function SettingsPage() {
           { href: "/configuracoes/conta", icon: UserRound, label: "Minha conta", hint: "Nome, @, bio, foto, capa e informações" },
           { href: "/configuracoes/conta", icon: Lock, label: "Privacidade", hint: "O que aparece no seu perfil" },
           { icon: ShieldCheck, label: "Segurança", hint: "Senha e sessões" },
-          { icon: Bell, label: "Notificações", hint: "O que você quer receber" },
+          { href: "/configuracoes/notificacoes", icon: Bell, label: "Notificações", hint: "No celular e no computador, mesmo com o app fechado" },
         ]}
       />
 
@@ -98,6 +99,11 @@ export default async function SettingsPage() {
             hint: `Cor do perfil: ${profileColorLabel(current.profile.profileColor)}`,
           },
         ]}
+      />
+
+      <Group
+        title="Aplicativo"
+        items={[{ href: "/app", icon: Download, label: "Baixar o app ÓrbitaX", hint: "Android (APK), iPhone e computador" }]}
       />
 
       <Group

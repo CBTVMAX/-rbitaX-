@@ -9,6 +9,7 @@ const PROTECTED_PREFIXES = [
   "/perfil",
   "/configuracoes",
   "/notificacoes",
+  "/amigos",
 ];
 
 export async function updateSession(request: NextRequest) {

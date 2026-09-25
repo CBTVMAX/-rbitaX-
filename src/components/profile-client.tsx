@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
+import { disablePush } from "@/lib/push-client";
 import { saveCover } from "@/lib/cover-upload";
 import { CoverCropDialog } from "@/components/cover-crop-dialog";
 import {
@@ -104,6 +105,7 @@ export function ProfileMoreMenu({
 
   async function signOut() {
     const supabase = createClient();
+    await disablePush(supabase);
     await supabase.auth.signOut();
     window.location.href = "/";
   }

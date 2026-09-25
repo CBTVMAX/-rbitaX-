@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appName">ÓrbitaX</string>
+    <string name="launchUrl">https://orbitax.social.br/feed?source=android</string>
+    <string name="providerAuthority">br.social.orbitax.fileprovider</string>
+    <!-- Links the app to orbitax.social.br (see /.well-known/assetlinks.json) so it opens full screen. -->
+    <string name="assetStatements" translatable="false">
+        [{ \"relation\": [\"delegate_permission/common.handle_all_urls\"],
+           \"target\": {\"namespace\": \"web\", \"site\": \"https://orbitax.social.br\"} }]
+    </string>
+</resources>

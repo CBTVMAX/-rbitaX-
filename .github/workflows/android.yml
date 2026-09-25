@@ -1,0 +1,91 @@
+name: App Android (APK)
+
+# Builds the ÓrbitaX Android app and publishes orbitax.apk as the latest GitHub release.
+# The download button on orbitax.social.br/app points to that release.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "android/**"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write # publish the release
+  id-token: write # GitHub OIDC token to fetch the signing key from Supabase Vault
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+env:
+  SIGNING_URL: https://hrfrwsedjtvkmpaniijl.supabase.co/functions/v1/android-signing
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Signing key
+        # Created on the first build and kept in Supabase Vault so every update is signed
+        # with the same key. Only this repository's builds on main can read it (OIDC).
+        run: |
+          set -euo pipefail
+          TOKEN=$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=orbitax-android-signing" | jq -r .value)
+          echo "::add-mask::$TOKEN"
+          call() { curl -sSf -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" --data-binary @- "$SIGNING_URL"; }
+
+          RESP=$(echo '{"action":"get"}' | call)
+          if [ "$(echo "$RESP" | jq -r .found)" != "true" ]; then
+            echo "First build: creating the app signing key."
+            NEW_PASS=$(openssl rand -hex 24)
+            echo "::add-mask::$NEW_PASS"
+            keytool -genkeypair -keystore "$RUNNER_TEMP/new.jks" -storetype PKCS12 -alias orbitax \
+              -keyalg RSA -keysize 4096 -validity 10000 -storepass "$NEW_PASS" -keypass "$NEW_PASS" \
+              -dname "CN=OrbitaX, O=OrbitaX, L=Aracaju, C=BR" >/dev/null 2>&1
+            SHA=$(keytool -list -v -keystore "$RUNNER_TEMP/new.jks" -storepass "$NEW_PASS" -alias orbitax | awk '/SHA256:/{print $2; exit}')
+            jq -n --arg k "$(base64 -w0 "$RUNNER_TEMP/new.jks")" --arg p "$NEW_PASS" --arg s "$SHA" \
+              '{action:"store", keystore:$k, password:$p, sha256:$s}' | call >/dev/null
+            rm -f "$RUNNER_TEMP/new.jks"
+            RESP=$(echo '{"action":"get"}' | call)
+          fi
+
+          PASS=$(echo "$RESP" | jq -r .password)
+          echo "::add-mask::$PASS"
+          echo "$RESP" | jq -r .keystore | base64 -d > "$RUNNER_TEMP/orbitax.jks"
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/orbitax.jks" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASSWORD=$PASS" >> "$GITHUB_ENV"
+          echo "Certificate SHA-256: $(keytool -list -v -keystore "$RUNNER_TEMP/orbitax.jks" -storepass "$PASS" -alias orbitax | awk '/SHA256:/{print $2; exit}')"
+
+      - name: Build APK
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 1.0.${{ github.run_number }}
+        run: |
+          gradle -p android assembleRelease --no-daemon --stacktrace
+          cp android/app/build/outputs/apk/release/app-release.apk orbitax.apk
+          rm -f "$KEYSTORE_PATH"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-v1.0.${{ github.run_number }}
+          name: ÓrbitaX para Android 1.0.${{ github.run_number }}
+          make_latest: "true"
+          files: orbitax.apk
+          body: |
+            Aplicativo ÓrbitaX para Android.
+            Baixe o arquivo **orbitax.apk**, abra no celular e toque em Instalar.
+            Página de download: https://orbitax.social.br/app

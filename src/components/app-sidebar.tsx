@@ -5,6 +5,7 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
+import { disablePush } from "@/lib/push-client";
 import { OrbitWordmarkThemed } from "@/components/orbit-logo";
 import { PresenceDot, PresenceList } from "@/components/presence-picker";
 import { CountBadge, useLiveCounts, type LiveCounts } from "@/components/live-activity";
@@ -15,6 +16,7 @@ import {
   Clapperboard,
   Coins,
   Compass,
+  Download,
   Gamepad2,
   Grid2x2,
   Home,
@@ -78,6 +80,7 @@ function isActive(pathname: string, href: string) {
 
 async function signOut() {
   const supabase = createClient();
+  await disablePush(supabase); // this device stops receiving this account's notifications
   await supabase.auth.signOut();
   window.location.href = "/";
 }
@@ -241,6 +244,9 @@ export function AppSidebar({ username }: { username: string; name: string; avata
             <Link href="/configuracoes" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white">
               <Settings className="h-4 w-4" /> Configurações
             </Link>
+            <Link href="/app" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white">
+              <Download className="h-4 w-4" /> Baixar o app
+            </Link>
             <button
               type="button"
               onClick={signOut}
@@ -333,6 +339,13 @@ export function MobileHeader({ userId, username, presence }: { userId: string; u
             className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/80 hover:bg-white/5"
           >
             <Settings className="h-5 w-5" /> Configurações
+          </Link>
+          <Link
+            href="/app"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/80 hover:bg-white/5"
+          >
+            <Download className="h-5 w-5" /> Baixar o app
           </Link>
           <button
             type="button"

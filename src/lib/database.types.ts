@@ -201,6 +201,10 @@ export type Database = {
       my_badge_counts: { Args: Record<string, never>; Returns: { messages: number; friendRequests: number; notifications: number }[] };
       mark_conversation_read: { Args: { conversation_id: string }; Returns: undefined };
       mark_friend_requests_seen: { Args: Record<string, never>; Returns: undefined };
+      android_cert_fingerprint: { Args: Record<string, never>; Returns: string | null };
+      push_public_key: { Args: Record<string, never>; Returns: string | null };
+      save_push_subscription: { Args: { p_endpoint: string; p_p256dh: string; p_auth: string; p_user_agent?: string | null }; Returns: undefined };
+      remove_push_subscription: { Args: { p_endpoint: string }; Returns: undefined };
       create_community: { Args: { p_name: string; p_description?: string | null; p_category?: string | null }; Returns: string };
       public_profile_details: {
         Args: { target_user_id: string };

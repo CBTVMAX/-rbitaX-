@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { APP_THEME_COOKIE, parseAppTheme } from "@/lib/app-theme";
 import { AppThemeSync } from "@/components/app-theme";
 import { LiveActivityProvider } from "@/components/live-activity";
+import { PushPrompt } from "@/components/pwa";
 import { AppSidebar, AppTopBar, MobileHeader, MobileTabBar } from "@/components/app-sidebar";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <AppSidebar username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} />
         <main className="min-h-screen pb-24 md:ml-64 md:pb-0 md:pt-16">{children}</main>
         <MobileTabBar username={profile.username} />
+        <PushPrompt />
       </div>
     </LiveActivityProvider>
   );
