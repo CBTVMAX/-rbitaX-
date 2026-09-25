@@ -455,7 +455,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
               https://{profileUrlHost}/@{normalized || initial.username}
             </p>
             <p className="mt-1.5 text-xs text-white/50">
-              {usernameHint ?? "Você pode alterar seu nome de usuário. Ele precisa ser único. Seu Orbit ID não muda."}
+              {usernameHint ?? "Você pode alterar seu nome de usuário. Ele precisa ser único."}
             </p>
           </Field>
 

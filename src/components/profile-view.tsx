@@ -193,7 +193,6 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
       </div>
       <p className="mt-0.5 text-sm text-white/70">
         @{user.username}
-        {user.orbitId && <span className="text-white/60"> &nbsp;·&nbsp; Orbit ID #{user.orbitId}</span>}
       </p>
       <PresenceStatus userId={user.id} initial={user.presence} editable={isMe} className="mt-1.5" />
     </>
