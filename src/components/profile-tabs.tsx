@@ -16,7 +16,7 @@ import {
 
 const TABS = [
   { id: "inicio", label: "Início", icon: Home },
-  { id: "posts", label: "Posts", icon: List },
+  { id: "posts", label: "Publicações", icon: List },
   { id: "fotos", label: "Fotos", icon: ImageIcon },
   { id: "videos", label: "Vídeos", icon: PlayCircle },
   { id: "musica", label: "Música", icon: Music2 },
@@ -40,7 +40,13 @@ const EMPTY_TEXT: Record<ProfileTabId, string> = {
   comunidades: "Nenhuma comunidade ainda.",
 };
 
-export function ProfileTabs({ slots }: { slots: Partial<Record<ProfileTabId, React.ReactNode>> }) {
+export function ProfileTabs({
+  slots,
+  aside,
+}: {
+  slots: Partial<Record<ProfileTabId, React.ReactNode>>;
+  aside?: React.ReactNode;
+}) {
   const [active, setActive] = useState<ProfileTabId>("inicio");
 
   return (
@@ -52,7 +58,7 @@ export function ProfileTabs({ slots }: { slots: Partial<Record<ProfileTabId, Rea
             type="button"
             onClick={() => setActive(id)}
             className={clsx(
-              "relative flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm transition",
+              "relative flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm transition lg:px-2.5",
               active === id
                 ? "bg-gradient-to-r from-orbit-blue/25 to-orbit-purple/25 font-medium text-white"
                 : "text-white/65 hover:bg-white/5 hover:text-white"
@@ -65,11 +71,16 @@ export function ProfileTabs({ slots }: { slots: Partial<Record<ProfileTabId, Rea
         ))}
       </div>
 
-      {slots[active] ?? (
-        <div className="rounded-2xl border border-white/10 bg-space-surface/80 p-10 text-center text-sm text-white/50">
-          {EMPTY_TEXT[active]}
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_290px] lg:items-start lg:gap-4">
+        <div className="min-w-0">
+          {slots[active] ?? (
+            <div className="rounded-2xl border border-white/10 bg-space-surface/80 p-10 text-center text-sm text-white/50">
+              {EMPTY_TEXT[active]}
+            </div>
+          )}
         </div>
-      )}
+        {aside && <div className="hidden space-y-4 lg:block">{aside}</div>}
+      </div>
     </div>
   );
 }

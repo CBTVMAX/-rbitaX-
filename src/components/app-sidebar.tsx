@@ -310,7 +310,7 @@ export function MobileTabBar({ username }: { username: string }) {
   const items: { href: string; label: string; icon: Icon }[] = [
     { href: "/feed", label: "Início", icon: Home },
     { href: "/explorar", label: "Explorar", icon: Compass },
-    { href: "/comunidades", label: "Comunidades", icon: Users },
+    { href: "/mensagens", label: "Messenger", icon: MessageCircle },
     { href: `/perfil/${username}`, label: "Perfil", icon: UserRound },
   ];
 

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import type { FeedPost } from "@/components/post-card";
-import { ProfileView, type ProfileInfo } from "@/components/profile-view";
+import { ProfileView, type ProfileCommunity, type ProfileInfo } from "@/components/profile-view";
 
 export const dynamic = "force-dynamic";
 
@@ -22,13 +22,17 @@ export default async function ProfilePage({ params }: { params: { username: stri
     { data: followerRows },
     { data: followingRows },
     { count: postCount },
-    { count: communityCount },
+    { data: membershipRows },
     { data: myFollow },
   ] = await Promise.all([
     supabase.from("Follow").select("followerId").eq("followingId", user.id),
     supabase.from("Follow").select("followingId").eq("followerId", user.id),
     supabase.from("Post").select("id", { count: "exact", head: true }).eq("authorId", user.id),
-    supabase.from("CommunityMember").select("id", { count: "exact", head: true }).eq("userId", user.id),
+    supabase
+      .from("CommunityMember")
+      .select("role, community:Community(id, name, slug, avatarUrl)")
+      .eq("userId", user.id)
+      .order("createdAt", { ascending: false }),
     current
       ? supabase.from("Follow").select("id").eq("followerId", current.authId).eq("followingId", user.id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -87,6 +91,12 @@ export default async function ProfilePage({ params }: { params: { username: stri
     likedByMe: likedSet.has(p.id),
   }));
 
+  const communities: ProfileCommunity[] = (membershipRows ?? []).flatMap((m) => {
+    const c = (m as unknown as { community: Omit<ProfileCommunity, "role"> | Omit<ProfileCommunity, "role">[] | null }).community;
+    const community = Array.isArray(c) ? c[0] : c;
+    return community ? [{ ...community, role: m.role }] : [];
+  });
+
   const rawProfile = (user as unknown as { profile?: ProfileInfo | ProfileInfo[] | null }).profile;
   const info = Array.isArray(rawProfile) ? rawProfile[0] : rawProfile;
 
@@ -101,10 +111,11 @@ export default async function ProfilePage({ params }: { params: { username: stri
         friends: friendCount,
         followers: followerIds.size,
         following: followingIds.length,
-        communities: communityCount ?? 0,
+        communities: communities.length,
       }}
       feed={feed}
       pinnedPostId={pinnedPostId}
+      communities={communities}
     />
   );
 }

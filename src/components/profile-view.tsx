@@ -3,8 +3,35 @@ import { PostCard, type FeedPost } from "@/components/post-card";
 import { PostComposer } from "@/components/post-composer";
 import { ProfileTabs } from "@/components/profile-tabs";
 import { FollowButton } from "@/components/follow-button";
-import { OrbitIcon, ProfileImageUpload, ProfileMoreMenu, ProfileRightRail, ShareProfileButton } from "@/components/profile-client";
-import { BadgeCheck, Cake, Camera, ImagePlus, Link2, MapPin, MessageCircle, Plus, Sparkles } from "lucide-react";
+import {
+  OrbitIcon,
+  PresenceStatus,
+  ProfileImageUpload,
+  ProfileMoreMenu,
+  ProfileRightRail,
+  ShareProfileButton,
+} from "@/components/profile-client";
+import { presenceOf } from "@/lib/presence";
+import {
+  BadgeCheck,
+  Cake,
+  Camera,
+  Check,
+  ChevronRight,
+  Crown,
+  Gem,
+  ImagePlus,
+  Link2,
+  MapPin,
+  MessageCircle,
+  Music2,
+  PenLine,
+  Play,
+  Plus,
+  Shield,
+  Sparkles,
+  User as UserIcon,
+} from "lucide-react";
 
 export type ProfileInfo = {
   birthDate: string | null;
@@ -104,6 +131,7 @@ export type ProfileViewProps = {
     bio: string | null;
     isVerified: boolean;
     lastSeenAt: string | null;
+    presence: string;
     avatarUrl: string | null;
     coverUrl: string | null;
   };
@@ -113,13 +141,35 @@ export type ProfileViewProps = {
   stats: { posts: number; friends: number; followers: number; following: number; communities: number };
   feed: FeedPost[];
   pinnedPostId: string | null;
+  communities: ProfileCommunity[];
 };
 
-export function ProfileView({ user, info, current, isFollowing, stats, feed, pinnedPostId }: ProfileViewProps) {
+export type ProfileCommunity = { id: string; name: string; slug: string; avatarUrl: string | null; role: string };
+
+const ROLE_LABEL: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; className: string }> = {
+  owner: { label: "Proprietário", icon: Crown, className: "text-amber-400" },
+  admin: { label: "Moderador", icon: Shield, className: "text-orbit-cyan" },
+  moderator: { label: "Moderador", icon: Shield, className: "text-orbit-cyan" },
+  member: { label: "Membro", icon: UserIcon, className: "text-white/60" },
+};
+
+function SideCard({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="rounded-2xl border border-white/10 bg-space-surface/80 p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-white">{title}</h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export function ProfileView({ user, info, current, isFollowing, stats, feed, pinnedPostId, communities }: ProfileViewProps) {
   const isMe = current?.authId === user.id;
 
-  const online =
-    isMe || (!!user.lastSeenAt && Date.now() - new Date(user.lastSeenAt).getTime() < 5 * 60 * 1000);
+  const presence = presenceOf(user.presence);
+  const online = presence === "online";
 
   const age = info?.birthDate && (isMe || info.showAge) ? ageFrom(info.birthDate) : null;
   const sign = info?.zodiacSign && (isMe || info.showSign) ? info.zodiacSign : null;
@@ -138,10 +188,7 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
         @{user.username}
         {user.orbitId && <span className="text-white/60"> &nbsp;·&nbsp; Orbit ID #{user.orbitId}</span>}
       </p>
-      <p className="mt-1.5 flex items-center gap-2 text-sm">
-        <span className={`h-2.5 w-2.5 rounded-full ${online ? "bg-emerald-400" : "bg-white/30"}`} />
-        <span className={online ? "text-emerald-400" : "text-white/50"}>{online ? "Online" : "Offline"}</span>
-      </p>
+      <PresenceStatus userId={user.id} initial={presence} editable={isMe} />
     </>
   );
 
@@ -267,14 +314,193 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
     emptyFeed
   );
 
+  const aboutRows: { icon: React.ComponentType<{ className?: string }>; text: string | null; prompt: string }[] = [
+    { icon: MapPin, text: location, prompt: "Adicionar cidade" },
+    { icon: Cake, text: age !== null ? `${age} anos` : null, prompt: "Data de nascimento" },
+    { icon: Sparkles, text: sign, prompt: "Seu signo" },
+    { icon: Gem, text: interests.length ? interests.join(", ") : null, prompt: "Seus interesses" },
+    { icon: Link2, text: website, prompt: "Site ou link" },
+  ];
+  const visibleAbout = aboutRows.filter((r) => r.text || isMe);
+
+  const aboutList =
+    user.bio || visibleAbout.some((r) => r.text) || isMe ? (
+      <div className="space-y-2.5 text-sm">
+        {user.bio && <p className="text-white/80">{user.bio}</p>}
+        {visibleAbout.map(({ icon: Icon, text, prompt }) =>
+          text ? (
+            <p key={prompt} className="flex items-start gap-2.5 text-white/80">
+              <Icon className="mt-0.5 h-4 w-4 shrink-0 text-white/45" /> <span className="min-w-0 break-words">{text}</span>
+            </p>
+          ) : (
+            <Link key={prompt} href="/configuracoes/conta" className="flex items-center gap-2.5 text-white/45 hover:text-white/75">
+              <Icon className="h-4 w-4 shrink-0" /> {prompt}
+            </Link>
+          )
+        )}
+      </div>
+    ) : null;
+
+  const onboardingSteps = [
+    { done: !!user.avatarUrl, label: "Adicione uma foto de perfil", field: "avatarUrl" as const, icon: Camera },
+    { done: !!user.coverUrl, label: "Adicione uma capa", field: "coverUrl" as const, icon: ImagePlus },
+    { done: !!user.bio, label: "Escreva sua bio", field: null, icon: PenLine },
+  ];
+  const stepClass =
+    "flex w-full items-center gap-3 rounded-xl border border-white/10 bg-space-bg/40 px-3.5 py-3 text-left text-sm transition";
+
+  const onboarding =
+    isMe && onboardingSteps.some((st) => !st.done) ? (
+      <section className="rounded-2xl border border-white/10 bg-space-surface/80 p-4">
+        <h2 className="text-sm font-semibold text-white">Personalize seu perfil</h2>
+        <p className="mt-0.5 text-xs text-white/50">Complete estes passos para as pessoas conhecerem você.</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {onboardingSteps.map(({ done, label, field, icon: Icon }) => {
+            const content = (
+              <>
+                <span
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                    done ? "bg-emerald-500/15 text-emerald-400" : "bg-orbit-gradient text-white"
+                  }`}
+                >
+                  {done ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                </span>
+                <span className={done ? "text-white/45 line-through" : "text-white/85"}>{label}</span>
+              </>
+            );
+            if (done) return <div key={label} className={stepClass}>{content}</div>;
+            return field ? (
+              <ProfileImageUpload key={label} userId={user.id} field={field} ariaLabel={label} className={`${stepClass} hover:border-orbit-purple/50`}>
+                {content}
+              </ProfileImageUpload>
+            ) : (
+              <Link key={label} href="/configuracoes/conta" className={`${stepClass} hover:border-orbit-purple/50`}>
+                {content}
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+    ) : null;
+
+  const soonButton =
+    "mt-3 w-full cursor-default rounded-xl border border-white/15 bg-space-bg/40 py-2 text-xs font-medium text-white/60";
+
+  const aside = (
+    <>
+      {isMe && (
+        <SideCard title="Seu tema atual">
+          <div className="flex items-center gap-3">
+            <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-orbit-purple/40 bg-gradient-to-br from-orbit-blue/25 to-orbit-purple/25">
+              <Gem className="h-6 w-6 text-orbit-cyan" />
+            </span>
+            <div>
+              <p className="text-sm font-medium text-white">Padrão Órbita X</p>
+              <p className="text-xs text-white/50">Tema escuro</p>
+            </div>
+          </div>
+          <button type="button" disabled title="Em breve" className={soonButton}>
+            Alterar tema
+          </button>
+        </SideCard>
+      )}
+      {isMe && (
+        <SideCard title="Moldura do avatar">
+          <div title="Em breve" className="flex cursor-default items-center gap-3 rounded-xl border border-white/10 bg-space-bg/40 p-3">
+            <span className="h-11 w-11 shrink-0 rounded-full border-2 border-orbit-blue/70 shadow-[0_0_14px_rgba(43,108,255,0.45)]" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-white">Nenhuma moldura</p>
+              <p className="text-xs text-white/50">Adicione uma moldura ao seu avatar</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-white/40" />
+          </div>
+        </SideCard>
+      )}
+      <SideCard title="Conquistas">
+        <div className="flex items-center gap-3">
+          <div className="flex shrink-0 -space-x-2">
+            <span className="h-10 w-9 [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)] bg-white/10" />
+            <span className="h-10 w-9 [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)] bg-white/5" />
+          </div>
+          <div>
+            <p className="text-sm text-white/80">Ainda não há conquistas</p>
+            {isMe && <p className="text-xs text-white/50">Explore a plataforma e conquiste seus emblemas!</p>}
+          </div>
+        </div>
+      </SideCard>
+      {isMe && (
+        <SideCard title="Música do perfil">
+          <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-space-bg/40 p-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10">
+              <Music2 className="h-5 w-5 text-white/60" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-white/80">Nenhuma música adicionada</p>
+              <p className="text-xs text-white/50">Adicione uma música ao seu perfil</p>
+            </div>
+            <span title="Em breve" className="flex h-8 w-8 items-center justify-center rounded-full border border-orbit-purple/50 text-white/60">
+              <Play className="h-3.5 w-3.5" />
+            </span>
+          </div>
+        </SideCard>
+      )}
+      {aboutList && (
+        <SideCard
+          title="Sobre mim"
+          action={
+            isMe && (
+              <Link href="/configuracoes/conta" className="text-xs text-orbit-blue hover:underline">
+                Editar
+              </Link>
+            )
+          }
+        >
+          {aboutList}
+        </SideCard>
+      )}
+    </>
+  );
+
+  const communitiesList = communities.length ? (
+    <div className="space-y-2">
+      {communities.map((c) => {
+        const role = ROLE_LABEL[c.role] ?? ROLE_LABEL.member;
+        const RoleIcon = role.icon;
+        return (
+          <Link
+            key={c.id}
+            href={`/comunidades/${c.slug}`}
+            className="flex items-center gap-3 rounded-2xl border border-white/10 bg-space-surface/80 p-3 transition hover:border-orbit-purple/50"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-space-card">
+              {c.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={c.avatarUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <OrbitIcon className="h-6 w-8" />
+              )}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-white">{c.name}</p>
+              <p className={`flex items-center gap-1 text-xs ${role.className}`}>
+                <RoleIcon className="h-3.5 w-3.5" /> {role.label}
+              </p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-white/40" />
+          </Link>
+        );
+      })}
+    </div>
+  ) : undefined;
+
   const photos = feed.flatMap((p) => p.media.filter((m) => m.type === "image"));
   const videos = feed.flatMap((p) => p.media.filter((m) => m.type === "video"));
 
   return (
     <div className="mx-auto flex max-w-[1240px] gap-5 px-3 pt-3 md:px-5 md:py-5">
       <div className="min-w-0 flex-1 space-y-3 md:space-y-4">
-        <section className="overflow-hidden rounded-2xl border border-white/10 bg-space-surface/80">
-          <div className="relative h-60 md:h-56">
+        <section className="rounded-2xl border border-white/10 bg-space-surface/80">
+          <div className="relative h-60 overflow-hidden rounded-t-2xl md:h-56">
             {user.coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={user.coverUrl} alt="" className="h-full w-full object-cover" />
@@ -316,7 +542,7 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
                   ) : (
                     visitorActions
                   )}
-                  <ProfileMoreMenu username={user.username} isMe={isMe} />
+                  <ProfileMoreMenu username={user.username} userId={user.id} isMe={isMe} />
                 </div>
               </div>
               {bioAndMeta}
@@ -337,7 +563,7 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
               ) : (
                 visitorActions
               )}
-              <ProfileMoreMenu username={user.username} isMe={isMe} compact />
+              <ProfileMoreMenu username={user.username} userId={user.id} isMe={isMe} compact />
             </div>
           </div>
 
@@ -356,7 +582,10 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
           </div>
         </section>
 
+        {onboarding}
+
         <ProfileTabs
+          aside={aside}
           slots={{
             inicio: (
               <div className="space-y-3 md:space-y-4">
@@ -388,15 +617,10 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
                 ))}
               </div>
             ) : undefined,
-            sobre:
-              user.bio || age !== null || sign || location ? (
-                <div className="space-y-3 rounded-2xl border border-white/10 bg-space-surface/80 p-5 text-sm text-white/80">
-                  {user.bio && <p>{user.bio}</p>}
-                  {age !== null && <p className="flex items-center gap-2"><Cake className="h-4 w-4 text-white/50" /> {age} anos</p>}
-                  {sign && <p className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-white/50" /> {sign}</p>}
-                  {location && <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-white/50" /> {location}</p>}
-                </div>
-              ) : undefined,
+            sobre: aboutList ? (
+              <div className="rounded-2xl border border-white/10 bg-space-surface/80 p-5">{aboutList}</div>
+            ) : undefined,
+            comunidades: communitiesList,
           }}
         />
       </div>
