@@ -18,6 +18,8 @@ const config: Config = {
         },
         // Accent of the profile being viewed (Personalizar perfil → Cor do perfil).
         pa: "rgb(var(--pa, 139 92 246) / <alpha-value>)",
+        // Accent of the open conversation (Messenger → Tema da conversa).
+        chat: "rgb(var(--chat-accent, 139 92 246) / <alpha-value>)",
         orbit: {
           blue: "#2b6cff",
           cyan: "#22d3ee",
@@ -27,6 +29,7 @@ const config: Config = {
       },
       backgroundImage: {
         "orbit-gradient": "linear-gradient(135deg, #2b6cff 0%, #8b5cf6 55%, #ec4899 100%)",
+        "chat-bubble": "var(--chat-bubble, linear-gradient(135deg, #2b6cff 0%, #8b5cf6 55%, #ec4899 100%))",
         "orbit-radial": "radial-gradient(circle at 30% 20%, rgba(139,92,246,0.25), transparent 60%)",
       },
       fontFamily: {

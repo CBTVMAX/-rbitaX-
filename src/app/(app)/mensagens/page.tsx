@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
-import { MessengerApp, type ConversationSummary } from "@/components/messenger-app";
+import { DesktopMessenger } from "@/components/messenger/desktop-messenger";
 
 export const dynamic = "force-dynamic";
 
-export default async function MensagensPage({ searchParams }: { searchParams: { com?: string } }) {
+export default async function MensagensPage({ searchParams }: { searchParams: { com?: string; c?: string } }) {
   const current = await getCurrentUser();
   if (!current) redirect("/entrar");
 
@@ -25,61 +25,28 @@ export default async function MensagensPage({ searchParams }: { searchParams: { 
     }
   }
 
-  const { data: memberships } = await supabase
-    .from("ConversationMember")
-    .select("conversationId")
-    .eq("userId", current.authId);
+  // Whole list in one round trip (last message, unread, settings, who can write).
+  const { data: rows } = await supabase.rpc("my_conversations");
+  const conversations = (rows ?? []) as unknown as Record<string, unknown>[];
 
-  const conversationIds = (memberships ?? []).map((m) => m.conversationId);
-
-  let conversations: ConversationSummary[] = [];
-
-  if (conversationIds.length) {
-    const { data: members } = await supabase
-      .from("ConversationMember")
-      .select("conversationId, user:User(id, name, username, avatarUrl, presence)")
-      .in("conversationId", conversationIds);
-
-    const { data: lastMessages } = await supabase
-      .from("Message")
-      .select("id, conversationId, content, createdAt, senderId, isRead")
-      .in("conversationId", conversationIds)
-      .order("createdAt", { ascending: false });
-
-    const lastByConversation = new Map<string, NonNullable<typeof lastMessages>[number]>();
-    (lastMessages ?? []).forEach((m) => {
-      if (!lastByConversation.has(m.conversationId)) lastByConversation.set(m.conversationId, m);
-    });
-
-    conversations = conversationIds
-      .map((id) => {
-        const other = (members ?? []).find(
-          (m) => m.conversationId === id && (m.user as unknown as { id: string })?.id !== current.authId
-        );
-        const last = lastByConversation.get(id);
-        const unread = (lastMessages ?? []).filter(
-          (m) => m.conversationId === id && !m.isRead && m.senderId !== current.authId
-        ).length;
-        return {
-          id,
-          otherUser: (other?.user as unknown as ConversationSummary["otherUser"]) ?? null,
-          lastMessage: last ? { content: last.content, createdAt: last.createdAt } : null,
-          unread,
-        };
-      })
-      .filter((c) => c.otherUser)
-      .sort((a, b) => {
-        const at = a.lastMessage?.createdAt ?? "";
-        const bt = b.lastMessage?.createdAt ?? "";
-        return bt.localeCompare(at);
-      });
+  // Links from notifications (?c=<conversa>) open that chat when the person belongs to it.
+  if (!openConversationId && searchParams.c && conversations.some((c) => c.id === searchParams.c)) {
+    openConversationId = searchParams.c;
   }
 
+  const { profile } = current;
+
   return (
-    <MessengerApp
-      currentUserId={current.authId}
-      currentUserName={current.profile.name}
-      currentUserPresence={current.profile.presence}
+    <DesktopMessenger
+      me={{
+        id: current.authId,
+        name: profile.name,
+        username: profile.username,
+        avatarUrl: profile.avatarUrl,
+        presence: profile.presence,
+        avatarFrame: profile.avatarFrame,
+      }}
+      presence={profile.presence}
       initialConversations={conversations}
       initialActiveId={openConversationId}
       notice={

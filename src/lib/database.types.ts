@@ -30,11 +30,11 @@ type CommunityMemberRow = { communityId: string; createdAt: string; id: string; 
 type CommunityMemberInsert = { communityId: string; createdAt?: string; id: string; role?: string; userId: string };
 type CommunityMemberUpdate = Partial<CommunityMemberInsert>;
 
-type ConversationRow = { createdAt: string; id: string; updatedAt: string };
+type ConversationRow = { createdAt: string; id: string; updatedAt: string; isGroup: boolean; name: string | null; avatarUrl: string | null; description: string | null; createdById: string | null; messageTtlSeconds: number | null; lastMessageAt: string | null };
 type ConversationInsert = { createdAt?: string; id: string; updatedAt?: string };
 type ConversationUpdate = Partial<ConversationInsert>;
 
-type ConversationMemberRow = { conversationId: string; createdAt: string; id: string; userId: string };
+type ConversationMemberRow = { conversationId: string; createdAt: string; id: string; userId: string; role: string; lastReadAt: string | null };
 type ConversationMemberInsert = { conversationId: string; createdAt?: string; id: string; userId: string };
 type ConversationMemberUpdate = Partial<ConversationMemberInsert>;
 
@@ -50,8 +50,15 @@ type MediaRow = { createdAt: string; height: number | null; id: string; mimeType
 type MediaInsert = { createdAt?: string; height?: number | null; id: string; mimeType?: string | null; position?: number; postId: string; sizeBytes?: number | null; thumbnailUrl?: string | null; type: string; url: string; width?: number | null };
 type MediaUpdate = Partial<MediaInsert>;
 
-type MessageRow = { content: string; conversationId: string; createdAt: string; id: string; isRead: boolean; senderId: string };
-type MessageInsert = { content: string; conversationId: string; createdAt?: string; id: string; isRead?: boolean; senderId: string };
+type MessageRow = { content: string; conversationId: string; createdAt: string; id: string; isRead: boolean; senderId: string; type: string; attachments: Json; meta: Json; replyToId: string | null; deletedAt: string | null; deliveredAt: string | null; expiresAt: string | null };
+type MessageInsert = { content: string; conversationId: string; createdAt?: string; id: string; isRead?: boolean; senderId: string; type?: string; attachments?: Json; meta?: Json; replyToId?: string | null };
+
+type MessageReactionRow = { id: string; messageId: string; conversationId: string; userId: string; emoji: string; createdAt: string };
+type PollVoteRow = { id: string; messageId: string; conversationId: string; userId: string; optionIndex: number; createdAt: string };
+type MessageFavoriteRow = { messageId: string; userId: string; conversationId: string; createdAt: string };
+type MessageHiddenRow = { messageId: string; userId: string; createdAt: string };
+type ConversationSettingRow = { conversationId: string; userId: string; archivedAt: string | null; mutedUntil: string | null; theme: string | null; clearedAt: string | null; updatedAt: string };
+type ReadOnly<R> = { Row: R; Insert: never; Update: never; Relationships: [] };
 type MessageUpdate = Partial<MessageInsert>;
 
 type MomentRow = { createdAt: string; expiresAt: string; id: string; mediaUrl: string; text: string | null; type: string; userId: string };
@@ -150,6 +157,11 @@ export type Database = {
         { foreignKeyName: "Message_conversationId_fkey"; columns: ["conversationId"]; isOneToOne: false; referencedRelation: "Conversation"; referencedColumns: ["id"] },
         { foreignKeyName: "Message_senderId_fkey"; columns: ["senderId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
       ] };
+      MessageReaction: ReadOnly<MessageReactionRow>;
+      PollVote: ReadOnly<PollVoteRow>;
+      MessageFavorite: ReadOnly<MessageFavoriteRow>;
+      MessageHidden: ReadOnly<MessageHiddenRow>;
+      ConversationSetting: ReadOnly<ConversationSettingRow>;
       Moment: { Row: MomentRow; Insert: MomentInsert; Update: MomentUpdate; Relationships: [
         { foreignKeyName: "Moment_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
       ] };
@@ -263,6 +275,42 @@ export type Database = {
           friendState: string;
         }[];
       };
+      my_conversations: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          isGroup: boolean;
+          name: string | null;
+          avatarUrl: string | null;
+          description: string | null;
+          memberCount: number;
+          role: string;
+          archivedAt: string | null;
+          mutedUntil: string | null;
+          theme: string | null;
+          messageTtlSeconds: number | null;
+          othersReadAt: string | null;
+          otherUser: Json | null;
+          lastMessage: Json | null;
+          unread: number;
+          sortAt: string;
+          sendStatus: string;
+        }[];
+      };
+      conversation_send_status: { Args: { conversation_id: string }; Returns: string };
+      mark_messages_delivered: { Args: Record<string, never>; Returns: undefined };
+      delete_message: { Args: { message_id: string; for_everyone: boolean }; Returns: Json };
+      toggle_reaction: { Args: { message_id: string; emoji: string }; Returns: string | null };
+      vote_poll: { Args: { message_id: string; option_indexes: number[] }; Returns: undefined };
+      toggle_favorite: { Args: { message_id: string }; Returns: boolean };
+      update_conversation_setting: { Args: { conversation_id: string; patch: Json }; Returns: undefined };
+      clear_conversation: { Args: { conversation_id: string }; Returns: undefined };
+      create_group: { Args: { p_name: string; p_member_ids: string[]; p_avatar_url?: string | null }; Returns: string };
+      update_group: { Args: { p_conversation_id: string; p_name: string; p_description: string | null; p_avatar_url: string | null }; Returns: undefined };
+      add_group_members: { Args: { p_conversation_id: string; p_member_ids: string[] }; Returns: number };
+      remove_group_member: { Args: { p_conversation_id: string; p_user_id: string }; Returns: undefined };
+      set_group_admin: { Args: { p_conversation_id: string; p_user_id: string; p_admin: boolean }; Returns: undefined };
+      set_conversation_ttl: { Args: { p_conversation_id: string; p_seconds: number | null }; Returns: undefined };
       public_posts: {
         Args: { limit_count?: number; search_query?: string | null };
         Returns: {

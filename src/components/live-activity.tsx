@@ -6,6 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { Bell, MessageCircle, UserPlus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { messagePreview, toDate } from "@/lib/messenger/format";
+import type { Attachment, MessageMeta } from "@/lib/messenger/types";
 
 export type LiveCounts = { messages: number; friendRequests: number; notifications: number };
 
@@ -95,6 +97,7 @@ export function LiveActivityProvider({
 
   useEffect(() => {
     load();
+    supabase.rpc("mark_messages_delivered").then(() => {});
 
     const channel = supabase
       .channel(`live:${userId}`)
@@ -131,18 +134,38 @@ export function LiveActivityProvider({
         if (pathRef.current === "/amigos" || pathRef.current.startsWith("/perfil/")) router.refresh();
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "Message" }, async (payload) => {
-        const m = payload.new as { senderId: string; content: string; conversationId: string };
+        const m = payload.new as {
+          senderId: string;
+          content: string;
+          conversationId: string;
+          type?: string;
+          meta?: MessageMeta;
+          attachments?: Attachment[];
+        };
         if (m.senderId === userId) return;
         refresh();
+        // The message reached this device: the sender sees "entregue".
+        supabase.rpc("mark_messages_delivered").then(() => {});
         // Inside Messenger the conversation itself shows the new message.
-        if (pathRef.current.startsWith("/mensagens")) return;
-        const sender = await person(m.senderId);
+        if (m.type === "system" || pathRef.current.startsWith("/mensagens")) return;
+        const [sender, { data: conv }, { data: setting }] = await Promise.all([
+          person(m.senderId),
+          supabase.from("Conversation").select("isGroup, name, avatarUrl").eq("id", m.conversationId).maybeSingle(),
+          supabase.from("ConversationSetting").select("mutedUntil").eq("conversationId", m.conversationId).maybeSingle(),
+        ]);
+        if (setting?.mutedUntil && toDate(setting.mutedUntil) > new Date()) return;
+        const preview = messagePreview(m.type ?? "text", m.content, m.meta ?? {}, m.attachments ?? []);
+        const body = conv?.isGroup ? `${sender?.name.split(" ")[0] ?? "Alguém"}: ${preview}` : preview;
         pushToast({
           kind: "message",
-          title: sender?.name ?? "Nova mensagem",
-          body: m.content.length > 90 ? `${m.content.slice(0, 90)}…` : m.content,
-          href: sender ? `/mensagens?com=${encodeURIComponent(sender.username)}` : "/mensagens",
-          avatarUrl: sender?.avatarUrl ?? null,
+          title: conv?.isGroup ? conv.name ?? "Grupo" : sender?.name ?? "Nova mensagem",
+          body: body.length > 90 ? `${body.slice(0, 90)}…` : body,
+          href: conv?.isGroup
+            ? `/mensagens?c=${encodeURIComponent(m.conversationId)}`
+            : sender
+              ? `/mensagens?com=${encodeURIComponent(sender.username)}`
+              : "/mensagens",
+          avatarUrl: (conv?.isGroup ? conv.avatarUrl : sender?.avatarUrl) ?? null,
         });
       })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "Message" }, refresh)
