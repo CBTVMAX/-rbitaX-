@@ -129,7 +129,7 @@ export function MessengerApp({
   }
 
   return (
-    <div className="flex h-screen md:h-screen">
+    <div className="flex h-[calc(100dvh-9.5rem)] md:h-[calc(100vh-4rem)]">
       <div className="flex w-full flex-col border-r border-white/10 md:w-80">
         <div className="flex items-center justify-between border-b border-white/10 p-4">
           <h1 className="font-display text-lg font-bold text-white">Mensagens</h1>
