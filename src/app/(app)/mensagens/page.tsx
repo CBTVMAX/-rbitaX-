@@ -42,7 +42,7 @@ export default async function MensagensPage({ searchParams }: { searchParams: { 
 
     const { data: lastMessages } = await supabase
       .from("Message")
-      .select("id, conversationId, content, createdAt, senderId")
+      .select("id, conversationId, content, createdAt, senderId, isRead")
       .in("conversationId", conversationIds)
       .order("createdAt", { ascending: false });
 
@@ -57,10 +57,14 @@ export default async function MensagensPage({ searchParams }: { searchParams: { 
           (m) => m.conversationId === id && (m.user as unknown as { id: string })?.id !== current.authId
         );
         const last = lastByConversation.get(id);
+        const unread = (lastMessages ?? []).filter(
+          (m) => m.conversationId === id && !m.isRead && m.senderId !== current.authId
+        ).length;
         return {
           id,
           otherUser: (other?.user as unknown as ConversationSummary["otherUser"]) ?? null,
           lastMessage: last ? { content: last.content, createdAt: last.createdAt } : null,
+          unread,
         };
       })
       .filter((c) => c.otherUser)

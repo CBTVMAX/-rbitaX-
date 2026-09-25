@@ -202,6 +202,8 @@ export type Database = {
         Args: { limit_count?: number; search_query?: string | null };
         Returns: { id: string; name: string; username: string; avatarUrl: string | null; bio: string | null; isVerified: boolean }[];
       };
+      my_badge_counts: { Args: Record<string, never>; Returns: { messages: number; friendRequests: number; notifications: number }[] };
+      mark_conversation_read: { Args: { conversation_id: string }; Returns: undefined };
       send_friend_request: { Args: { target_user_id: string }; Returns: string };
       respond_friend_request: { Args: { requester_id: string; accept: boolean }; Returns: string };
       cancel_friend_request: { Args: { target_user_id: string }; Returns: string };

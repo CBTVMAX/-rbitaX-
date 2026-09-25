@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/post-card";
 import { timeAgo } from "@/lib/format";
 import Link from "next/link";
 import { ArrowLeft, Lock, MessageCircle, Search, Send, X } from "lucide-react";
 import { PresenceDot, PresenceStatus } from "@/components/presence-picker";
+import { CountBadge } from "@/components/live-activity";
 import { PRESENCE, presenceOf } from "@/lib/presence";
 import { clsx } from "clsx";
 
@@ -14,6 +15,7 @@ export type ConversationSummary = {
   id: string;
   otherUser: { id: string; name: string; username: string; avatarUrl: string | null; presence?: string } | null;
   lastMessage: { content: string; createdAt: string } | null;
+  unread?: number;
 };
 
 type MessageRow = {
@@ -62,7 +64,24 @@ export function MessengerApp({
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
+  const activeRef = useRef(activeId);
+  activeRef.current = activeId;
+  const conversationsRef = useRef(conversations);
+  conversationsRef.current = conversations;
+  const mobileChatOpenRef = useRef(mobileChatOpen);
+  mobileChatOpenRef.current = mobileChatOpen;
+  // On phones the list and the chat are separate screens: only an open chat counts as read.
+  const chatVisible = () => mobileChatOpenRef.current || window.matchMedia("(min-width: 768px)").matches;
 
+  const markRead = useCallback(
+    (conversationId: string) => {
+      setConversations((prev) => prev.map((c) => (c.id === conversationId ? { ...c, unread: 0 } : c)));
+      supabase.rpc("mark_conversation_read", { conversation_id: conversationId });
+    },
+    [supabase]
+  );
+
+  // Messages of the open conversation; opening it marks the other side's messages as read.
   useEffect(() => {
     if (!activeId) return;
     let cancelled = false;
@@ -75,23 +94,82 @@ export function MessengerApp({
       .then(({ data }) => {
         if (!cancelled) setMessages(data ?? []);
       });
-
-    const channel = supabase
-      .channel(`messages:${activeId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "Message", filter: `conversationId=eq.${activeId}` },
-        (payload) => {
-          setMessages((prev) => [...prev, payload.new as MessageRow]);
-        }
-      )
-      .subscribe();
+    if (chatVisible()) markRead(activeId);
 
     return () => {
       cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeId, supabase, markRead]);
+
+  useEffect(() => {
+    if (mobileChatOpen && activeId) markRead(activeId);
+  }, [mobileChatOpen, activeId, markRead]);
+
+  // Every new message in any of my conversations (the database only delivers my own):
+  // updates the open chat, the list order, the preview and the unread counters live.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`messenger:${currentUserId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "Message" }, async (payload) => {
+        const m = payload.new as MessageRow;
+        const mine = m.senderId === currentUserId;
+        const isOpen = m.conversationId === activeRef.current && chatVisible();
+        const isActive = m.conversationId === activeRef.current;
+
+        if (isActive) {
+          setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+          if (!mine && document.visibilityState === "visible" && chatVisible()) markRead(m.conversationId);
+        }
+
+        const known = conversationsRef.current.some((c) => c.id === m.conversationId);
+        setConversations((prev) => {
+          if (!prev.some((c) => c.id === m.conversationId)) return prev;
+          return prev
+            .map((c) =>
+              c.id === m.conversationId
+                ? {
+                    ...c,
+                    lastMessage: { content: m.content, createdAt: m.createdAt },
+                    unread: !mine && !isOpen ? (c.unread ?? 0) + 1 : c.unread ?? 0,
+                  }
+                : c
+            )
+            .sort((a, b) => (b.lastMessage?.createdAt ?? "").localeCompare(a.lastMessage?.createdAt ?? ""));
+        });
+
+        if (!known) {
+          // A friend started a new conversation with me.
+          const { data: members } = await supabase
+            .from("ConversationMember")
+            .select("user:User(id, name, username, avatarUrl, presence)")
+            .eq("conversationId", m.conversationId)
+            .neq("userId", currentUserId)
+            .limit(1);
+          const other = (members?.[0]?.user as unknown as ConversationSummary["otherUser"]) ?? null;
+          if (!other) return;
+          setConversations((prev) =>
+            prev.some((c) => c.id === m.conversationId)
+              ? prev
+              : [
+                  {
+                    id: m.conversationId,
+                    otherUser: other,
+                    lastMessage: { content: m.content, createdAt: m.createdAt },
+                    unread: mine ? 0 : 1,
+                  },
+                  ...prev,
+                ]
+          );
+        }
+      })
+      .subscribe();
+
+    return () => {
       supabase.removeChannel(channel);
     };
-  }, [activeId, supabase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase, currentUserId, markRead]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -116,8 +194,9 @@ export function MessengerApp({
     if (!content || !activeId) return;
     setText("");
     setSendError(null);
+    const id = crypto.randomUUID();
     const { error } = await supabase.from("Message").insert({
-      id: crypto.randomUUID(),
+      id,
       conversationId: activeId,
       senderId: currentUserId,
       content,
@@ -128,6 +207,10 @@ export function MessengerApp({
       setSendError("Não foi possível enviar. O chat é só entre amigos: confira se a amizade continua ativa.");
       return;
     }
+    const createdAt = new Date().toISOString();
+    setMessages((prev) =>
+      prev.some((x) => x.id === id) ? prev : [...prev, { id, conversationId: activeId, senderId: currentUserId, content, createdAt }]
+    );
     setConversations((prev) =>
       prev
         .map((c) => (c.id === activeId ? { ...c, lastMessage: { content, createdAt: new Date().toISOString() } } : c))
@@ -204,14 +287,15 @@ export function MessengerApp({
                 <PresenceDot value={c.otherUser?.presence} className="absolute -bottom-0.5 -right-0.5 h-3 w-3 border-2 border-space-bg" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white">{c.otherUser?.name}</p>
-                <p className="truncate text-xs text-white/40">
+                <p className={clsx("truncate text-sm text-white", c.unread ? "font-bold" : "font-medium")}>{c.otherUser?.name}</p>
+                <p className={clsx("truncate text-xs", c.unread ? "font-medium text-white/80" : "text-white/40")}>
                   {c.lastMessage?.content ?? "Diga oi 👋"}
                 </p>
               </div>
-              {c.lastMessage && (
-                <span className="shrink-0 text-[10px] text-white/30">{timeAgo(c.lastMessage.createdAt)}</span>
-              )}
+              <span className="flex shrink-0 flex-col items-end gap-1">
+                {c.lastMessage && <span className="text-[10px] text-white/30">{timeAgo(c.lastMessage.createdAt)}</span>}
+                <CountBadge count={c.unread ?? 0} />
+              </span>
             </button>
           ))}
         </div>

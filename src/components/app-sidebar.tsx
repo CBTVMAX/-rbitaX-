@@ -7,6 +7,7 @@ import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { OrbitWordmarkThemed } from "@/components/orbit-logo";
 import { PresenceDot, PresenceList } from "@/components/presence-picker";
+import { CountBadge, useLiveCounts, type LiveCounts } from "@/components/live-activity";
 import {
   Bell,
   CalendarDays,
@@ -40,15 +41,15 @@ import {
 
 type Icon = React.ComponentType<{ className?: string }>;
 
-type NavItem = { href: string | null; label: string; icon: Icon };
+type NavItem = { href: string | null; label: string; icon: Icon; badge?: keyof LiveCounts };
 
 function sidebarItems(username: string): NavItem[] {
   return [
     { href: `/perfil/${username}`, label: "Perfil", icon: UserRound },
     { href: "/feed", label: "Feed", icon: Newspaper },
-    { href: "/mensagens", label: "Messenger", icon: MessageCircle },
+    { href: "/mensagens", label: "Messenger", icon: MessageCircle, badge: "messages" },
     { href: null, label: "Chamadas", icon: Phone },
-    { href: null, label: "Amigos", icon: Users },
+    { href: "/amigos", label: "Amigos", icon: Users, badge: "friendRequests" },
     { href: "/comunidades", label: "Comunidades", icon: Users },
     { href: null, label: "Fotos", icon: ImageIcon },
     { href: "/musica", label: "Música", icon: Music2 },
@@ -63,12 +64,12 @@ function sidebarItems(username: string): NavItem[] {
   ];
 }
 
-const TOP_NAV: { href: string; label: string; icon: Icon }[] = [
+const TOP_NAV: { href: string; label: string; icon: Icon; badge?: keyof LiveCounts }[] = [
   { href: "/feed", label: "Início", icon: Home },
   { href: "/explorar", label: "Explorar", icon: Music2 },
   { href: "/comunidades", label: "Comunidades", icon: Users },
-  { href: "/mensagens", label: "Messenger", icon: MessageCircle },
-  { href: "/notificacoes", label: "Notificações", icon: Bell },
+  { href: "/mensagens", label: "Messenger", icon: MessageCircle, badge: "messages" },
+  { href: "/notificacoes", label: "Notificações", icon: Bell, badge: "notifications" },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -125,6 +126,7 @@ export function AppTopBar({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { counts } = useLiveCounts();
 
   return (
     <header className="fixed inset-x-0 top-0 z-30 hidden h-16 items-center border-b border-white/10 bg-space-bg/90 backdrop-blur md:flex">
@@ -135,7 +137,7 @@ export function AppTopBar({
       <SearchBox className="w-full max-w-sm lg:max-w-md" />
 
       <nav className="ml-auto flex items-center gap-1 lg:gap-3">
-        {TOP_NAV.map(({ href, label, icon: Icon }) => {
+        {TOP_NAV.map(({ href, label, icon: Icon, badge }) => {
           const active = isActive(pathname, href);
           return (
             <Link
@@ -148,6 +150,7 @@ export function AppTopBar({
             >
               <Icon className="h-5 w-5" />
               {label}
+              {badge && <CountBadge count={counts[badge]} className="absolute -top-1 left-1/2 ml-1" />}
               {active && <span className="absolute -bottom-[9px] left-2 right-2 h-0.5 rounded-full bg-orbit-gradient" />}
             </Link>
           );
@@ -194,11 +197,12 @@ export function AppTopBar({
 export function AppSidebar({ username }: { username: string; name: string; avatarUrl: string | null }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
+  const { counts } = useLiveCounts();
 
   return (
     <aside className="fixed bottom-0 left-0 top-16 z-20 hidden w-64 flex-col border-r border-white/10 bg-space-bg/80 backdrop-blur md:flex">
       <nav className="orbit-scrollbar flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-        {sidebarItems(username).map(({ href, label, icon: Icon }) => {
+        {sidebarItems(username).map(({ href, label, icon: Icon, badge }) => {
           const active = href ? isActive(pathname, href) : false;
           const classes = clsx(
             "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition",
@@ -211,6 +215,7 @@ export function AppSidebar({ username }: { username: string; name: string; avata
           return href ? (
             <Link key={label} href={href} className={classes}>
               <Icon className="h-5 w-5" /> {label}
+              {badge && <CountBadge count={counts[badge]} className="ml-auto" />}
             </Link>
           ) : (
             <span key={label} title="Em breve" className={classes}>
@@ -225,11 +230,13 @@ export function AppSidebar({ username }: { username: string; name: string; avata
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/75 transition hover:bg-white/5 hover:text-white"
         >
           <MoreHorizontal className="h-5 w-5" /> Mais
+          {!moreOpen && <CountBadge count={counts.notifications} className="ml-auto" />}
         </button>
         {moreOpen && (
           <div className="space-y-0.5 pl-4">
             <Link href="/notificacoes" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white">
               <Bell className="h-4 w-4" /> Notificações
+              <CountBadge count={counts.notifications} className="ml-auto" />
             </Link>
             <Link href="/configuracoes" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white">
               <Settings className="h-4 w-4" /> Configurações
@@ -265,6 +272,7 @@ export function AppSidebar({ username }: { username: string; name: string; avata
 
 export function MobileHeader({ userId, username, presence }: { userId: string; username: string; presence: string }) {
   const [open, setOpen] = useState(false);
+  const { counts } = useLiveCounts();
 
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-space-bg/90 backdrop-blur md:hidden">
@@ -276,8 +284,9 @@ export function MobileHeader({ userId, username, presence }: { userId: string; u
           <Link href="/explorar" aria-label="Pesquisar">
             <Search className="h-5 w-5" />
           </Link>
-          <Link href="/notificacoes" aria-label="Notificações">
+          <Link href="/notificacoes" aria-label="Notificações" className="relative">
             <Bell className="h-5 w-5" />
+            <CountBadge count={counts.notifications} className="absolute -right-2.5 -top-2 h-4 min-w-4 px-1 text-[10px]" />
           </Link>
           <button
             type="button"
@@ -286,7 +295,12 @@ export function MobileHeader({ userId, username, presence }: { userId: string; u
             className="relative"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            {!open && <PresenceDot value={presence} className="absolute -right-1 -top-1 h-2.5 w-2.5 border-2 border-space-bg" />}
+            {!open &&
+              (counts.friendRequests > 0 ? (
+                <CountBadge count={counts.friendRequests} className="absolute -right-2.5 -top-2 h-4 min-w-4 px-1 text-[10px]" />
+              ) : (
+                <PresenceDot value={presence} className="absolute -right-1 -top-1 h-2.5 w-2.5 border-2 border-space-bg" />
+              ))}
           </button>
         </div>
       </div>
@@ -296,7 +310,7 @@ export function MobileHeader({ userId, username, presence }: { userId: string; u
           <div className="-mx-3 mb-2 border-b border-white/10 pb-2">
             <PresenceList userId={userId} initial={presence} />
           </div>
-          {sidebarItems(username).map(({ href, label, icon: Icon }) =>
+          {sidebarItems(username).map(({ href, label, icon: Icon, badge }) =>
             href ? (
               <Link
                 key={label}
@@ -305,6 +319,7 @@ export function MobileHeader({ userId, username, presence }: { userId: string; u
                 className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/80 hover:bg-white/5"
               >
                 <Icon className="h-5 w-5" /> {label}
+                {badge && <CountBadge count={counts[badge]} className="ml-auto" />}
               </Link>
             ) : (
               <span key={label} title="Em breve" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/40">
@@ -334,14 +349,15 @@ export function MobileHeader({ userId, username, presence }: { userId: string; u
 
 export function MobileTabBar({ username }: { username: string }) {
   const pathname = usePathname();
-  const items: { href: string; label: string; icon: Icon }[] = [
+  const { counts } = useLiveCounts();
+  const items: { href: string; label: string; icon: Icon; badge?: keyof LiveCounts }[] = [
     { href: "/feed", label: "Início", icon: Home },
     { href: "/explorar", label: "Explorar", icon: Compass },
-    { href: "/mensagens", label: "Messenger", icon: MessageCircle },
+    { href: "/mensagens", label: "Messenger", icon: MessageCircle, badge: "messages" },
     { href: `/perfil/${username}`, label: "Perfil", icon: UserRound },
   ];
 
-  const tab = ({ href, label, icon: Icon }: (typeof items)[number]) => {
+  const tab = ({ href, label, icon: Icon, badge }: (typeof items)[number]) => {
     const active = isActive(pathname, href);
     return (
       <Link
@@ -352,7 +368,10 @@ export function MobileTabBar({ username }: { username: string }) {
           active ? "text-orbit-blue" : "text-white/60"
         )}
       >
-        <Icon className="h-6 w-6" />
+        <span className="relative">
+          <Icon className="h-6 w-6" />
+          {badge && <CountBadge count={counts[badge]} className="absolute -right-3 -top-1.5 h-4 min-w-4 px-1 text-[10px]" />}
+        </span>
         {label}
       </Link>
     );
