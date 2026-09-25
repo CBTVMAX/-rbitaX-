@@ -129,6 +129,12 @@ export type Database = {
         { foreignKeyName: "ConversationMember_conversationId_fkey"; columns: ["conversationId"]; isOneToOne: false; referencedRelation: "Conversation"; referencedColumns: ["id"] },
         { foreignKeyName: "ConversationMember_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
       ] };
+      Friendship: {
+        Row: { id: string; requesterId: string; addresseeId: string; status: string; createdAt: string; respondedAt: string | null };
+        Insert: { id?: string; requesterId: string; addresseeId: string; status?: string; createdAt?: string; respondedAt?: string | null };
+        Update: { id?: string; requesterId?: string; addresseeId?: string; status?: string; createdAt?: string; respondedAt?: string | null };
+        Relationships: [];
+      };
       Follow: { Row: FollowRow; Insert: FollowInsert; Update: FollowUpdate; Relationships: [
         { foreignKeyName: "Follow_followerId_fkey"; columns: ["followerId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
         { foreignKeyName: "Follow_followingId_fkey"; columns: ["followingId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
@@ -196,6 +202,12 @@ export type Database = {
         Args: { limit_count?: number; search_query?: string | null };
         Returns: { id: string; name: string; username: string; avatarUrl: string | null; bio: string | null; isVerified: boolean }[];
       };
+      send_friend_request: { Args: { target_user_id: string }; Returns: string };
+      respond_friend_request: { Args: { requester_id: string; accept: boolean }; Returns: string };
+      cancel_friend_request: { Args: { target_user_id: string }; Returns: string };
+      remove_friend: { Args: { other_user_id: string }; Returns: string };
+      friendship_state: { Args: { other_user_id: string }; Returns: string };
+      are_friends: { Args: { a: string; b: string }; Returns: boolean };
       search_profiles: {
         Args: { search_query: string; limit_count?: number; offset_count?: number };
         Returns: {
@@ -208,6 +220,7 @@ export type Database = {
           isPrivate: boolean;
           presence: string;
           isFollowing: boolean;
+          friendState: string;
         }[];
       };
       public_posts: {

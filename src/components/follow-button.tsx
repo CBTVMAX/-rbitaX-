@@ -5,15 +5,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { clsx } from "clsx";
+import { Rss, UserCheck } from "lucide-react";
 
 export function FollowButton({
   targetUserId,
   initiallyFollowing = false,
   currentUserId,
   className,
+  variant = "default",
+  compact = false,
 }: {
   targetUserId: string;
   initiallyFollowing?: boolean;
+  /** "outline": secondary button next to "Adicionar amigo" on profiles. */
+  variant?: "default" | "outline";
+  compact?: boolean;
   /** Pass when the caller already knows the viewer's auth state (e.g. guest pages). */
   currentUserId?: string | null;
   className?: string;
@@ -59,6 +65,26 @@ export function FollowButton({
     }
     setBusy(false);
     router.refresh();
+  }
+
+  if (variant === "outline") {
+    return (
+      <button
+        onClick={toggle}
+        disabled={busy}
+        aria-label={following ? "Deixar de seguir" : "Seguir"}
+        title={following ? "Deixar de seguir" : "Seguir"}
+        className={clsx(
+          "flex items-center justify-center gap-2 rounded-xl border text-sm font-medium transition disabled:opacity-50",
+          following ? "border-white/15 bg-space-bg/40 text-white/80 hover:bg-white/5" : "border-orbit-purple/60 text-white hover:bg-orbit-purple/10",
+          compact ? "h-11 w-11 shrink-0" : "px-4 py-2.5",
+          className
+        )}
+      >
+        {following ? <UserCheck className="h-4 w-4" /> : <Rss className="h-4 w-4" />}
+        {!compact && (following ? "Seguindo" : "Seguir")}
+      </button>
+    );
   }
 
   return (

@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { Avatar } from "@/components/post-card";
 import { timeAgo } from "@/lib/format";
-import { Bell, Heart, MessageCircle, UserPlus } from "lucide-react";
+import Link from "next/link";
+import { FriendRequestActions } from "@/components/friend-button";
+import { Bell, Heart, MessageCircle, UserCheck, UserPlus } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,8 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   like: Heart,
   comment: MessageCircle,
   follow: UserPlus,
+  friend_request: UserPlus,
+  friend_accept: UserCheck,
 };
 
 export default async function NotificacoesPage() {
@@ -20,14 +24,14 @@ export default async function NotificacoesPage() {
   const supabase = createClient();
   const { data: notifications } = await supabase
     .from("Notification")
-    .select("id, type, title, message, isRead, createdAt, actorId")
+    .select("id, type, title, message, isRead, createdAt, actorId, href")
     .eq("userId", current.authId)
     .order("createdAt", { ascending: false })
     .limit(50);
 
   const actorIds = Array.from(new Set((notifications ?? []).map((n) => n.actorId).filter(Boolean))) as string[];
   const { data: actors } = actorIds.length
-    ? await supabase.from("User").select("id, name, avatarUrl").in("id", actorIds)
+    ? await supabase.from("User").select("id, name, username, avatarUrl").in("id", actorIds)
     : { data: [] };
   const actorById = new Map((actors ?? []).map((a) => [a.id, a]));
 
@@ -54,21 +58,27 @@ export default async function NotificacoesPage() {
           return (
             <div
               key={n.id}
-              className="flex items-center gap-3 rounded-xl border border-white/10 bg-space-card p-3"
+              className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-space-card p-3"
             >
-              {actor ? (
-                <Avatar name={actor.name} url={actor.avatarUrl} size={36} />
-              ) : (
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10">
-                  <Icon className="h-4 w-4 text-orbit-cyan" />
+              <Link
+                href={actor ? `/perfil/${actor.username}` : n.href ?? "/notificacoes"}
+                className="flex min-w-[12rem] flex-1 items-center gap-3"
+              >
+                {actor ? (
+                  <Avatar name={actor.name} url={actor.avatarUrl} size={36} />
+                ) : (
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10">
+                    <Icon className="h-4 w-4 text-orbit-cyan" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-white">
+                    <strong>{actor?.name ?? n.title}</strong> {n.message}
+                  </p>
+                  <p className="text-xs text-white/40">{timeAgo(n.createdAt)}</p>
                 </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-white">
-                  <strong>{actor?.name ?? n.title}</strong> {n.message}
-                </p>
-                <p className="text-xs text-white/40">{timeAgo(n.createdAt)}</p>
-              </div>
+              </Link>
+              {n.type === "friend_request" && n.actorId && <FriendRequestActions requesterId={n.actorId} />}
               {!n.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-orbit-pink" />}
             </div>
           );

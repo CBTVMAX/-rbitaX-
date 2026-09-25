@@ -5,11 +5,25 @@ import { MessengerApp, type ConversationSummary } from "@/components/messenger-a
 
 export const dynamic = "force-dynamic";
 
-export default async function MensagensPage() {
+export default async function MensagensPage({ searchParams }: { searchParams: { com?: string } }) {
   const current = await getCurrentUser();
   if (!current) redirect("/entrar");
 
   const supabase = createClient();
+
+  // "Mensagem" on a friend's profile: open (or create) the conversation with them.
+  // get_or_create_dm only works between friends; otherwise the page explains why.
+  let openConversationId: string | null = null;
+  let blockedName: string | null = null;
+  const target = searchParams.com?.trim().toLowerCase();
+  if (target) {
+    const { data: other } = await supabase.from("User").select("id, name").eq("username", target).maybeSingle();
+    if (other && other.id !== current.authId) {
+      const { data: conversationId, error } = await supabase.rpc("get_or_create_dm", { other_user_id: other.id });
+      if (!error && conversationId) openConversationId = conversationId as string;
+      else blockedName = other.name;
+    }
+  }
 
   const { data: memberships } = await supabase
     .from("ConversationMember")
@@ -63,6 +77,12 @@ export default async function MensagensPage() {
       currentUserName={current.profile.name}
       currentUserPresence={current.profile.presence}
       initialConversations={conversations}
+      initialActiveId={openConversationId}
+      notice={
+        blockedName
+          ? `Você e ${blockedName} ainda não são amigos. O chat é liberado quando o pedido de amizade for aceito.`
+          : null
+      }
     />
   );
 }

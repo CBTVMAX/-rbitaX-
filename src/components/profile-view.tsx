@@ -3,6 +3,8 @@ import { PostCard, type FeedPost } from "@/components/post-card";
 import { PostComposer } from "@/components/post-composer";
 import { ProfileTabs } from "@/components/profile-tabs";
 import { FollowButton } from "@/components/follow-button";
+import { FriendButton, FriendRequestActions } from "@/components/friend-button";
+import type { FriendState } from "@/lib/friends";
 import {
   OrbitIcon,
   ProfileImageUpload,
@@ -26,6 +28,7 @@ import {
   Heart,
   ImagePlus,
   Link2,
+  Lock,
   MapPin,
   MessageCircle,
   Music2,
@@ -37,6 +40,7 @@ import {
   Shield,
   Sparkles,
   User as UserIcon,
+  UserPlus,
 } from "lucide-react";
 
 export type ProfileInfo = {
@@ -184,6 +188,8 @@ export type ProfileViewProps = {
   pinnedPostId: string | null;
   communities: ProfileCommunity[];
   friends: ProfileFriend[];
+  friendState?: FriendState;
+  friendRequests?: ProfileFriend[];
 };
 
 export type ProfileCommunity = { id: string; name: string; slug: string; avatarUrl: string | null; role: string };
@@ -226,6 +232,8 @@ export function ProfileView({
   pinnedPostId,
   communities,
   friends,
+  friendState = "none",
+  friendRequests = [],
 }: ProfileViewProps) {
   const isMe = current?.authId === user.id;
 
@@ -345,17 +353,72 @@ export function ProfileView({
     </Link>
   );
 
-  const visitorActions = current && (
-    <>
-      <FollowButton targetUserId={user.id} initiallyFollowing={isFollowing} />
+  const isFriend = friendState === "friends";
+  const messageButton = (compact: boolean) =>
+    isFriend ? (
       <Link
-        href="/mensagens"
-        className="flex items-center gap-2 rounded-xl border border-white/15 bg-space-bg/40 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/5"
+        href={`/mensagens?com=${encodeURIComponent(user.username)}`}
+        aria-label="Mensagem"
+        className={`flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-space-bg/40 text-sm font-medium text-white transition hover:bg-white/5 ${
+          compact ? "h-11 w-11 shrink-0" : "px-4 py-2.5"
+        }`}
       >
-        <MessageCircle className="h-4 w-4" /> Mensagem
+        <MessageCircle className="h-4 w-4" /> {!compact && "Mensagem"}
       </Link>
-    </>
-  );
+    ) : (
+      <span
+        title="O chat é liberado quando o pedido de amizade for aceito."
+        aria-label="Mensagem disponível apenas para amigos"
+        className={`flex cursor-default items-center justify-center gap-2 rounded-xl border border-white/10 text-sm font-medium text-white/40 ${
+          compact ? "h-11 w-11 shrink-0" : "px-4 py-2.5"
+        }`}
+      >
+        <Lock className="h-4 w-4" /> {!compact && "Mensagem"}
+      </span>
+    );
+
+  const visitorActions = (compact: boolean) =>
+    current && (
+      <>
+        <FriendButton targetUserId={user.id} initialState={friendState} className={compact ? "min-w-0 flex-1" : ""} />
+        <FollowButton targetUserId={user.id} initiallyFollowing={isFollowing} variant="outline" compact={compact} />
+        {messageButton(compact)}
+      </>
+    );
+
+  const friendRequestsCard =
+    isMe && friendRequests.length > 0 ? (
+      <section className="rounded-2xl border border-orbit-purple/40 bg-space-surface/80 p-4">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
+          <UserPlus className="h-4 w-4 text-orbit-purple" /> Pedidos de amizade
+          <span className="rounded-full bg-orbit-purple/20 px-2 py-0.5 text-[11px] text-orbit-purple">{friendRequests.length}</span>
+        </h2>
+        <p className="mt-0.5 text-xs text-white/50">
+          Ao aceitar, vocês viram amigos e o chat é liberado. Se recusar, a pessoa continua como seguidora.
+        </p>
+        <div className="mt-3 space-y-2">
+          {friendRequests.map((r) => (
+            <div key={r.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-space-bg/40 p-2.5">
+              <Link href={`/perfil/${r.username}`} className="flex min-w-0 flex-1 items-center gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-end justify-center overflow-hidden rounded-full bg-space-card">
+                  {r.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={r.avatarUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <Silhouette className="h-[78%] w-[78%] text-orbit-blue/55" />
+                  )}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium text-white">{r.name}</span>
+                  <span className="block truncate text-xs text-white/50">@{r.username}</span>
+                </span>
+              </Link>
+              <FriendRequestActions requesterId={r.id} />
+            </div>
+          ))}
+        </div>
+      </section>
+    ) : null;
 
   const emptyFeed = isMe ? (
     <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-space-surface/80 px-6 py-12 text-center md:py-16">
@@ -718,7 +781,7 @@ export function ProfileView({
                       <ShareProfileButton username={user.username} />
                     </>
                   ) : (
-                    visitorActions
+                    visitorActions(false)
                   )}
                   <ProfileMoreMenu username={user.username} userId={user.id} isMe={isMe} />
                 </div>
@@ -740,7 +803,7 @@ export function ProfileView({
                   <ShareProfileButton username={user.username} compact />
                 </>
               ) : (
-                visitorActions
+                visitorActions(true)
               )}
               <ProfileMoreMenu username={user.username} userId={user.id} isMe={isMe} compact />
             </div>
@@ -754,6 +817,7 @@ export function ProfileView({
           </div>
         </section>
 
+        {friendRequestsCard}
         {onboarding}
 
         <ProfileTabs

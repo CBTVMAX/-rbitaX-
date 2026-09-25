@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/post-card";
 import { timeAgo } from "@/lib/format";
-import { ArrowLeft, Search, Send, X } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Lock, MessageCircle, Search, Send, X } from "lucide-react";
 import { PresenceDot, PresenceStatus } from "@/components/presence-picker";
 import { PRESENCE, presenceOf } from "@/lib/presence";
 import { clsx } from "clsx";
@@ -23,28 +24,41 @@ type MessageRow = {
   createdAt: string;
 };
 
-type UserResult = { id: string; name: string; username: string; avatarUrl: string | null; presence: string };
+type UserResult = {
+  id: string;
+  name: string;
+  username: string;
+  avatarUrl: string | null;
+  presence: string;
+  friendState?: string;
+};
 
 export function MessengerApp({
   currentUserId,
   currentUserName,
   currentUserPresence,
   initialConversations,
+  initialActiveId = null,
+  notice = null,
 }: {
   currentUserId: string;
   currentUserName: string;
   currentUserPresence: string;
   initialConversations: ConversationSummary[];
+  initialActiveId?: string | null;
+  notice?: string | null;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [conversations, setConversations] = useState(initialConversations);
-  const [activeId, setActiveId] = useState<string | null>(initialConversations[0]?.id ?? null);
+  const [activeId, setActiveId] = useState<string | null>(initialActiveId ?? initialConversations[0]?.id ?? null);
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [text, setText] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserResult[]>([]);
-  const [mobileChatOpen, setMobileChatOpen] = useState(false);
+  const [mobileChatOpen, setMobileChatOpen] = useState(!!initialActiveId);
+  const [banner, setBanner] = useState<string | null>(notice);
+  const [sendError, setSendError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const active = conversations.find((c) => c.id === activeId) ?? null;
@@ -101,12 +115,19 @@ export function MessengerApp({
     const content = text.trim();
     if (!content || !activeId) return;
     setText("");
-    await supabase.from("Message").insert({
+    setSendError(null);
+    const { error } = await supabase.from("Message").insert({
       id: crypto.randomUUID(),
       conversationId: activeId,
       senderId: currentUserId,
       content,
     });
+    if (error) {
+      // Friendship ended (or was never accepted): the database refuses the message.
+      setText(content);
+      setSendError("Não foi possível enviar. O chat é só entre amigos: confira se a amizade continua ativa.");
+      return;
+    }
     setConversations((prev) =>
       prev
         .map((c) => (c.id === activeId ? { ...c, lastMessage: { content, createdAt: new Date().toISOString() } } : c))
@@ -118,7 +139,11 @@ export function MessengerApp({
     const { data: conversationId, error } = await supabase.rpc("get_or_create_dm", {
       other_user_id: user.id,
     });
-    if (error || !conversationId) return;
+    if (error || !conversationId) {
+      setBanner(`Você e ${user.name} ainda não são amigos. O chat é liberado quando o pedido de amizade for aceito.`);
+      setSearchOpen(false);
+      return;
+    }
 
     setConversations((prev) => {
       if (prev.some((c) => c.id === conversationId)) return prev;
@@ -148,9 +173,18 @@ export function MessengerApp({
         </div>
 
         <div className="orbit-scrollbar flex-1 overflow-y-auto">
+          {banner && (
+            <div className="m-3 flex items-start gap-2 rounded-xl border border-orbit-purple/40 bg-orbit-purple/10 p-3 text-xs text-white/80">
+              <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-orbit-purple" />
+              <p className="flex-1">{banner}</p>
+              <button type="button" onClick={() => setBanner(null)} aria-label="Fechar aviso" className="text-white/50 hover:text-white">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
           {conversations.length === 0 && (
             <p className="p-6 text-center text-xs text-white/30">
-              Nenhuma conversa ainda. Toque na lupa para começar.
+              Nenhuma conversa ainda. Toque na lupa para conversar com seus amigos.
             </p>
           )}
           {conversations.map((c) => (
@@ -232,6 +266,7 @@ export function MessengerApp({
               <div ref={bottomRef} />
             </div>
 
+            {sendError && <p className="border-t border-white/10 px-4 pt-3 text-xs text-red-400">{sendError}</p>}
             <form onSubmit={sendMessage} className="flex items-center gap-2 border-t border-white/10 p-4">
               <input
                 value={text}
@@ -270,19 +305,38 @@ export function MessengerApp({
               </button>
             </div>
             <div className="space-y-1">
-              {results.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => startConversation(u)}
-                  className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition hover:bg-white/5"
-                >
-                  <Avatar name={u.name} url={u.avatarUrl} size={32} />
-                  <div>
-                    <p className="text-sm text-white">{u.name}</p>
-                    <p className="text-xs text-white/40">@{u.username}</p>
-                  </div>
-                </button>
-              ))}
+              {results.map((u) =>
+                u.friendState === "friends" ? (
+                  <button
+                    key={u.id}
+                    onClick={() => startConversation(u)}
+                    className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition hover:bg-white/5"
+                  >
+                    <Avatar name={u.name} url={u.avatarUrl} size={32} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-white">{u.name}</p>
+                      <p className="truncate text-xs text-white/40">@{u.username}</p>
+                    </div>
+                    <MessageCircle className="h-4 w-4 shrink-0 text-orbit-purple" />
+                  </button>
+                ) : (
+                  <Link
+                    key={u.id}
+                    href={`/perfil/${u.username}`}
+                    className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition hover:bg-white/5"
+                  >
+                    <Avatar name={u.name} url={u.avatarUrl} size={32} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-white">{u.name}</p>
+                      <p className="truncate text-xs text-white/40">@{u.username}</p>
+                    </div>
+                    <span className="flex shrink-0 items-center gap-1 rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-white/50">
+                      <Lock className="h-3 w-3" />
+                      {u.friendState === "outgoing" ? "Pedido enviado" : u.friendState === "incoming" ? "Responder pedido" : "Adicionar amigo"}
+                    </span>
+                  </Link>
+                )
+              )}
               {query.trim().length >= 2 && results.length === 0 && (
                 <p className="p-2 text-xs text-white/30">Ninguém encontrado.</p>
               )}
