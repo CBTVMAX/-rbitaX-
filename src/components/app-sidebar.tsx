@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { OrbitLogo, OrbitWordmarkImage } from "@/components/orbit-logo";
@@ -57,13 +57,11 @@ export function AppSidebar({
   avatarUrl: string | null;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
 
   async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push("/");
-    router.refresh();
+    window.location.href = "/";
   }
 
   return (

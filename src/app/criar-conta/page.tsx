@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AuthShell } from "@/components/auth-shell";
@@ -79,7 +78,6 @@ type Step = "form" | "otp" | "welcome";
 
 export default function CriarContaPage() {
   const supabase = useMemo(() => createClient(), []);
-  const router = useRouter();
 
   const [mode, setMode] = useState<"email" | "phone">("email");
   const [step, setStep] = useState<Step>("form");
@@ -212,8 +210,7 @@ export default function CriarContaPage() {
   }
 
   function handleContinue() {
-    router.push("/feed");
-    router.refresh();
+    window.location.href = "/feed";
   }
 
   if (step === "welcome" && welcome) {

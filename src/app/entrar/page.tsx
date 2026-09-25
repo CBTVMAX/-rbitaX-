@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AuthShell } from "@/components/auth-shell";
@@ -29,7 +29,6 @@ export default function EntrarPage() {
 
 function EntrarForm() {
   const supabase = useMemo(() => createClient(), []);
-  const router = useRouter();
   const params = useSearchParams();
 
   const [mode, setMode] = useState<"email" | "celular">("email");
@@ -59,8 +58,7 @@ function EntrarForm() {
       return;
     }
 
-    router.push(params.get("redirect") || "/feed");
-    router.refresh();
+    window.location.href = params.get("redirect") || "/feed";
   }
 
   async function handleGoogle() {
@@ -106,8 +104,7 @@ function EntrarForm() {
       return;
     }
 
-    router.push(params.get("redirect") || "/feed");
-    router.refresh();
+    window.location.href = params.get("redirect") || "/feed";
   }
 
   async function handleForgotPassword() {
