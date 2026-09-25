@@ -5,7 +5,6 @@ import { clsx } from "clsx";
 import {
   Archive,
   ArrowLeft,
-  BadgeCheck,
   Bell,
   BellOff,
   Loader2,
@@ -25,6 +24,7 @@ import { formatTime, messagePreview, toDate } from "@/lib/messenger/format";
 import { conversationTitle, isMuted, MESSAGE_COLUMNS, toMessage, type ChatMessage, type Conversation, type Member } from "@/lib/messenger/types";
 import { useMessenger } from "./context";
 import { ConversationAvatar, IconButton, MenuItem, Popover } from "./ui";
+import { VerifiedBadge } from "@/components/verified-badge";
 
 function ChatSearch({ c, onClose, onJump }: { c: Conversation; onClose: () => void; onJump: (m: ChatMessage) => void }) {
   const { supabase } = useMessenger();
@@ -162,7 +162,7 @@ export function ChatHeader({
             <span className="min-w-0">
               <span className="flex items-center gap-1.5">
                 <span className="truncate text-[15px] font-semibold text-white">{conversationTitle(c)}</span>
-                {!c.isGroup && other?.isVerified && <BadgeCheck className="h-4 w-4 shrink-0 text-orbit-cyan" aria-label="Verificado" />}
+                {!c.isGroup && other?.isVerified && <VerifiedBadge />}
                 {muted && <BellOff className="h-3.5 w-3.5 shrink-0 text-white/35" aria-label="Silenciada" />}
                 {c.messageTtlSeconds && <Timer className="h-3.5 w-3.5 shrink-0 text-white/35" aria-label="Mensagens temporárias" />}
               </span>

@@ -5,7 +5,6 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import {
-  BadgeCheck,
   Bike,
   Camera,
   Check,
@@ -42,6 +41,7 @@ import {
   isValidProfileColor,
   profileColorHex,
 } from "@/lib/profile-colors";
+import { VerifiedBadge } from "@/components/verified-badge";
 
 type Props = {
   userId: string;
@@ -187,7 +187,7 @@ function Preview({ color, frameId, props }: { color: string; frameId: string | n
         </div>
         <div className="mt-2 flex items-center gap-1.5">
           <p className="truncate font-display text-lg font-bold text-white">{props.name}</p>
-          {props.isVerified && <BadgeCheck className={clsx("h-4 w-4 shrink-0", accent ? "text-pa" : "text-orbit-blue")} />}
+          {props.isVerified && <VerifiedBadge className="h-[18px] w-[18px]" />}
         </div>
         <p className="text-xs text-white/60">@{props.username}</p>
         {props.bio && <p className="mt-2 line-clamp-2 text-xs text-white/75">{props.bio}</p>}

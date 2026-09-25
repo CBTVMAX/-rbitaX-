@@ -8,8 +8,9 @@ import { PublicHeader } from "@/components/public-header";
 import { CreateCommunityDialog } from "@/components/create-community-dialog";
 import { CommunityJoinButton } from "@/components/community-join-button";
 import { COMMUNITY_CATEGORIES, categoryLabel } from "@/lib/community-categories";
-import { Search, Users, Plus, BadgeCheck, Star } from "lucide-react";
+import { Search, Users, Plus, Star } from "lucide-react";
 import { clsx } from "clsx";
+import { VerifiedBadge } from "@/components/verified-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -350,7 +351,7 @@ export default async function ComunidadesPage({
                         </div>
                         <h3 className="flex items-center gap-1.5 truncate text-lg font-semibold text-white hover:underline">
                           {officialCommunity.name}
-                          <BadgeCheck className="h-4 w-4 shrink-0 text-orbit-cyan" />
+                          <VerifiedBadge className="h-[18px] w-[18px]" title="Comunidade verificada" />
                         </h3>
                         <p className="mt-1 flex items-center gap-1 text-xs text-white/40">
                           <Users className="h-3.5 w-3.5" /> 1 membro

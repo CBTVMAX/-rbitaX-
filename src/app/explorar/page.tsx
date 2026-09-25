@@ -10,7 +10,6 @@ import {
   Search,
   Users,
   Music2,
-  BadgeCheck,
   Heart,
   MessageCircle,
   SlidersHorizontal,
@@ -34,6 +33,7 @@ import { clsx } from "clsx";
 import { AppAccentSync } from "@/components/app-theme";
 import { appAccentVars } from "@/lib/profile-colors";
 import type { LucideIcon } from "lucide-react";
+import { VerifiedBadge } from "@/components/verified-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -571,7 +571,7 @@ function OfficialCommunitySection({
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="flex items-center gap-1 text-lg font-bold text-white">
                   {officialCommunity.name}
-                  <BadgeCheck className="h-4 w-4 text-orbit-cyan" />
+                  <VerifiedBadge className="h-[18px] w-[18px]" title="Comunidade verificada" />
                 </h3>
                 <span className="rounded-full bg-orbit-gradient px-2.5 py-0.5 text-[10px] font-semibold uppercase text-white">Oficial</span>
               </div>
@@ -632,7 +632,7 @@ function FeaturedPostCard({ post }: { post: PublicPost }) {
           <div className="min-w-0 flex-1">
             <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-white">
               {post.authorName}
-              <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-orbit-cyan" />
+              <VerifiedBadge />
               <span className="rounded-full bg-orbit-gradient px-2 py-0.5 text-[9px] font-semibold uppercase text-white">Oficial</span>
             </p>
             <p className="text-xs text-white/40">

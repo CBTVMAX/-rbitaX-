@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { BadgeCheck, Lock, Users } from "lucide-react";
+import { Lock, Users } from "lucide-react";
 import { Avatar } from "@/components/post-card";
+import { VerifiedBadge } from "@/components/verified-badge";
 
 export type PersonResult = {
   id: string;
@@ -63,7 +64,7 @@ export function PeopleResults({ query, people, signedIn }: { query: string; peop
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-1.5 text-sm font-semibold text-white">
                   <span className="truncate">{p.name}</span>
-                  {p.isVerified && <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-orbit-cyan" />}
+                  {p.isVerified && <VerifiedBadge />}
                   {p.isPrivate && <Lock className="h-3.5 w-3.5 shrink-0 text-white/40" />}
                 </p>
                 <p className="truncate text-xs text-white/40">@{p.username}</p>

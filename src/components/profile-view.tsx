@@ -18,7 +18,6 @@ import { frameBackdropStyle, frameSrc, getFrame, type AvatarFrame } from "@/lib/
 import { hasCustomAccent, profileAccentStyle, profileColorHex, profileColorLabel } from "@/lib/profile-colors";
 import { PresenceDot, PresenceStatus } from "@/components/presence-picker";
 import {
-  BadgeCheck,
   Cake,
   Camera,
   Check,
@@ -42,6 +41,7 @@ import {
   User as UserIcon,
   UserPlus,
 } from "lucide-react";
+import { VerifiedBadge } from "@/components/verified-badge";
 
 export type ProfileInfo = {
   /** Already hidden (null) by the database when the owner chose not to show it. */
@@ -247,7 +247,7 @@ export function ProfileView({
     <>
       <div className="flex items-center gap-2">
         <h1 className="truncate font-display text-xl font-bold text-white md:text-2xl">{user.name}</h1>
-        {user.isVerified && <BadgeCheck className={`h-5 w-5 shrink-0 ${accent ? "text-pa" : "text-orbit-blue"}`} />}
+        {user.isVerified && <VerifiedBadge className="h-5 w-5 md:h-6 md:w-6" />}
       </div>
       <p className="mt-0.5 text-sm text-white/70">
         @{user.username}
@@ -680,7 +680,7 @@ export function ProfileView({
           </span>
           <span className="mt-2.5 flex max-w-full items-center gap-1">
             <span className="truncate text-sm font-medium text-white">{f.name}</span>
-            {f.isVerified && <BadgeCheck className="h-4 w-4 shrink-0 text-orbit-blue" />}
+            {f.isVerified && <VerifiedBadge />}
           </span>
           <span className="max-w-full truncate text-xs text-white/55">@{f.username}</span>
         </Link>

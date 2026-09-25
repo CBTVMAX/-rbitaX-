@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { BadgeCheck, Loader2, UserRound } from "lucide-react";
+import { Loader2, UserRound } from "lucide-react";
 import { FriendButton } from "@/components/friend-button";
 import { FollowButton } from "@/components/follow-button";
 import { parseFriendState, type FriendState } from "@/lib/friends";
@@ -12,6 +12,7 @@ import type { Attachment, ChatUser } from "@/lib/messenger/types";
 import { useMessenger } from "./context";
 import { SharedContent } from "./conversation-info";
 import { ChatAvatar, Modal } from "./ui";
+import { VerifiedBadge } from "@/components/verified-badge";
 
 type Details = { bio: string | null; coverUrl: string | null; friendState: FriendState; following: boolean };
 
@@ -73,7 +74,7 @@ export function ProfileCard({
           </span>
           <h2 className="mt-3 flex items-center gap-1.5 font-display text-xl font-bold text-white">
             {user.name}
-            {user.isVerified && <BadgeCheck className="h-5 w-5 text-orbit-cyan" aria-label="Verificado" />}
+            {user.isVerified && <VerifiedBadge className="h-5 w-5" />}
           </h2>
           <p className="text-sm text-white/50">@{user.username}</p>
           <p className={clsx("mt-1 flex items-center gap-1.5 text-xs font-medium", presence.text)}>
