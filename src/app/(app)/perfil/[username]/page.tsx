@@ -2,7 +2,12 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import type { FeedPost } from "@/components/post-card";
-import { ProfileView, type ProfileCommunity, type ProfileInfo } from "@/components/profile-view";
+import {
+  ProfileView,
+  type ProfileCommunity,
+  type ProfileFriend,
+  type ProfileInfo,
+} from "@/components/profile-view";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +56,15 @@ export default async function ProfilePage({ params }: { params: { username: stri
 
   const followerIds = new Set((followerRows ?? []).map((f) => f.followerId));
   const followingIds = (followingRows ?? []).map((f) => f.followingId);
-  const friendCount = followingIds.filter((id) => followerIds.has(id)).length;
+  const friendIds = followingIds.filter((id) => followerIds.has(id));
+
+  const { data: friendRows } = friendIds.length
+    ? await supabase
+        .from("User")
+        .select("id, name, username, avatarUrl, presence, isVerified")
+        .in("id", friendIds.slice(0, 60))
+        .order("name")
+    : { data: [] as ProfileFriend[] };
 
   const postSelect =
     "id, content, createdAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url)" as const;
@@ -119,7 +132,7 @@ export default async function ProfilePage({ params }: { params: { username: stri
       isFollowing={!!myFollow}
       stats={{
         posts: postCount ?? 0,
-        friends: friendCount,
+        friends: friendIds.length,
         followers: followerIds.size,
         following: followingIds.length,
         communities: communities.length,
@@ -127,6 +140,7 @@ export default async function ProfilePage({ params }: { params: { username: stri
       feed={feed}
       pinnedPostId={pinnedPostId}
       communities={communities}
+      friends={friendRows ?? []}
     />
   );
 }

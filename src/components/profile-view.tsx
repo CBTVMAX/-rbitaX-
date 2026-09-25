@@ -12,7 +12,7 @@ import {
 } from "@/components/profile-client";
 import { presenceOf } from "@/lib/presence";
 import { relationshipLabel } from "@/lib/profile-options";
-import { PresenceStatus } from "@/components/presence-picker";
+import { PresenceDot, PresenceStatus } from "@/components/presence-picker";
 import {
   BadgeCheck,
   Cake,
@@ -30,6 +30,7 @@ import {
   PenLine,
   Play,
   Plus,
+  Quote,
   Shield,
   Sparkles,
   User as UserIcon,
@@ -147,9 +148,19 @@ export type ProfileViewProps = {
   feed: FeedPost[];
   pinnedPostId: string | null;
   communities: ProfileCommunity[];
+  friends: ProfileFriend[];
 };
 
 export type ProfileCommunity = { id: string; name: string; slug: string; avatarUrl: string | null; role: string };
+
+export type ProfileFriend = {
+  id: string;
+  name: string;
+  username: string;
+  avatarUrl: string | null;
+  presence: string;
+  isVerified: boolean;
+};
 
 const ROLE_LABEL: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; className: string }> = {
   owner: { label: "Proprietário", icon: Crown, className: "text-amber-400" },
@@ -170,7 +181,17 @@ function SideCard({ title, action, children }: { title: string; action?: React.R
   );
 }
 
-export function ProfileView({ user, info, current, isFollowing, stats, feed, pinnedPostId, communities }: ProfileViewProps) {
+export function ProfileView({
+  user,
+  info,
+  current,
+  isFollowing,
+  stats,
+  feed,
+  pinnedPostId,
+  communities,
+  friends,
+}: ProfileViewProps) {
   const isMe = current?.authId === user.id;
 
   const presence = presenceOf(user.presence);
@@ -500,8 +521,80 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
     </div>
   ) : undefined;
 
-  const photos = feed.flatMap((p) => p.media.filter((m) => m.type === "image"));
-  const videos = feed.flatMap((p) => p.media.filter((m) => m.type === "video"));
+  const media = feed.flatMap((p) => p.media.filter((m) => m.type === "image" || m.type === "video"));
+
+  const mediaGrid = media.length ? (
+    <div className="grid grid-cols-3 gap-1.5 md:gap-2">
+      {media.map((m) =>
+        m.type === "image" ? (
+          <a key={m.id} href={m.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={m.url} alt="" className="aspect-square w-full object-cover transition hover:scale-105" />
+          </a>
+        ) : (
+          // eslint-disable-next-line jsx-a11y/media-has-caption
+          <video key={m.id} src={m.url} controls preload="metadata" className="aspect-square w-full rounded-xl bg-black object-cover" />
+        )
+      )}
+    </div>
+  ) : undefined;
+
+  const friendsList = friends.length ? (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+      {friends.map((f) => (
+        <Link
+          key={f.id}
+          href={`/perfil/${f.username}`}
+          className="flex flex-col items-center rounded-2xl border border-white/10 bg-space-surface/80 px-3 py-4 text-center transition hover:border-orbit-purple/50"
+        >
+          <span className="relative">
+            <span className="flex h-16 w-16 items-end justify-center overflow-hidden rounded-full border-2 border-orbit-purple/60 bg-space-card">
+              {f.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={f.avatarUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <Silhouette className="h-[78%] w-[78%] text-orbit-blue/55" />
+              )}
+            </span>
+            <PresenceDot value={f.presence} className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 border-2 border-space-bg" />
+          </span>
+          <span className="mt-2.5 flex max-w-full items-center gap-1">
+            <span className="truncate text-sm font-medium text-white">{f.name}</span>
+            {f.isVerified && <BadgeCheck className="h-4 w-4 shrink-0 text-orbit-blue" />}
+          </span>
+          <span className="max-w-full truncate text-xs text-white/55">@{f.username}</span>
+        </Link>
+      ))}
+    </div>
+  ) : undefined;
+
+  const achievementsEmpty = (
+    <div className="rounded-2xl border border-white/10 bg-space-surface/80 px-6 py-12 text-center">
+      <div className="mx-auto mb-4 flex w-fit -space-x-2">
+        <span className="h-12 w-11 [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)] bg-white/10" />
+        <span className="h-12 w-11 [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)] bg-gradient-to-b from-orbit-blue/40 to-orbit-purple/40" />
+        <span className="h-12 w-11 [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)] bg-white/5" />
+      </div>
+      <p className="text-sm font-medium text-white/85">Ainda não há conquistas</p>
+      <p className="mt-1 text-xs text-white/50">
+        {isMe ? "Explore a plataforma e conquiste seus emblemas!" : `${user.name} ainda não conquistou emblemas.`}
+      </p>
+    </div>
+  );
+
+  const testimonialsEmpty = (
+    <div className="rounded-2xl border border-white/10 bg-space-surface/80 px-6 py-12 text-center">
+      <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-orbit-purple/40 bg-orbit-purple/10">
+        <Quote className="h-6 w-6 text-orbit-purple" />
+      </span>
+      <p className="text-sm font-medium text-white/85">Nenhum depoimento ainda</p>
+      <p className="mx-auto mt-1 max-w-sm text-xs text-white/50">
+        {isMe
+          ? "Quando seus amigos escreverem depoimentos, eles aparecerão aqui para você aprovar antes de ficarem públicos."
+          : `Os depoimentos aprovados por ${user.name} aparecerão aqui.`}
+      </p>
+    </div>
+  );
 
   return (
     <div className="mx-auto flex max-w-[1240px] gap-5 px-3 pt-3 md:px-5 md:py-5">
@@ -578,17 +671,10 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
             </div>
           </div>
 
-          <div className="hidden grid-cols-5 gap-2.5 px-5 pb-5 md:grid">
+          <div className="grid grid-cols-4 gap-1.5 px-3 pb-3 md:gap-2.5 md:px-5 md:pb-5">
+            <StatBox value={stats.followers} label="Seguidores" />
+            <StatBox value={stats.following} label="Seguindo" />
             <StatBox value={stats.posts} label="Publicações" />
-            <StatBox value={stats.friends} label="Amigos" />
-            <StatBox value={stats.followers} label="Seguidores" />
-            <StatBox value={stats.following} label="Seguindo" />
-            <StatBox value={stats.communities} label="Comunidades" />
-          </div>
-          <div className="grid grid-cols-4 gap-1.5 px-3 pb-3 md:hidden">
-            <StatBox value={stats.posts} label="Posts" />
-            <StatBox value={stats.followers} label="Seguidores" />
-            <StatBox value={stats.following} label="Seguindo" />
             <StatBox value={stats.communities} label="Comunidades" />
           </div>
         </section>
@@ -598,7 +684,7 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
         <ProfileTabs
           aside={aside}
           slots={{
-            inicio: (
+            posts: (
               <div className="space-y-3 md:space-y-4">
                 {isMe && current && (
                   <PostComposer
@@ -611,27 +697,14 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
                 {feedList}
               </div>
             ),
-            posts: feed.length ? feedList : undefined,
-            fotos: photos.length ? (
-              <div className="grid grid-cols-3 gap-2">
-                {photos.map((m) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img key={m.id} src={m.url} alt="" className="aspect-square w-full rounded-xl object-cover" />
-                ))}
-              </div>
-            ) : undefined,
-            videos: videos.length ? (
-              <div className="grid grid-cols-2 gap-2">
-                {videos.map((m) => (
-                  // eslint-disable-next-line jsx-a11y/media-has-caption
-                  <video key={m.id} src={m.url} controls className="aspect-video w-full rounded-xl bg-black object-cover" />
-                ))}
-              </div>
-            ) : undefined,
+            midia: mediaGrid,
             sobre: aboutList ? (
               <div className="rounded-2xl border border-white/10 bg-space-surface/80 p-5">{aboutList}</div>
             ) : undefined,
+            amigos: friendsList,
             comunidades: communitiesList,
+            conquistas: achievementsEmpty,
+            depoimentos: testimonialsEmpty,
           }}
         />
       </div>
