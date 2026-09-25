@@ -222,7 +222,7 @@ function Preview({ color, frameId, props }: { color: string; frameId: string | n
   );
 }
 
-const TIER_ORDER: FrameTier[] = ["gratuita", "rara", "epica", "mistica", "lendaria", "fantasia"];
+const TIER_ORDER: FrameTier[] = ["gratuita", "rara", "epica", "mistica", "lendaria", "fantasia", "heroica", "magica"];
 
 function FrameCatalog({
   avatarUrl,
@@ -334,6 +334,12 @@ function FrameCatalog({
               <span className={clsx("rounded-full border px-2 py-px text-[9px] font-semibold uppercase tracking-wide", FRAME_TIERS[f.tier].className)}>
                 {free ? (isSel ? "Em uso" : "Grátis") : FRAME_TIERS[f.tier].badge}
               </span>
+              {f.price && (
+                <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-300">
+                  <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-br from-amber-200 to-amber-500" />
+                  {f.price.toLocaleString("pt-BR")}
+                </span>
+              )}
             </button>
           );
         })}

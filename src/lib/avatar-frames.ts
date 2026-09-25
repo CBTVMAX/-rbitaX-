@@ -12,11 +12,13 @@ export const FRAME_TIERS = {
   mistica: { label: "Místicas", badge: "Mística", free: false, className: "text-violet-300 border-violet-400/40 bg-violet-400/10" },
   lendaria: { label: "Lendárias", badge: "Lendária", free: false, className: "text-amber-300 border-amber-400/40 bg-amber-400/10" },
   fantasia: { label: "Fantasias", badge: "Fantasia", free: false, className: "text-pink-300 border-pink-400/40 bg-pink-400/10" },
+  heroica: { label: "Heroica", badge: "Heroica", free: false, className: "text-red-300 border-red-400/40 bg-red-400/10" },
+  magica: { label: "Mágica", badge: "Mágica", free: false, className: "text-yellow-200 border-yellow-300/40 bg-yellow-300/10" },
 } as const;
 
 export type FrameTier = keyof typeof FRAME_TIERS;
 
-export type AvatarFrame = { id: string; tier: FrameTier; name: string; tagline: string; ext: number };
+export type AvatarFrame = { id: string; tier: FrameTier; name: string; tagline: string; ext: number; price?: number };
 
 export const AVATAR_FRAMES: AvatarFrame[] = [
   { id: "gratuita-01", tier: "gratuita", name: "Órbita Básica", tagline: "Simples. Sempre com você.", ext: 1.13 },
@@ -104,6 +106,36 @@ export const AVATAR_FRAMES: AvatarFrame[] = [
   { id: "fantasia-13", tier: "fantasia", name: "Dragão", tagline: "Carregue o fogo em você.", ext: 1.42 },
   { id: "fantasia-14", tier: "fantasia", name: "Rei", tagline: "Porque você nasceu pra mais.", ext: 1.42 },
   { id: "fantasia-15", tier: "fantasia", name: "Gamer", tagline: "Jogue do seu jeito.", ext: 1.39 },
+  { id: "heroica-01", tier: "heroica", name: "Armadura Estelar", tagline: "Tecnologia que impulsiona.", ext: 1.44, price: 8000 },
+  { id: "heroica-02", tier: "heroica", name: "Guardião Cósmico", tagline: "Além dos limites.", ext: 1.42, price: 7000 },
+  { id: "heroica-03", tier: "heroica", name: "Senhor do Trovão", tagline: "Força que ecoa.", ext: 1.46, price: 6500 },
+  { id: "heroica-04", tier: "heroica", name: "Defensor Supremo", tagline: "Coragem em qualquer mundo.", ext: 1.42, price: 6000 },
+  { id: "heroica-05", tier: "heroica", name: "Força Esmeralda", tagline: "Poder sem limites.", ext: 1.44, price: 6000 },
+  { id: "heroica-06", tier: "heroica", name: "Sombra Real", tagline: "Estratégia. Precisão. Controle.", ext: 1.49, price: 5500 },
+  { id: "heroica-07", tier: "heroica", name: "Arte Mística", tagline: "Realidades ao seu alcance.", ext: 1.42, price: 6500 },
+  { id: "heroica-08", tier: "heroica", name: "Teia Dimensional", tagline: "Conexões em todo lugar.", ext: 1.46, price: 5000 },
+  { id: "heroica-09", tier: "heroica", name: "Comandante Galáctico", tagline: "Liderança além das estrelas.", ext: 1.48, price: 6500 },
+  { id: "heroica-10", tier: "heroica", name: "Poder Bruto", tagline: "Quando a raiva vira força.", ext: 1.44, price: 5500 },
+  { id: "heroica-11", tier: "heroica", name: "Fênix Eterna", tagline: "Renascimento é poder.", ext: 1.49, price: 7000 },
+  { id: "heroica-12", tier: "heroica", name: "Assassino das Sombras", tagline: "Silêncio também é poder.", ext: 1.48, price: 5000 },
+  { id: "heroica-13", tier: "heroica", name: "Guardião Celestial", tagline: "Luz que protege.", ext: 1.46, price: 6000 },
+  { id: "heroica-14", tier: "heroica", name: "Velocidade Suprema", tagline: "Sempre um passo à frente.", ext: 1.44, price: 5500 },
+  { id: "heroica-15", tier: "heroica", name: "Protetor Multiversal", tagline: "Infinitas possibilidades.", ext: 1.41, price: 8000 },
+  { id: "magica-01", tier: "magica", name: "Hogwarts Legacy", tagline: "Onde grandes histórias começam.", ext: 1.47, price: 5000 },
+  { id: "magica-02", tier: "magica", name: "Relíquias da Morte", tagline: "Poder. Lealdade. Escolha.", ext: 1.41, price: 4500 },
+  { id: "magica-03", tier: "magica", name: "O Pomo de Ouro", tagline: "Mais que um jogo, é uma paixão.", ext: 1.46, price: 4000 },
+  { id: "magica-04", tier: "magica", name: "Varinha Ancestral", tagline: "O verdadeiro poder está em quem a usa.", ext: 1.46, price: 4500 },
+  { id: "magica-05", tier: "magica", name: "Plataforma 9¾", tagline: "Novos mundos te esperam.", ext: 1.46, price: 4000 },
+  { id: "magica-06", tier: "magica", name: "Grifinória", tagline: "Coragem. Determinação.", ext: 1.41, price: 3500 },
+  { id: "magica-07", tier: "magica", name: "Sonserina", tagline: "Ambição. Inteligência.", ext: 1.41, price: 3500 },
+  { id: "magica-08", tier: "magica", name: "Corvinal", tagline: "Sabedoria. Criatividade.", ext: 1.44, price: 3500 },
+  { id: "magica-09", tier: "magica", name: "Lufa-Lufa", tagline: "Lealdade. Paciência.", ext: 1.41, price: 3500 },
+  { id: "magica-10", tier: "magica", name: "Mapa do Maroto", tagline: "Sempre um passo à frente.", ext: 1.46, price: 4000 },
+  { id: "magica-11", tier: "magica", name: "Edwiges", tagline: "Mensagens que aproximam.", ext: 1.44, price: 4000 },
+  { id: "magica-12", tier: "magica", name: "Expecto Patronum", tagline: "A luz que afasta as trevas.", ext: 1.36, price: 4500 },
+  { id: "magica-13", tier: "magica", name: "Tom Riddle", tagline: "Ambição além dos limites.", ext: 1.39, price: 5000 },
+  { id: "magica-14", tier: "magica", name: "Magia das Estrelas", tagline: "O universo também é mágico.", ext: 1.37, price: 4000 },
+  { id: "magica-15", tier: "magica", name: "Sala Precisa", tagline: "Tudo o que você imaginar.", ext: 1.44, price: 5000 },
 ];
 
 const BY_ID = new Map(AVATAR_FRAMES.map((f) => [f.id, f]));
