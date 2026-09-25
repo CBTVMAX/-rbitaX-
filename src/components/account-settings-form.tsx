@@ -64,13 +64,43 @@ const selectClass = `${inputClass} appearance-none pr-10`;
 const dateSelectClass =
   "w-full appearance-none rounded-xl border border-white/10 bg-space-bg/60 py-3 pl-3 pr-7 text-sm text-white outline-none transition focus:border-orbit-purple/70";
 
-function Section({ title, icon: Icon, children }: { title: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
+function SectionHeader({
+  title,
+  subtitle,
+  icon: Icon,
+  desktopOnly = false,
+}: {
+  title: string;
+  subtitle?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  desktopOnly?: boolean;
+}) {
+  return (
+    <div className={clsx("mb-4 items-start gap-2.5 lg:mb-5 lg:gap-3", desktopOnly ? "hidden lg:flex" : "flex")}>
+      <Icon className="mt-0.5 h-5 w-5 shrink-0 text-orbit-blue lg:h-6 lg:w-6" />
+      <div>
+        <h2 className="text-base font-semibold text-orbit-blue lg:text-lg">{title}</h2>
+        {subtitle && <p className="mt-0.5 hidden text-xs text-white/55 lg:block">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  subtitle,
+  icon,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
   return (
     <section className="rounded-2xl border border-white/10 bg-space-surface/80 p-4 md:p-5">
-      <h2 className="mb-4 flex items-center gap-2.5 text-base font-semibold text-orbit-blue">
-        <Icon className="h-5 w-5" /> {title}
-      </h2>
-      <div className="space-y-5">{children}</div>
+      <SectionHeader title={title} subtitle={subtitle} icon={icon} />
+      <div className="space-y-5 lg:space-y-4">{children}</div>
     </section>
   );
 }
@@ -78,17 +108,24 @@ function Section({ title, icon: Icon, children }: { title: string; icon: React.C
 function Field({
   label,
   icon: Icon,
+  stacked = false,
   children,
 }: {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  stacked?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-3">
-      <Icon className="mt-0.5 h-5 w-5 text-orbit-blue/80" />
-      <label className="mb-2 text-sm text-white/80">{label}</label>
-      <div className="col-start-2">{children}</div>
+    <div
+      className={clsx(
+        "grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-3",
+        !stacked && "lg:grid-cols-[1.5rem_8.5rem_minmax(0,1fr)]"
+      )}
+    >
+      <Icon className={clsx("mt-0.5 h-5 w-5 text-orbit-blue/80", !stacked && "lg:mt-3")} />
+      <label className={clsx("mb-2 text-sm text-white/80", !stacked && "lg:mb-0 lg:mt-3")}>{label}</label>
+      <div className={clsx("col-start-2", !stacked && "lg:col-start-3 lg:row-start-1")}>{children}</div>
     </div>
   );
 }
@@ -309,9 +346,14 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
   }[usernameState];
 
   return (
-    <form onSubmit={save} className="space-y-4 pb-6">
-      <section className="rounded-2xl border border-white/10 bg-space-surface/80">
-        <div className="relative h-36 overflow-hidden rounded-t-2xl md:h-44">
+    <form
+      onSubmit={save}
+      className="pb-6 lg:grid lg:grid-cols-[minmax(0,1.12fr)_minmax(0,1fr)] lg:items-start lg:gap-5"
+    >
+      <div className="lg:space-y-5">
+      <section className="rounded-t-2xl border border-b-0 border-white/10 bg-space-surface/80 lg:rounded-2xl lg:border-b lg:p-5">
+        <SectionHeader title="Foto e capa" subtitle="Personalize sua capa e foto de perfil" icon={ImagePlus} desktopOnly />
+        <div className="relative h-36 overflow-hidden rounded-t-2xl md:h-44 lg:h-56 lg:rounded-xl">
           {coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={coverUrl} alt="" className="h-full w-full object-cover" />
@@ -332,9 +374,9 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
           <input ref={coverRef} type="file" accept="image/*" hidden onChange={(e) => uploadImage("cover", e)} />
         </div>
 
-        <div className="flex items-end gap-4 px-4 pb-2">
-          <div className="relative -mt-12 shrink-0">
-            <div className="h-28 w-28 rounded-full bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] p-[3px]">
+        <div className="flex items-end gap-4 px-4 pb-2 lg:-mt-20 lg:px-3 lg:pb-0">
+          <div className="relative -mt-12 shrink-0 lg:mt-0">
+            <div className="h-28 w-28 rounded-full lg:h-36 lg:w-36 bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] p-[3px]">
               <div className="flex h-full w-full items-end justify-center overflow-hidden rounded-full border-4 border-space-bg bg-space-card">
                 {avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -355,13 +397,22 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
             </button>
             <input ref={avatarRef} type="file" accept="image/*" hidden onChange={(e) => uploadImage("avatar", e)} />
           </div>
-          <div className="pb-2">
+          <div className="pb-2 lg:hidden">
             <p className="text-sm font-medium text-white">Foto de perfil</p>
             <p className="text-xs text-white/50">Toque para trocar sua foto</p>
           </div>
         </div>
 
-        <div className="space-y-5 p-4 md:p-5">
+      </section>
+
+      <section className="rounded-b-2xl border border-t-0 border-white/10 bg-space-surface/80 lg:rounded-2xl lg:border-t">
+        <div className="space-y-5 p-4 md:p-5 lg:space-y-4">
+          <SectionHeader
+            title="Informações básicas"
+            subtitle="Seu nome, nome de usuário e uma breve descrição sobre você."
+            icon={User}
+            desktopOnly
+          />
           <Field label="Nome" icon={User}>
             <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} className={inputClass} />
           </Field>
@@ -404,11 +455,12 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
             </p>
           </Field>
 
-          <Field label="Cidade" icon={MapPin}>
+          <div className="space-y-5 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
+          <Field label="Cidade" icon={MapPin} stacked>
             <input value={location} onChange={(e) => setLocation(e.target.value)} maxLength={80} placeholder="Ex.: Aracaju, Sergipe, Brasil" className={inputClass} />
           </Field>
 
-          <Field label="Link" icon={Link2}>
+          <Field label="Link" icon={Link2} stacked>
             <div className="relative">
               <input value={website} onChange={(e) => setWebsite(e.target.value)} maxLength={200} placeholder="Ex.: linktr.ee/seunome" className={clsx(inputClass, "pr-10")} />
               {website && (
@@ -424,7 +476,9 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
             </div>
           </Field>
 
-          <Field label="Interesses" icon={Star}>
+          </div>
+
+          <Field label="Interesses" icon={Star} stacked>
             <div className="flex flex-wrap gap-2">
               {interests.map((i) => (
                 <span key={i} className="flex items-center gap-1.5 rounded-full border border-orbit-purple/60 bg-orbit-purple/10 px-3 py-1.5 text-xs text-white/90">
@@ -467,9 +521,11 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
           </Field>
         </div>
       </section>
+      </div>
 
-      <Section title="Informações pessoais" icon={User}>
-        <Field label="Data de nascimento" icon={Calendar}>
+      <div className="mt-4 space-y-4 lg:mt-0">
+      <Section title="Informações pessoais" subtitle="Estas informações ajudam outras pessoas a te conhecerem." icon={User}>
+        <Field label="Data de nascimento" icon={Calendar} stacked>
           <div className="grid grid-cols-[4.75rem_minmax(0,1fr)_5.75rem] gap-2">
             <SelectWrap compact>
               <select value={day} onChange={(e) => setDay(e.target.value)} aria-label="Dia" className={dateSelectClass}>
@@ -518,7 +574,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
         </Field>
       </Section>
 
-      <Section title="Relacionamento" icon={Heart}>
+      <Section title="Relacionamento" subtitle="Defina seu status de relacionamento." icon={Heart}>
         <Field label="Status de relacionamento" icon={User}>
           <SelectWrap>
             <select value={relationship} onChange={(e) => setRelationship(e.target.value)} className={selectClass}>
@@ -531,7 +587,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
         </Field>
       </Section>
 
-      <Section title="Privacidade" icon={Shield}>
+      <Section title="Privacidade" subtitle="Escolha o que será exibido no seu perfil." icon={Shield}>
         <div className="space-y-4">
           <Toggle label="Mostrar minha idade no perfil" icon={Calendar} checked={showAge} onChange={setShowAge} />
           <Toggle label="Mostrar meu signo no perfil" icon={Star} checked={showSign} onChange={setShowSign} />
@@ -561,6 +617,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
         {saving && <Loader2 className="h-5 w-5 animate-spin" />}
         {saving ? "Salvando..." : "Salvar alterações"}
       </button>
+      </div>
     </form>
   );
 }

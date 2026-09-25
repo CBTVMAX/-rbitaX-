@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { AccountSettingsForm } from "@/components/account-settings-form";
@@ -24,16 +24,27 @@ export default async function AccountSettingsPage() {
   const user = current.profile;
 
   return (
-    <div className="mx-auto max-w-2xl px-3 py-4 md:px-4 md:py-6">
-      <div className="mb-4 flex items-center gap-3">
+    <div className="mx-auto max-w-2xl px-3 py-4 md:px-4 md:py-6 lg:max-w-6xl lg:px-6">
+      <div className="mb-4 flex items-center gap-3 lg:mb-6">
         <Link
           href={`/perfil/${user.username}`}
           aria-label="Voltar para o perfil"
-          className="rounded-full p-1.5 text-white/80 transition hover:bg-white/5 hover:text-white"
+          className="rounded-full p-1.5 text-white/80 transition hover:bg-white/5 hover:text-white lg:hidden"
         >
           <ArrowLeft className="h-6 w-6" />
         </Link>
-        <h1 className="font-display text-xl font-bold text-white md:text-2xl">Editar perfil</h1>
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-xl font-bold text-white md:text-2xl lg:text-3xl">Editar perfil</h1>
+          <p className="mt-1 hidden text-sm text-white/60 lg:block">
+            Atualize suas informações e personalize seu perfil no Órbita X.
+          </p>
+        </div>
+        <Link
+          href={`/perfil/${user.username}`}
+          className="hidden items-center gap-2 rounded-xl border border-orbit-purple/60 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-orbit-purple/10 lg:flex"
+        >
+          <Eye className="h-4 w-4" /> Ver meu perfil
+        </Link>
       </div>
 
       <AccountSettingsForm
