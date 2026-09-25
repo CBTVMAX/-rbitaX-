@@ -508,7 +508,11 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
     <div className="mx-auto flex max-w-[1240px] gap-5 px-3 pt-3 md:px-5 md:py-5">
       <div className="min-w-0 flex-1 space-y-3 md:space-y-4">
         <section className="rounded-2xl border border-white/10 bg-space-surface/80">
-          <div className="relative h-60 overflow-hidden rounded-t-2xl md:h-56">
+          <div
+            className={`relative overflow-hidden rounded-t-2xl ${
+              !user.coverUrl && isMe ? "h-60 md:aspect-[8/3] md:h-auto" : "aspect-[8/3]"
+            }`}
+          >
             {user.coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={user.coverUrl} alt="" className="h-full w-full object-cover" />
@@ -528,9 +532,9 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
                 userId={user.id}
                 field="coverUrl"
                 ariaLabel="Editar capa"
-                className="absolute bottom-3 right-3 flex items-center gap-2 rounded-xl border border-white/15 bg-space-bg/80 px-3.5 py-2 text-xs font-medium text-white backdrop-blur transition hover:bg-space-bg md:bottom-auto md:right-4 md:top-4 md:text-sm"
+                className="absolute right-3 top-3 flex items-center gap-2 rounded-full border border-white/15 bg-space-bg/80 p-2 text-xs font-medium text-white backdrop-blur transition hover:bg-space-bg md:right-4 md:top-4 md:rounded-xl md:px-3.5 md:py-2 md:text-sm"
               >
-                <Camera className="h-4 w-4" /> Editar capa
+                <Camera className="h-4 w-4" /> <span className="hidden md:inline">Editar capa</span>
               </ProfileImageUpload>
             )}
           </div>
@@ -559,7 +563,7 @@ export function ProfileView({ user, info, current, isFollowing, stats, feed, pin
 
           {/* Mobile */}
           <div className="px-4 pb-4 md:hidden">
-            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} isMe={isMe} online={online} className="-mt-20 h-36 w-36" />
+            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} isMe={isMe} online={online} className="-mt-12 h-28 w-28" />
             <div className="mt-3">{identity}</div>
             {bioAndMeta}
             <div className="mt-4 flex items-center gap-2">

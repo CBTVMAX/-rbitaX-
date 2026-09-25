@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
+import { saveCover } from "@/lib/cover-upload";
+import { CoverCropDialog } from "@/components/cover-crop-dialog";
 import { normalizeUsername, usernameError } from "@/lib/username";
 import { zodiacFor } from "@/lib/zodiac";
 import { GENDER_OPTIONS, RELATIONSHIP_OPTIONS } from "@/lib/profile-options";
@@ -198,6 +200,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
   const [avatarUrl, setAvatarUrl] = useState(initial.avatarUrl);
   const [coverUrl, setCoverUrl] = useState(initial.coverUrl);
   const [uploading, setUploading] = useState<"avatar" | "cover" | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -239,7 +242,13 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
     e.target.value = "";
     if (!file) return;
     if (!file.type.startsWith("image/")) return setError("Escolha um arquivo de imagem.");
-    if (file.size > 10 * 1024 * 1024) return setError("A imagem precisa ter no máximo 10 MB.");
+    const limitMb = kind === "cover" ? 20 : 10;
+    if (file.size > limitMb * 1024 * 1024) return setError(`A imagem precisa ter no máximo ${limitMb} MB.`);
+    if (kind === "cover") {
+      setError(null);
+      setCoverFile(file);
+      return;
+    }
 
     setUploading(kind);
     setError(null);
@@ -259,6 +268,13 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
     if (updateError) return setError("Não foi possível salvar a imagem.");
     if (kind === "avatar") setAvatarUrl(pub.publicUrl);
     else setCoverUrl(pub.publicUrl);
+    router.refresh();
+  }
+
+  async function applyCover(blob: Blob) {
+    const url = await saveCover(userId, blob);
+    setCoverUrl(url);
+    setCoverFile(null);
     router.refresh();
   }
 
@@ -353,7 +369,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
       <div className="lg:space-y-5">
       <section className="rounded-t-2xl border border-b-0 border-white/10 bg-space-surface/80 lg:rounded-2xl lg:border-b lg:p-5">
         <SectionHeader title="Foto e capa" subtitle="Personalize sua capa e foto de perfil" icon={ImagePlus} desktopOnly />
-        <div className="relative h-36 overflow-hidden rounded-t-2xl md:h-44 lg:h-56 lg:rounded-xl">
+        <div className="relative aspect-[8/3] overflow-hidden rounded-t-2xl lg:rounded-xl">
           {coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={coverUrl} alt="" className="h-full w-full object-cover" />
@@ -372,6 +388,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
             {coverUrl ? "Trocar capa" : "Adicionar capa"}
           </button>
           <input ref={coverRef} type="file" accept="image/*" hidden onChange={(e) => uploadImage("cover", e)} />
+          {coverFile && <CoverCropDialog file={coverFile} onCancel={() => setCoverFile(null)} onConfirm={applyCover} />}
         </div>
 
         <div className="flex items-end gap-4 px-4 pb-2 lg:-mt-20 lg:px-3 lg:pb-0">

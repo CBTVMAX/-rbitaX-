@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
+import { saveCover } from "@/lib/cover-upload";
+import { CoverCropDialog } from "@/components/cover-crop-dialog";
 import {
   Archive,
   BarChart3,
@@ -329,6 +331,13 @@ export function ProfileImageUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+
+  async function applyCover(blob: Blob) {
+    await saveCover(userId, blob);
+    setCoverFile(null);
+    router.refresh();
+  }
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -338,8 +347,14 @@ export function ProfileImageUpload({
       setError("Escolha um arquivo de imagem.");
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
-      setError("A imagem precisa ter no máximo 10 MB.");
+    const limitMb = field === "coverUrl" ? 20 : 10;
+    if (file.size > limitMb * 1024 * 1024) {
+      setError(`A imagem precisa ter no máximo ${limitMb} MB.`);
+      return;
+    }
+    if (field === "coverUrl") {
+      setError(null);
+      setCoverFile(file);
       return;
     }
 
@@ -381,6 +396,7 @@ export function ProfileImageUpload({
         {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : children}
       </button>
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={onPick} />
+      {coverFile && <CoverCropDialog file={coverFile} onCancel={() => setCoverFile(null)} onConfirm={applyCover} />}
       {error && (
         <button
           type="button"
