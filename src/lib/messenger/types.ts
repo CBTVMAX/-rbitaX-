@@ -58,6 +58,8 @@ export type MessageMeta = {
   recipientId?: string;
   recipientName?: string;
   sticker?: string;
+  /** How to draw the sticker (written by the database from the Sticker row). */
+  stickerInfo?: StickerInfo | null;
   lat?: number;
   lng?: number;
   accuracy?: number;
@@ -73,6 +75,17 @@ export type MessageMeta = {
   title?: string;
   artist?: string;
   event?: string;
+};
+
+export type StickerInfo = {
+  storage: "app" | "app-premium" | "public" | "premium";
+  file: string;
+  preview: string | null;
+  format: "static" | "animated";
+  w: number;
+  h: number;
+  size: "mini" | "normal" | "large";
+  label?: string;
 };
 
 export type ChatMessage = {

@@ -494,7 +494,7 @@ export function ChatView({
 
   const api: ComposerApi = {
     text: (text) => queue({ type: "text", content: text, attachments: [], meta: {}, uploads: [] }),
-    sticker: (id) => queue({ type: "sticker", content: "", attachments: [], meta: { sticker: id }, uploads: [] }),
+    sticker: (id, info) => queue({ type: "sticker", content: "", attachments: [], meta: { sticker: id, stickerInfo: info ?? null }, uploads: [] }),
     media: async (files, caption) => {
       const attachments: Attachment[] = [];
       const uploads: Upload[] = [];

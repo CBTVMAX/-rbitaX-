@@ -210,7 +210,7 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
         <Ban className="h-3.5 w-3.5" /> Mensagem apagada
       </span>
     );
-  } else if (m.type === "sticker") body = <StickerView id={m.meta.sticker ?? ""} />;
+  } else if (m.type === "sticker") body = <StickerView id={m.meta.sticker ?? ""} info={m.meta.stickerInfo} interactive={m.status !== "sending"} />;
   else if (m.type === "gif") body = <GifView message={m} onOpen={() => p.onOpenMedia(m, 0)} />;
   else if (emojiOnly) body = <span className="text-5xl leading-tight">{m.content.trim()}</span>;
   else if (media) body = <MediaGrid message={m} onOpen={(i) => p.onOpenMedia(m, i)} />;

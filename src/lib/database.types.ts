@@ -58,14 +58,18 @@ type PollVoteRow = { id: string; messageId: string; conversationId: string; user
 type MessageFavoriteRow = { messageId: string; userId: string; conversationId: string; createdAt: string };
 type MessageHiddenRow = { messageId: string; userId: string; createdAt: string };
 type ConversationSettingRow = { conversationId: string; userId: string; archivedAt: string | null; mutedUntil: string | null; theme: string | null; wallpaper: string | null; clearedAt: string | null; updatedAt: string };
-type StickerPackRow = { id: string; name: string; tier: string; priceCoins: number | null; isAdult: boolean; sortOrder: number; cover: string; stickers: string[]; labels: string[] | null; active: boolean; createdAt: string; section: string; category: string | null; animated: boolean };
+type StickerPackRow = { id: string; name: string; tier: string; priceCoins: number | null; isAdult: boolean; sortOrder: number; cover: string; stickers: string[]; labels: string[] | null; active: boolean; createdAt: string; section: string; category: string | null; animated: boolean; creator: string; description: string; categories: string[]; rating: string; published: boolean; featured: boolean; isDefault: boolean; exclusive: boolean; availableFrom: string | null; availableUntil: string | null; updatedAt: string };
+type StickerRow = { id: string; packId: string; slug: string; label: string; keywords: string[]; storage: string; file: string; preview: string | null; format: string; mime: string; width: number; height: number; bytes: number; size: string; hasText: boolean; rating: string; sortOrder: number; active: boolean; createdAt: string };
+type StickerCategoryRow = { id: string; name: string; emoji: string; sortOrder: number; isAdult: boolean; active: boolean };
+type StickerPackFavoriteRow = { userId: string; packId: string; createdAt: string };
+type StickerRecentRow = { userId: string; stickerId: string; lastUsedAt: string; uses: number };
 type StickerFavoriteRow = { userId: string; sticker: string; createdAt: string };
 type CoinWalletRow = { userId: string; balance: number; updatedAt: string };
 type CoinTransactionRow = { id: string; userId: string; amount: number; balanceAfter: number; kind: string; productId: string | null; referenceId: string | null; description: string; createdAt: string };
 type StoreProductRow = { id: string; kind: string; refId: string; name: string; description: string; image: string; priceCoins: number; tier: string; isAdult: boolean; badge: string | null; sortOrder: number; active: boolean; meta: Json; createdAt: string };
 type UserInventoryRow = { userId: string; productId: string; source: string; isFavorite: boolean; acquiredAt: string };
 type VirtualGiftRow = { id: string; productId: string; senderId: string; recipientId: string; conversationId: string | null; messageId: string | null; priceCoins: number; note: string | null; createdAt: string };
-type UserStickerPackRow = { userId: string; packId: string; acquiredAt: string };
+type UserStickerPackRow = { userId: string; packId: string; acquiredAt: string; installed: boolean; source: string; updatedAt: string };
 type ReadOnly<R> = { Row: R; Insert: never; Update: never; Relationships: [] };
 type MessageUpdate = Partial<MessageInsert>;
 
@@ -173,6 +177,10 @@ export type Database = {
       StickerPack: ReadOnly<StickerPackRow>;
       UserStickerPack: ReadOnly<UserStickerPackRow>;
       StickerFavorite: ReadOnly<StickerFavoriteRow>;
+      Sticker: ReadOnly<StickerRow>;
+      StickerCategory: ReadOnly<StickerCategoryRow>;
+      StickerPackFavorite: ReadOnly<StickerPackFavoriteRow>;
+      StickerRecent: ReadOnly<StickerRecentRow>;
       CoinWallet: ReadOnly<CoinWalletRow>;
       CoinTransaction: ReadOnly<CoinTransactionRow>;
       StoreProduct: ReadOnly<StoreProductRow>;
@@ -340,6 +348,19 @@ export type Database = {
       toggle_sticker_favorite: { Args: { p_sticker: string }; Returns: boolean };
       my_recent_stickers: { Args: { p_limit?: number }; Returns: { sticker: string; lastUsedAt: string }[] };
       popular_stickers: { Args: { p_limit?: number }; Returns: { sticker: string; uses: number }[] };
+      set_sticker_pack_installed: { Args: { p_pack: string; p_installed: boolean }; Returns: boolean };
+      toggle_sticker_pack_favorite: { Args: { p_pack: string }; Returns: boolean };
+      search_stickers: { Args: { p_query: string; p_limit?: number }; Returns: Json };
+      sticker_readable: { Args: { p_sticker: string }; Returns: boolean };
+      is_admin: { Args: Record<string, never>; Returns: boolean };
+      admin_save_pack: { Args: { p: Json }; Returns: string };
+      admin_save_sticker: { Args: { p: Json }; Returns: string };
+      admin_delete_sticker: { Args: { p_sticker: string }; Returns: string };
+      admin_delete_pack: { Args: { p_pack: string }; Returns: string };
+      admin_sticker_stats: {
+        Args: Record<string, never>;
+        Returns: { packId: string; sales: number; revenue: number; installs: number; favorites: number; stickerFavorites: number; sends: number; senders: number }[];
+      };
       my_coin_balance: { Args: Record<string, never>; Returns: number };
       acquire_product: { Args: { p_product_id: string }; Returns: Json };
       toggle_inventory_favorite: { Args: { p_product_id: string }; Returns: boolean };

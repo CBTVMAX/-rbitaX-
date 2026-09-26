@@ -5,7 +5,7 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { Ban, Keyboard, Lock, Mic, Plus, Send, Smile, Trash2, UserMinus, X } from "lucide-react";
 import { formatDuration, messagePreview } from "@/lib/messenger/format";
-import type { Attachment, ChatMessage, SendStatus } from "@/lib/messenger/types";
+import type { Attachment, ChatMessage, SendStatus, StickerInfo } from "@/lib/messenger/types";
 import { AttachmentMenu, type AttachmentChoice } from "./attachment-menu";
 import { StickerPanel, type PanelTab } from "./sticker-panel";
 
@@ -17,7 +17,7 @@ export type ComposerApi = {
   voice: (blob: Blob, mime: string) => void;
   gif: (file: File) => void;
   gifReuse: (a: Attachment) => void;
-  sticker: (id: string) => void;
+  sticker: (id: string, info?: StickerInfo | null) => void;
   openPoll: () => void;
   openLocation: () => void;
   openContact: () => void;
@@ -283,9 +283,9 @@ export function MessageComposer({
             onTabChange={(t) => (lastTab = t)}
             onClose={() => setPanel(null)}
             onEmoji={insertEmoji}
-            onSticker={(id) => {
+            onSticker={(id, info) => {
               setPanel(null);
-              api.sticker(id);
+              api.sticker(id, info);
             }}
             onGifFile={(f) => {
               setPanel(null);

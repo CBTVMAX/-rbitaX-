@@ -478,6 +478,22 @@ export function StoreView({
         </div>
       </div>
 
+      {category === "adesivos" && (
+        <Link
+          href="/loja/adesivos"
+          className="group mt-3 flex items-center gap-3 overflow-hidden rounded-3xl border border-orbit-purple/30 bg-[linear-gradient(120deg,rgb(var(--app-accent,139_92_246)/0.18),transparent_60%)] p-4 transition hover:border-orbit-purple/60"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orbit-gradient text-lg shadow-glow" aria-hidden>
+            ✨
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold text-white">Loja de Adesivos</span>
+            <span className="block truncate text-xs text-white/55">Busca, categorias, packs animados, favoritos e prévia antes de comprar</span>
+          </span>
+          <span className="shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition group-hover:bg-white/15">Abrir</span>
+        </Link>
+      )}
+
       {visible.length === 0 ? (
         <div className="mt-10 rounded-3xl border border-dashed border-white/10 px-6 py-14 text-center">
           <Sparkles className="mx-auto h-7 w-7 text-white/25" />
@@ -488,7 +504,14 @@ export function StoreView({
       ) : (
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {visible.map((p) => (
-            <ProductCard key={p.id} p={p} owned={owned.has(p.id)} favorite={!!owned.get(p.id)?.isFavorite} viewer={viewer} onOpen={() => setOpen(p.id)} />
+            <ProductCard
+              key={p.id}
+              p={p}
+              owned={owned.has(p.id)}
+              favorite={!!owned.get(p.id)?.isFavorite}
+              viewer={viewer}
+              onOpen={() => (p.kind === "sticker_pack" ? router.push(`/loja/adesivos/${p.refId}`) : setOpen(p.id))}
+            />
           ))}
         </div>
       )}

@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    // Premium sticker files are served by /api/sticker-file after an ownership check, never as static files.
+    outputFileTracingIncludes: {
+      "/api/sticker-file/[...path]": ["./private-stickers/**/*"],
+    },
+  },
   async headers() {
     return [
       {

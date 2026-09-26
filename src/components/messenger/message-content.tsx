@@ -21,7 +21,9 @@ import {
 import { downloadUrl, useSignedUrl } from "@/lib/messenger/media";
 import { formatBytes, formatDuration } from "@/lib/messenger/format";
 import { stickerSrc } from "@/lib/messenger/stickers";
-import type { Attachment, ChatMessage, PollVote } from "@/lib/messenger/types";
+import { stickerBox, stickerFileUrl } from "@/lib/stickers/catalog";
+import { StickerPackSheet } from "./sticker-pack-sheet";
+import type { Attachment, ChatMessage, PollVote, StickerInfo } from "@/lib/messenger/types";
 import { ChatAvatar } from "./ui";
 
 /** Only one audio plays at a time across the whole Messenger. */
@@ -639,10 +641,30 @@ export function PollCard({
   );
 }
 
-export function StickerView({ id }: { id: string }) {
-  return (
+/** A sticker in a bubble, sized by its class (mini / normal / large) and kept in its own shape. */
+export function StickerView({ id, info, interactive = false }: { id: string; info?: StickerInfo | null; interactive?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const box = info ? stickerBox(info) : { width: 148, height: 148 };
+  const img = (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={stickerSrc(id)} alt="Figurinha" loading="lazy" className="h-36 w-36 select-none object-contain drop-shadow-[0_6px_18px_rgba(0,0,0,0.35)] md:h-40 md:w-40" draggable={false} />
+    <img
+      src={info ? stickerFileUrl(info) : stickerSrc(id)}
+      alt={info?.label || "Adesivo"}
+      loading="lazy"
+      decoding="async"
+      style={{ width: box.width, height: box.height }}
+      className="select-none object-contain drop-shadow-[0_6px_18px_rgba(0,0,0,0.35)]"
+      draggable={false}
+    />
+  );
+  if (!interactive) return img;
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)} className="block rounded-2xl transition active:scale-95" aria-label={`Adesivo ${info?.label ?? ""}: ver o pack`}>
+        {img}
+      </button>
+      {open && <StickerPackSheet stickerId={id} onClose={() => setOpen(false)} />}
+    </>
   );
 }
 
