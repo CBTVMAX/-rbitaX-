@@ -35,7 +35,7 @@ export function useStoreToast() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), error ? 4500 : 2800);
   };
   const node = (
-    <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-28 z-[90] flex flex-col items-center gap-2 px-4 md:bottom-8">
+    <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-28 z-[100] flex flex-col items-center gap-2 px-4 md:bottom-8">
       {toasts.map((t) => (
         <div
           key={t.id}

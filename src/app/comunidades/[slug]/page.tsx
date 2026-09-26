@@ -1,117 +1,128 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
-import { AppSidebar, MobileTabBar } from "@/components/app-sidebar";
-import { AppAccentSync } from "@/components/app-theme";
-import { appAccentVars } from "@/lib/profile-colors";
-import { PublicHeader } from "@/components/public-header";
-import { CommunityJoinButton } from "@/components/community-join-button";
-import { Avatar } from "@/components/post-card";
-import { categoryLabel } from "@/lib/community-categories";
-import { Users } from "lucide-react";
+import { CommunityShell } from "@/components/community/community-shell";
+import { CommunityView, type MemberPreview } from "@/components/community/community-view";
+import { findCommunity } from "@/lib/community-server";
+import { DISCUSSION_COLUMNS, type Album, type Community, type Discussion, type Membership, type Role } from "@/lib/communities";
+import { loadCommunityPosts } from "@/lib/community-data";
 
 export const dynamic = "force-dynamic";
 
-export default async function CommunityDetailPage({ params }: { params: { slug: string } }) {
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const c = await findCommunity(params.slug);
+  if (!c) return { title: "Comunidade · Órbita X" };
+  return {
+    title: `${c.name} (@${c.username}) · Comunidades Órbita X`,
+    description: c.isPrivate ? "Comunidade privada no Órbita X." : c.description?.slice(0, 160) ?? undefined,
+  };
+}
+
+export default async function CommunityPage({ params, searchParams }: { params: { slug: string }; searchParams: { aba?: string; post?: string } }) {
   const current = await getCurrentUser();
-  const supabase = createClient();
-
-  const { data: community } = await supabase
-    .from("Community")
-    .select("*")
-    .eq("slug", params.slug.toLowerCase())
-    .maybeSingle();
-
+  const community = await findCommunity(params.slug);
   if (!community) notFound();
 
-  const { data: members } = await supabase
-    .from("CommunityMember")
-    .select("role, user:User(id, name, username, avatarUrl)")
-    .eq("communityId", community.id)
-    .order("createdAt", { ascending: true });
+  const supabase = createClient();
+  const me = current?.authId ?? null;
 
-  const isMember = current
-    ? (members ?? []).some((m) => (m.user as unknown as { id: string })?.id === current.authId)
-    : false;
+  const [mine, request, ban, siteAdmin] = await Promise.all([
+    me ? supabase.from("CommunityMember").select("role, notify").eq("communityId", community.id).eq("userId", me).maybeSingle() : Promise.resolve({ data: null }),
+    me ? supabase.from("CommunityJoinRequest").select("status").eq("communityId", community.id).eq("userId", me).maybeSingle() : Promise.resolve({ data: null }),
+    me ? supabase.from("CommunityBan").select("userId").eq("communityId", community.id).eq("userId", me).maybeSingle() : Promise.resolve({ data: null }),
+    me ? supabase.rpc("is_admin") : Promise.resolve({ data: false }),
+  ]);
+  const membership: Membership = {
+    role: (mine.data?.role as Role) ?? null,
+    notify: mine.data?.notify ?? true,
+    request: request.data?.status === "pending" || request.data?.status === "rejected" ? request.data.status : null,
+    banned: !!ban.data,
+  };
+  const canSee = !membership.banned && (!community.isPrivate || !!membership.role || siteAdmin.data === true);
 
-  const content = (
-    <div className="mx-auto max-w-2xl px-4 py-6">
-      <div className="mb-4 h-32 rounded-2xl bg-gradient-to-br from-orbit-blue/40 via-orbit-purple/40 to-orbit-pink/40" />
+  type Posts = Awaited<ReturnType<typeof loadCommunityPosts>>;
+  let pinned: Posts = [];
+  let posts: Posts = [];
+  let focus: Posts = [];
+  let discussions: Discussion[] = [];
+  let albums: Album[] = [];
+  let members: MemberPreview[] = [];
+  let counts = { photos: 0, videos: 0, clips: 0, discussions: 0 };
 
-      <div className="mb-6 flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          {community.category && (
-            <span className="mb-1 inline-block rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white/50">
-              {categoryLabel(community.category)}
-            </span>
-          )}
-          <h1 className="font-display text-2xl font-bold text-white">{community.name}</h1>
-          <p className="flex items-center gap-1 text-sm text-white/40">
-            <Users className="h-3.5 w-3.5" /> {members?.length ?? 0} membros
-          </p>
-        </div>
-        {current ? (
-          <CommunityJoinButton communityId={community.id} userId={current.authId} initiallyMember={isMember} />
-        ) : (
-          <Link
-            href="/entrar"
-            className="shrink-0 rounded-full bg-orbit-gradient px-4 py-1.5 text-xs font-semibold text-white shadow-glow"
-          >
-            Entrar para participar
-          </Link>
-        )}
-      </div>
-
-      {community.description && <p className="mb-6 text-sm text-white/70">{community.description}</p>}
-
-      <h2 className="mb-3 text-sm font-semibold text-white/70">Membros</h2>
-      {(members ?? []).length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-white/40">
-          Ainda não há membros nesta comunidade.
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {(members ?? []).map((m, i) => {
-            const u = m.user as unknown as { id: string; name: string; username: string; avatarUrl: string | null };
-            return (
-              <div key={i} className="flex items-center gap-3 rounded-xl border border-white/10 bg-space-card p-3">
-                <Avatar name={u.name} url={u.avatarUrl} size={36} />
-                <div className="flex-1">
-                  <p className="text-sm text-white">{u.name}</p>
-                  <p className="text-xs text-white/40">@{u.username}</p>
-                </div>
-                {m.role !== "member" && (
-                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase text-white/50">
-                    {m.role}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-
-  if (current) {
-    const { profile } = current;
-    const accent = appAccentVars(profile.profileColor);
-    return (
-      <div className="min-h-screen bg-space-bg bg-stars" style={accent as React.CSSProperties | undefined}>
-        <AppAccentSync vars={accent} />
-        <AppSidebar username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} />
-        <main className="min-h-screen pb-20 md:ml-64 md:pb-0">{content}</main>
-        <MobileTabBar username={profile.username} />
-      </div>
-    );
+  if (canSee) {
+    const head = (kind: string) =>
+      supabase.from("Post").select("id", { count: "exact", head: true }).eq("communityId", community.id).eq("kind", kind).eq("moderationStatus", "visible");
+    const [p, l, d, a, m, cPhotos, cVideos, cClips, cDisc, f] = await Promise.all([
+      loadCommunityPosts(supabase, community.id, me, { pinned: true, limit: 3 }),
+      loadCommunityPosts(supabase, community.id, me, { pinned: false, excludeKinds: ["clip"], limit: 15 }),
+      supabase
+        .from("CommunityDiscussion")
+        .select(DISCUSSION_COLUMNS)
+        .eq("communityId", community.id)
+        .eq("status", "visible")
+        .order("isPinned", { ascending: false })
+        .order("lastActivityAt", { ascending: false })
+        .limit(20),
+      supabase.from("CommunityAlbum").select("id, title, description, coverUrl, createdAt").eq("communityId", community.id).order("createdAt", { ascending: false }),
+      supabase
+        .from("CommunityMember")
+        .select("role, createdAt, user:User!CommunityMember_userId_fkey(id, name, username, avatarUrl, isVerified)")
+        .eq("communityId", community.id)
+        .order("createdAt", { ascending: true })
+        .limit(60),
+      // Photos tab counts pictures, not posts (one post can carry several).
+      supabase
+        .from("Media")
+        .select("id, post:Post!Media_postId_fkey!inner(communityId, moderationStatus)", { count: "exact", head: true })
+        .eq("type", "image")
+        .eq("post.communityId", community.id)
+        .eq("post.moderationStatus", "visible"),
+      head("video"),
+      head("clip"),
+      supabase.from("CommunityDiscussion").select("id", { count: "exact", head: true }).eq("communityId", community.id).eq("status", "visible"),
+      searchParams.post && /^[0-9a-f-]{36}$/.test(searchParams.post)
+        ? loadCommunityPosts(supabase, community.id, me, { ids: [searchParams.post], limit: 1 })
+        : Promise.resolve([] as Posts),
+    ]);
+    pinned = p;
+    posts = l;
+    focus = f;
+    discussions = (d.data ?? []) as unknown as Discussion[];
+    albums = (a.data ?? []) as Album[];
+    members = ((m.data ?? []) as unknown as MemberPreview[]).filter((x) => x.user);
+    counts = { photos: cPhotos.count ?? 0, videos: cVideos.count ?? 0, clips: cClips.count ?? 0, discussions: cDisc.count ?? 0 };
   }
 
+  let staffBadges = { pending: 0, requests: 0, reports: 0 };
+  if (membership.role && membership.role !== "member") {
+    const [pp, rq, rp] = await Promise.all([
+      supabase.from("Post").select("id", { count: "exact", head: true }).eq("communityId", community.id).eq("moderationStatus", "pending"),
+      supabase.from("CommunityJoinRequest").select("userId", { count: "exact", head: true }).eq("communityId", community.id).eq("status", "pending"),
+      supabase.from("Report").select("id", { count: "exact", head: true }).eq("communityId", community.id).eq("status", "open"),
+    ]);
+    staffBadges = { pending: pp.count ?? 0, requests: rq.count ?? 0, reports: rp.count ?? 0 };
+  }
+
+  const viewer = current ? { id: current.authId, name: current.profile.name, username: current.profile.username, avatarUrl: current.profile.avatarUrl } : null;
+
   return (
-    <div className="relative min-h-screen overflow-hidden bg-space-bg bg-stars">
-      <div className="pointer-events-none absolute inset-0 bg-orbit-radial" />
-      <PublicHeader authed={false} />
-      {content}
-    </div>
+    <CommunityShell current={current}>
+      <CommunityView
+        community={community}
+        viewer={viewer}
+        membership={membership}
+        canSee={canSee}
+        initialTab={searchParams.aba ?? "inicio"}
+        pinned={pinned}
+        posts={posts}
+        focus={focus[0] ?? null}
+        discussions={discussions}
+        albums={albums}
+        members={members}
+        counts={counts}
+        staffBadges={staffBadges}
+      />
+    </CommunityShell>
   );
 }

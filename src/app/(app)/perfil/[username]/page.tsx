@@ -47,7 +47,7 @@ export default async function ProfilePage({ params }: { params: { username: stri
   ] = await Promise.all([
     supabase.from("Follow").select("followerId").eq("followingId", user.id),
     supabase.from("Follow").select("followingId").eq("followerId", user.id),
-    supabase.from("Post").select("id", { count: "exact", head: true }).eq("authorId", user.id),
+    supabase.from("Post").select("id", { count: "exact", head: true }).eq("authorId", user.id).is("communityId", null),
     supabase
       .from("CommunityMember")
       .select("role, community:Community(id, name, slug, avatarUrl)")
@@ -106,6 +106,7 @@ export default async function ProfilePage({ params }: { params: { username: stri
     .from("Post")
     .select(postSelect)
     .eq("authorId", user.id)
+    .is("communityId", null)
     .order("createdAt", { ascending: false })
     .limit(20);
 

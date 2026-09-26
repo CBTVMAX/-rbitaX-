@@ -8,9 +8,10 @@ import { PublicHeader } from "@/components/public-header";
 import { CreateCommunityDialog } from "@/components/create-community-dialog";
 import { CommunityJoinButton } from "@/components/community-join-button";
 import { COMMUNITY_CATEGORIES, categoryLabel } from "@/lib/community-categories";
-import { Search, Users, Plus, Star } from "lucide-react";
+import { Search, Users, Plus, Star, Lock } from "lucide-react";
 import { clsx } from "clsx";
 import { VerifiedBadge } from "@/components/verified-badge";
+import { OfficialBadge } from "@/components/community/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,9 @@ type CommunityRow = {
   category: string | null;
   avatarUrl: string | null;
   coverUrl: string | null;
+  isPrivate: boolean;
+  isOfficial: boolean;
+  memberCount: number;
 };
 
 export default async function ComunidadesPage({
@@ -43,19 +47,24 @@ export default async function ComunidadesPage({
 
   let listQuery = supabase
     .from("Community")
-    .select("id, name, slug, description, category, avatarUrl, coverUrl")
+    .select("id, name, slug, description, category, avatarUrl, coverUrl, isPrivate, isOfficial, memberCount")
     .order("createdAt", { ascending: false });
   if (q) listQuery = listQuery.ilike("name", `%${q}%`);
   if (categoria) listQuery = listQuery.eq("category", categoria);
 
-  const [{ data: allCommunities }, { data: filtered }, { data: members }] = await Promise.all([
-    supabase.from("Community").select("id, name, slug, description, category, avatarUrl, coverUrl"),
+  const [{ data: allCommunities }, { data: filtered }, { data: members }, { data: myRequests }] = await Promise.all([
+    supabase.from("Community").select("id, name, slug, description, category, avatarUrl, coverUrl, isPrivate, isOfficial, memberCount"),
     listQuery,
-    supabase.from("CommunityMember").select("communityId, userId, role"),
+    current ? supabase.from("CommunityMember").select("communityId, userId, role").eq("userId", current.authId) : Promise.resolve({ data: [] as { communityId: string; userId: string; role: string }[] }),
+    current
+      ? supabase.from("CommunityJoinRequest").select("communityId").eq("userId", current.authId).eq("status", "pending")
+      : Promise.resolve({ data: [] as { communityId: string }[] }),
   ]);
 
+  // memberCount is kept by the database (private communities hide their member rows from outsiders).
   const countByCommunity = new Map<string, number>();
-  (members ?? []).forEach((m) => countByCommunity.set(m.communityId, (countByCommunity.get(m.communityId) ?? 0) + 1));
+  (allCommunities ?? []).forEach((c) => countByCommunity.set(c.id, c.memberCount ?? 0));
+  const pendingIds = new Set((myRequests ?? []).map((r) => r.communityId));
 
   const myMemberships = current ? (members ?? []).filter((m) => m.userId === current.authId) : [];
   const myCommunityIds = new Set(myMemberships.map((m) => m.communityId));
@@ -157,6 +166,7 @@ export default async function ComunidadesPage({
                       memberCount={countByCommunity.get(c.id) ?? 0}
                       current={current}
                       isMember={myCommunityIds.has(c.id)}
+                      pending={pendingIds.has(c.id)}
                     />
                   ))}
                 </div>
@@ -216,6 +226,7 @@ export default async function ComunidadesPage({
                     memberCount={countByCommunity.get(c.id) ?? 0}
                     current={current}
                     isMember={myCommunityIds.has(c.id)}
+                    pending={pendingIds.has(c.id)}
                   />
                 ))}
               </div>
@@ -462,11 +473,13 @@ function CommunityCard({
   memberCount,
   current,
   isMember,
+  pending = false,
 }: {
   community: CommunityRow;
   memberCount: number;
   current: { authId: string } | null;
   isMember: boolean;
+  pending?: boolean;
 }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-space-card p-4">
@@ -483,14 +496,22 @@ function CommunityCard({
             {categoryLabel(community.category)}
           </span>
         )}
-        <h3 className="truncate text-sm font-semibold text-white hover:underline">{community.name}</h3>
+        <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white">
+          <span className="truncate hover:underline">{community.name}</span>
+          {community.isOfficial && <OfficialBadge />}
+        </h3>
         <p className="flex items-center gap-1 text-xs text-white/40">
-          <Users className="h-3 w-3" /> {memberCount} membros
+          <Users className="h-3 w-3" /> {memberCount} {memberCount === 1 ? "membro" : "membros"}
+          {community.isPrivate && (
+            <>
+              <span aria-hidden>·</span> <Lock className="h-3 w-3" /> Privada
+            </>
+          )}
         </p>
       </Link>
       {community.description && <p className="mb-3 line-clamp-2 text-xs text-white/60">{community.description}</p>}
       {current ? (
-        <CommunityJoinButton communityId={community.id} userId={current.authId} initiallyMember={isMember} />
+        <CommunityJoinButton communityId={community.id} userId={current.authId} initiallyMember={isMember} isPrivate={community.isPrivate} request={pending ? "pending" : null} />
       ) : (
         <Link
           href="/entrar"

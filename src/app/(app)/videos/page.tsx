@@ -17,6 +17,7 @@ export default async function VideosPage() {
       "id, content, createdAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url)"
     )
     .eq("kind", "video")
+    .is("communityId", null)
     .order("createdAt", { ascending: false })
     .limit(30);
 

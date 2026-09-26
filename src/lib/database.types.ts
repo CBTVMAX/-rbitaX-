@@ -18,15 +18,15 @@ type BookmarkRow = { createdAt: string; id: string; postId: string; userId: stri
 type BookmarkInsert = { createdAt?: string; id: string; postId: string; userId: string };
 type BookmarkUpdate = Partial<BookmarkInsert>;
 
-type CommentRow = { content: string; createdAt: string; id: string; postId: string; updatedAt: string; userId: string };
+type CommentRow = { content: string; createdAt: string; id: string; postId: string; updatedAt: string; userId: string; status: string };
 type CommentInsert = { content: string; createdAt?: string; id: string; postId: string; updatedAt: string; userId: string };
 type CommentUpdate = Partial<CommentInsert>;
 
-type CommunityRow = { avatarUrl: string | null; category: string | null; coverUrl: string | null; createdAt: string; description: string | null; id: string; isPrivate: boolean; name: string; slug: string };
+type CommunityRow = { avatarUrl: string | null; category: string | null; coverUrl: string | null; createdAt: string; description: string | null; id: string; isPrivate: boolean; name: string; slug: string; username: string; isOfficial: boolean; accentColor: string | null; rules: string | null; links: Json; permissions: Json; moderation: Json; notifyPrefs: Json; memberCount: number; createdById: string | null; updatedAt: string };
 type CommunityInsert = { avatarUrl?: string | null; category?: string | null; coverUrl?: string | null; createdAt?: string; description?: string | null; id: string; isPrivate?: boolean; name: string; slug: string };
 type CommunityUpdate = Partial<CommunityInsert>;
 
-type CommunityMemberRow = { communityId: string; createdAt: string; id: string; role: string; userId: string };
+type CommunityMemberRow = { communityId: string; createdAt: string; id: string; role: string; userId: string; notify: boolean };
 type CommunityMemberInsert = { communityId: string; createdAt?: string; id: string; role?: string; userId: string };
 type CommunityMemberUpdate = Partial<CommunityMemberInsert>;
 
@@ -69,6 +69,13 @@ type CoinTransactionRow = { id: string; userId: string; amount: number; balanceA
 type StoreProductRow = { id: string; kind: string; refId: string; name: string; description: string; image: string; priceCoins: number; tier: string; isAdult: boolean; badge: string | null; sortOrder: number; active: boolean; meta: Json; createdAt: string };
 type UserInventoryRow = { userId: string; productId: string; source: string; isFavorite: boolean; acquiredAt: string };
 type VirtualGiftRow = { id: string; productId: string; senderId: string; recipientId: string; conversationId: string | null; messageId: string | null; priceCoins: number; note: string | null; createdAt: string };
+type CommunityAlbumRow = { id: string; communityId: string; title: string; description: string; coverUrl: string | null; createdById: string | null; createdAt: string };
+type PostPollVoteRow = { postId: string; userId: string; optionIndex: number; createdAt: string };
+type CommunityDiscussionRow = { id: string; communityId: string; authorId: string; title: string; body: string; imageUrl: string | null; isPinned: boolean; isClosed: boolean; status: string; replyCount: number; createdAt: string; updatedAt: string; lastActivityAt: string };
+type CommunityDiscussionReplyRow = { id: string; discussionId: string; userId: string; content: string; status: string; createdAt: string };
+type CommunityJoinRequestRow = { communityId: string; userId: string; message: string; status: string; createdAt: string; decidedAt: string | null; decidedById: string | null };
+type CommunityMemberEventRow = { id: number; communityId: string; userId: string | null; kind: string; createdAt: string };
+type CommunityBanRow = { communityId: string; userId: string; reason: string; bannedById: string | null; createdAt: string };
 type UserStickerPackRow = { userId: string; packId: string; acquiredAt: string; installed: boolean; source: string; updatedAt: string };
 type ReadOnly<R> = { Row: R; Insert: never; Update: never; Relationships: [] };
 type MessageUpdate = Partial<MessageInsert>;
@@ -77,7 +84,7 @@ type MomentRow = { createdAt: string; expiresAt: string; id: string; mediaUrl: s
 type MomentInsert = { createdAt?: string; expiresAt: string; id: string; mediaUrl: string; text?: string | null; type?: string; userId: string };
 type MomentUpdate = Partial<MomentInsert>;
 
-type NotificationRow = { actorId: string | null; commentId: string | null; createdAt: string; href: string | null; id: string; isRead: boolean; message: string; postId: string | null; title: string; type: string; userId: string };
+type NotificationRow = { actorId: string | null; commentId: string | null; createdAt: string; href: string | null; id: string; isRead: boolean; message: string; postId: string | null; title: string; type: string; userId: string; dedupeKey: string | null };
 type NotificationInsert = { actorId?: string | null; commentId?: string | null; createdAt?: string; href?: string | null; id: string; isRead?: boolean; message: string; postId?: string | null; title: string; type: string; userId: string };
 type NotificationUpdate = Partial<NotificationInsert>;
 
@@ -85,7 +92,7 @@ type PaymentRow = { amount: number; createdAt: string; externalId: string | null
 type PaymentInsert = { amount: number; createdAt?: string; externalId?: string | null; id: string; status?: string; type: string; updatedAt: string; userId: string };
 type PaymentUpdate = Partial<PaymentInsert>;
 
-type PostRow = { authorId: string; commentsEnabled: boolean; content: string; createdAt: string; editedAt: string | null; id: string; isArchived: boolean; isPinned: boolean; kind: string; linkUrl: string | null; location: string | null; moderationStatus: string; sharedPostId: string | null; updatedAt: string; viewCount: number; visibility: string };
+type PostRow = { authorId: string; commentsEnabled: boolean; content: string; createdAt: string; editedAt: string | null; id: string; isArchived: boolean; isPinned: boolean; kind: string; linkUrl: string | null; location: string | null; moderationStatus: string; sharedPostId: string | null; updatedAt: string; viewCount: number; visibility: string; communityId: string | null; albumId: string | null; meta: Json };
 type PostInsert = { authorId: string; commentsEnabled?: boolean; content: string; createdAt?: string; editedAt?: string | null; id: string; isArchived?: boolean; isPinned?: boolean; kind?: string; linkUrl?: string | null; location?: string | null; moderationStatus?: string; sharedPostId?: string | null; updatedAt: string; viewCount?: number; visibility?: string };
 type PostUpdate = Partial<PostInsert>;
 
@@ -97,7 +104,7 @@ type ProfileRow = { birthDate: string | null; createdAt: string; gender: string 
 type ProfileInsert = { birthDate?: string | null; createdAt?: string; gender?: string | null; id: string; interests?: string | null; links?: string | null; location?: string | null; occupation?: string | null; showAge?: boolean; relationshipStatus?: string | null; showInterests?: boolean; showRelationship?: boolean; showLocation?: boolean; showSign?: boolean; updatedAt?: string; userId: string; website?: string | null; zodiacSign?: string | null };
 type ProfileUpdate = Partial<ProfileInsert>;
 
-type ReportRow = { createdAt: string; details: string | null; id: string; reason: string; reporterId: string; resolvedAt: string | null; resolvedById: string | null; status: string; targetId: string; targetType: string };
+type ReportRow = { createdAt: string; details: string | null; id: string; reason: string; reporterId: string; resolvedAt: string | null; resolvedById: string | null; status: string; targetId: string; targetType: string; communityId: string | null };
 type ReportInsert = { createdAt?: string; details?: string | null; id: string; reason: string; reporterId: string; resolvedAt?: string | null; resolvedById?: string | null; status?: string; targetId: string; targetType: string };
 type ReportUpdate = Partial<ReportInsert>;
 
@@ -181,6 +188,24 @@ export type Database = {
       StickerCategory: ReadOnly<StickerCategoryRow>;
       StickerPackFavorite: ReadOnly<StickerPackFavoriteRow>;
       StickerRecent: ReadOnly<StickerRecentRow>;
+      CommunityAlbum: ReadOnly<CommunityAlbumRow>;
+      PostPollVote: ReadOnly<PostPollVoteRow>;
+      CommunityDiscussion: { Row: CommunityDiscussionRow; Insert: never; Update: never; Relationships: [
+        { foreignKeyName: "CommunityDiscussion_authorId_fkey"; columns: ["authorId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
+      ] };
+      CommunityDiscussionReply: { Row: CommunityDiscussionReplyRow; Insert: never; Update: never; Relationships: [
+        { foreignKeyName: "CommunityDiscussionReply_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
+        { foreignKeyName: "CommunityDiscussionReply_discussionId_fkey"; columns: ["discussionId"]; isOneToOne: false; referencedRelation: "CommunityDiscussion"; referencedColumns: ["id"] }
+      ] };
+      CommunityJoinRequest: { Row: CommunityJoinRequestRow; Insert: never; Update: never; Relationships: [
+        { foreignKeyName: "CommunityJoinRequest_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
+      ] };
+      CommunityBan: { Row: CommunityBanRow; Insert: never; Update: never; Relationships: [
+        { foreignKeyName: "CommunityBan_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
+      ] };
+      CommunityMemberEvent: { Row: CommunityMemberEventRow; Insert: never; Update: never; Relationships: [
+        { foreignKeyName: "CommunityMemberEvent_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
+      ] };
       CoinWallet: ReadOnly<CoinWalletRow>;
       CoinTransaction: ReadOnly<CoinTransactionRow>;
       StoreProduct: ReadOnly<StoreProductRow>;
@@ -357,6 +382,29 @@ export type Database = {
       admin_save_sticker: { Args: { p: Json }; Returns: string };
       admin_delete_sticker: { Args: { p_sticker: string }; Returns: string };
       admin_delete_pack: { Args: { p_pack: string }; Returns: string };
+      community_join: { Args: { p_community: string; p_message?: string }; Returns: string };
+      community_cancel_request: { Args: { p_community: string }; Returns: undefined };
+      community_leave: { Args: { p_community: string }; Returns: undefined };
+      community_decide_request: { Args: { p_community: string; p_user: string; p_approve: boolean }; Returns: undefined };
+      community_set_role: { Args: { p_community: string; p_user: string; p_role: string }; Returns: undefined };
+      community_remove_member: { Args: { p_community: string; p_user: string; p_ban?: boolean; p_reason?: string }; Returns: undefined };
+      community_unban: { Args: { p_community: string; p_user: string }; Returns: undefined };
+      community_set_notify: { Args: { p_community: string; p_on: boolean }; Returns: undefined };
+      community_update: { Args: { p_community: string; p: Json }; Returns: string };
+      community_create_post: { Args: { p_community: string; p: Json }; Returns: Json };
+      community_edit_post: { Args: { p_post: string; p_content: string; p_link?: string | null }; Returns: undefined };
+      community_post_action: { Args: { p_post: string; p_action: string }; Returns: undefined };
+      community_comment_action: { Args: { p_comment: string; p_action: string }; Returns: undefined };
+      community_vote_poll: { Args: { p_post: string; p_options: number[] }; Returns: undefined };
+      community_view: { Args: { p_post: string }; Returns: undefined };
+      community_create_discussion: { Args: { p_community: string; p_title: string; p_body: string; p_image?: string | null }; Returns: Json };
+      community_reply_discussion: { Args: { p_discussion: string; p_content: string }; Returns: Json };
+      community_discussion_action: { Args: { p_discussion: string; p_action: string }; Returns: undefined };
+      community_reply_action: { Args: { p_reply: string; p_action: string }; Returns: undefined };
+      community_save_album: { Args: { p_community: string; p_id: string | null; p_title: string; p_description?: string; p_cover?: string | null }; Returns: string };
+      community_delete_album: { Args: { p_album: string }; Returns: undefined };
+      community_resolve_report: { Args: { p_report: string; p_status: string }; Returns: undefined };
+      community_stats: { Args: { p_community: string; p_days?: number }; Returns: Json };
       admin_sticker_stats: {
         Args: Record<string, never>;
         Returns: { packId: string; sales: number; revenue: number; installs: number; favorites: number; stickerFavorites: number; sends: number; senders: number }[];
