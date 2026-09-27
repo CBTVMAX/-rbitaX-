@@ -52,12 +52,15 @@ export default async function ComunidadesPage({
   if (q) listQuery = listQuery.ilike("name", `%${q}%`);
   if (categoria) listQuery = listQuery.eq("category", categoria);
 
-  const [{ data: allCommunities }, { data: filtered }, { data: members }, { data: myRequests }] = await Promise.all([
+  const [{ data: allCommunities }, { data: filtered }, { data: members }, { data: myRequests }, { data: favoriteRows }] = await Promise.all([
     supabase.from("Community").select("id, name, slug, description, category, avatarUrl, coverUrl, isPrivate, isOfficial, memberCount"),
     listQuery,
     current ? supabase.from("CommunityMember").select("communityId, userId, role").eq("userId", current.authId) : Promise.resolve({ data: [] as { communityId: string; userId: string; role: string }[] }),
     current
       ? supabase.from("CommunityJoinRequest").select("communityId").eq("userId", current.authId).eq("status", "pending")
+      : Promise.resolve({ data: [] as { communityId: string }[] }),
+    current
+      ? supabase.from("CommunityFavorite").select("communityId").eq("userId", current.authId).order("createdAt", { ascending: false })
       : Promise.resolve({ data: [] as { communityId: string }[] }),
   ]);
 
@@ -84,6 +87,9 @@ export default async function ComunidadesPage({
   });
 
   const showDiscoveryExtras = view === "descobrir" && !q && !categoria;
+  const favoriteIds = (favoriteRows ?? []).map((f) => f.communityId);
+  const favorites = favoriteIds.map((id) => (allCommunities ?? []).find((c) => c.id === id)).filter((c): c is NonNullable<typeof c> => !!c);
+  if (view === "minhas" && favoriteIds.length) list = [...list].sort((a, b) => Number(favoriteIds.includes(b.id)) - Number(favoriteIds.includes(a.id)));
 
   const filterLink = (v: ViewFilter, label: string, locked: boolean) => {
     const href = `/comunidades?view=${v}`;
@@ -187,6 +193,27 @@ export default async function ComunidadesPage({
                     <Icon className="h-5 w-5 text-orbit-cyan" />
                     <span className="text-[11px] text-white/70">{label}</span>
                     <span className="text-[10px] text-white/30">{categoryCounts.get(slug) ?? 0}</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {favorites.length > 0 && (showDiscoveryExtras || view === "minhas") && (
+            <section>
+              <h2 className="mb-3 text-sm font-semibold text-white/80">⭐ Favoritas</h2>
+              <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:px-0">
+                {favorites.map((c) => (
+                  <Link key={c.id} href={`/comunidades/${c.slug}`} className="flex min-h-[56px] shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-space-card/80 py-2 pl-2 pr-4 transition hover:border-orbit-purple/40">
+                    <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-orbit-gradient text-sm font-bold text-snow">
+                      {c.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={c.avatarUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        c.name.slice(0, 1).toUpperCase()
+                      )}
+                    </span>
+                    <span className="max-w-[160px] truncate text-sm font-semibold text-white">{c.name}</span>
                   </Link>
                 ))}
               </div>

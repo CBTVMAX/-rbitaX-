@@ -4,13 +4,13 @@ import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { ArrowLeft, CheckCircle2, Flag, Loader2, Lock, LockOpen, MessagesSquare, MoreHorizontal, Pin, PinOff, RotateCcw, Send, Share2, ShieldX, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Flag, Heart, Loader2, Lock, LockOpen, MessagesSquare, MoreHorizontal, Pencil, Pin, PinOff, RotateCcw, Send, Share2, ShieldX, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/post-card";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { useStoreToast } from "@/components/store/store-view";
 import { ago as timeAgo } from "@/lib/communities";
-import { accentOf, can, communityError, rank, type Author, type Community, type Discussion, type Role, type Viewer } from "@/lib/communities";
+import { accentOf, can, categoryOf, communityError, DISCUSSION_CATEGORIES, isEditorOrAdmin, rank, type Author, type Community, type Discussion, type DiscussionCategory, type Role, type Viewer } from "@/lib/communities";
 import { CommunityContext, type CommunityCtx } from "./context";
 import { Confirm, OfficialBadge, RoleBadge, Sheet } from "./ui";
 import { RichText } from "./rich-text";
@@ -21,7 +21,7 @@ export type Reply = { id: string; content: string; status: string; createdAt: st
 
 type TopicAction = "pin" | "unpin" | "close" | "open" | "approve" | "remove" | "restore" | "delete";
 
-export function DiscussionView(props: { community: Community; viewer: Viewer; role: Role | null; discussion: Discussion; replies: Reply[] }) {
+export function DiscussionView(props: { community: Community; viewer: Viewer; role: Role | null; discussion: Discussion; replies: Reply[]; liked?: boolean; muted?: boolean }) {
   const { community, viewer, role } = props;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -35,14 +35,16 @@ export function DiscussionView(props: { community: Community; viewer: Viewer; ro
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState<ReportTarget | null>(null);
   const [image, setImage] = useState(false);
+  const [liked, setLiked] = useState(!!props.liked);
+  const [edit, setEdit] = useState<{ title: string; body: string; category: DiscussionCategory } | null>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const accent = accentOf(community.accentColor);
 
   const me = viewer?.id ?? null;
   const isAuthor = !!me && d.author.id === me;
   const mod = rank(role) >= 2;
-  const admin = rank(role) >= 3;
-  const canReply = !!viewer && can(community, role, "comment") && (!d.isClosed || mod) && d.status === "visible";
+  const admin = isEditorOrAdmin(role);
+  const canReply = !!viewer && !props.muted && can(community, role, "comment") && (!d.isClosed || mod) && d.status === "visible";
   const base = `/comunidades/${community.slug}`;
 
   const ctx: CommunityCtx = useMemo(() => ({ community, viewer, role, supabase, toast, refresh: () => router.refresh() }), [community, viewer, role, supabase, toast, router]);
@@ -55,7 +57,7 @@ export function DiscussionView(props: { community: Community; viewer: Viewer; ro
     if (error) return toast(communityError(error.message), true);
     if (a === "delete") {
       toast("Discussão excluída.");
-      router.push(`${base}?aba=discussoes`);
+      router.push(`${base}/discussoes`);
       return;
     }
     const next: Partial<Discussion> =
@@ -99,6 +101,33 @@ export function DiscussionView(props: { community: Community; viewer: Viewer; ro
     }
   }
 
+  async function like() {
+    if (!viewer) return toast("Entre na sua conta para curtir.", true);
+    const next = !liked;
+    setLiked(next);
+    setD((x) => ({ ...x, likeCount: Math.max(0, x.likeCount + (next ? 1 : -1)) }));
+    const { data, error } = await supabase.rpc("community_discussion_like", { p_discussion: d.id });
+    if (error) {
+      setLiked(!next);
+      setD((x) => ({ ...x, likeCount: Math.max(0, x.likeCount + (next ? -1 : 1)) }));
+      return toast(communityError(error.message), true);
+    }
+    const r = data as { liked: boolean; count: number };
+    setLiked(r.liked);
+    setD((x) => ({ ...x, likeCount: r.count }));
+  }
+
+  async function saveEdit() {
+    if (!edit) return;
+    setBusy(true);
+    const { error } = await supabase.rpc("community_edit_discussion", { p_discussion: d.id, p_title: edit.title.trim(), p_body: edit.body.trim(), p_category: edit.category });
+    setBusy(false);
+    if (error) return toast(communityError(error.message), true);
+    setD((x) => ({ ...x, title: edit.title.trim(), body: edit.body.trim(), category: edit.category }));
+    setEdit(null);
+    toast("Discussão atualizada.");
+  }
+
   function share() {
     const url = window.location.href.split("?")[0];
     if (navigator.share) navigator.share({ title: d.title, url }).catch(() => {});
@@ -106,6 +135,7 @@ export function DiscussionView(props: { community: Community; viewer: Viewer; ro
   }
 
   const menuItems: { label: string; icon: React.ComponentType<{ className?: string }>; run: () => void; danger?: boolean; show: boolean }[] = [
+    { label: "Editar discussão", icon: Pencil, run: () => (setMenu(false), setEdit({ title: d.title, body: d.body, category: d.category ?? "geral" })), show: isAuthor || admin },
     { label: d.isPinned ? "Desafixar discussão" : "Fixar no topo", icon: d.isPinned ? PinOff : Pin, run: () => topic(d.isPinned ? "unpin" : "pin"), show: admin && d.status === "visible" },
     { label: d.isClosed ? "Reabrir para respostas" : "Fechar discussão", icon: d.isClosed ? LockOpen : Lock, run: () => topic(d.isClosed ? "open" : "close"), show: mod || isAuthor },
     { label: "Aprovar discussão", icon: CheckCircle2, run: () => topic("approve"), show: mod && d.status === "pending" },
@@ -119,7 +149,7 @@ export function DiscussionView(props: { community: Community; viewer: Viewer; ro
   return (
     <CommunityContext.Provider value={ctx}>
       <div style={{ ["--app-accent" as string]: accent.rgb }} className="mx-auto max-w-3xl px-4 pb-40 pt-4 md:px-6 md:pb-12 md:pt-6">
-        <Link href={`${base}?aba=discussoes`} className="inline-flex min-h-[44px] items-center gap-2 rounded-full pr-3 text-sm text-white/65 hover:text-white">
+        <Link href={`${base}/discussoes`} className="inline-flex min-h-[44px] items-center gap-2 rounded-full pr-3 text-sm text-white/65 hover:text-white">
           <ArrowLeft className="h-4 w-4" />
           <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-space-card text-xs font-bold text-white">
             {community.avatarUrl ? (
@@ -136,9 +166,12 @@ export function DiscussionView(props: { community: Community; viewer: Viewer; ro
         <article className="mt-3 overflow-hidden rounded-3xl border border-white/[0.08] bg-space-card/80">
           <div className="p-4 md:p-6">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 rounded-full bg-orbit-purple/15 px-2.5 py-1 text-[11px] font-semibold text-orbit-purple">
-                <MessagesSquare className="h-3.5 w-3.5" /> Discussão
-              </span>
+              <Link
+                href={`${base}/discussoes?categoria=${d.category ?? "geral"}`}
+                className="inline-flex items-center gap-1 rounded-full bg-orbit-purple/15 px-2.5 py-1 text-[11px] font-semibold text-orbit-purple hover:bg-orbit-purple/25"
+              >
+                {categoryOf(d.category).emoji} {categoryOf(d.category).label}
+              </Link>
               {d.isPinned && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-orbit-cyan/15 px-2.5 py-1 text-[11px] font-semibold text-orbit-cyan">
                   <Pin className="h-3.5 w-3.5" /> Fixada
@@ -178,6 +211,15 @@ export function DiscussionView(props: { community: Community; viewer: Viewer; ro
             )}
           </div>
           <div className="flex items-center gap-2 border-t border-white/[0.06] px-4 py-3 text-sm text-white/60 md:px-6">
+            <button
+              type="button"
+              onClick={like}
+              aria-pressed={liked}
+              disabled={d.status !== "visible"}
+              className={clsx("flex min-h-[40px] items-center gap-1.5 rounded-full px-3 transition hover:bg-white/5", liked ? "text-orbit-pink" : "text-white/70")}
+            >
+              <Heart className={clsx("h-4 w-4", liked && "fill-orbit-pink")} /> {d.likeCount}
+            </button>
             <MessagesSquare className="h-4 w-4 text-orbit-cyan" />
             <span>
               <strong className="font-semibold text-white">{d.replyCount}</strong> {d.replyCount === 1 ? "resposta" : "respostas"}
@@ -327,6 +369,46 @@ export function DiscussionView(props: { community: Community; viewer: Viewer; ro
         onClose={() => setConfirm(null)}
         onConfirm={() => (confirm?.kind === "topic" ? (setConfirm(null), topic("delete")) : confirm && replyAction(confirm.reply, "delete"))}
       />
+      <Sheet open={!!edit} onClose={() => !busy && setEdit(null)} title="Editar discussão" wide>
+        {edit && (
+          <div className="space-y-3 pt-1">
+            <input
+              value={edit.title}
+              onChange={(e) => setEdit({ ...edit, title: e.target.value })}
+              maxLength={140}
+              className="w-full rounded-2xl border border-white/10 bg-space-bg/60 px-4 py-3 text-sm font-semibold text-white outline-none focus:border-orbit-purple/60"
+            />
+            <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 [scrollbar-width:none]">
+              {DISCUSSION_CATEGORIES.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setEdit({ ...edit, category: c.id })}
+                  aria-pressed={edit.category === c.id}
+                  className={clsx("shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold", edit.category === c.id ? "bg-orbit-gradient text-snow" : "border border-white/10 text-white/65")}
+                >
+                  {c.emoji} {c.label}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={edit.body}
+              onChange={(e) => setEdit({ ...edit, body: e.target.value })}
+              maxLength={5000}
+              rows={6}
+              className="w-full resize-y rounded-2xl border border-white/10 bg-space-bg/60 px-4 py-3 text-sm text-white outline-none focus:border-orbit-purple/60"
+            />
+            <button
+              type="button"
+              onClick={saveEdit}
+              disabled={busy || edit.title.trim().length < 3}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-orbit-gradient text-sm font-semibold text-snow disabled:opacity-50"
+            >
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />} Salvar alterações
+            </button>
+          </div>
+        )}
+      </Sheet>
       <ReportSheet target={report} onClose={() => setReport(null)} />
       {image && d.imageUrl && <Lightbox images={[{ id: d.id, url: d.imageUrl }]} start={0} onClose={() => setImage(false)} />}
       {node}

@@ -19,6 +19,8 @@ import {
   Music2,
   Pencil,
   Pin,
+  Repeat2,
+  Reply,
   PinOff,
   RotateCcw,
   Send,
@@ -29,14 +31,83 @@ import {
 import { Avatar } from "@/components/post-card";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { ago as timeAgo } from "@/lib/communities";
-import { can, communityError, compactNumber, rank, TAG_LABEL, type CommunityPost } from "@/lib/communities";
+import { can, communityError, compactNumber, isEditorOrAdmin, rank, reactionOf, REACTIONS, TAG_LABEL, type CommunityPost, type ReactionKey } from "@/lib/communities";
 import { useCommunity } from "./context";
 import { Confirm, Sheet } from "./ui";
 import { RichText } from "./rich-text";
 import { Lightbox } from "./lightbox";
 import { ReportSheet, type ReportTarget } from "./report-sheet";
 
-type CommentRow = { id: string; content: string; createdAt: string; status: string; userId: string; user: { name: string; username: string; avatarUrl: string | null } };
+type CommentRow = { id: string; content: string; createdAt: string; status: string; userId: string; parentId: string | null; user: { name: string; username: string; avatarUrl: string | null } };
+const COMMENT_COLUMNS = "id, content, createdAt, status, userId, parentId, user:User!Comment_userId_fkey(name, username, avatarUrl)";
+type Reactor = { reaction: ReactionKey; user: { id: string; name: string; username: string; avatarUrl: string | null } };
+
+/** Tap = ❤️ (or remove); press and hold / hover = pick one of the 7 reactions. */
+function ReactionButton({ mine, count, top, onPick, onShowList }: { mine: ReactionKey | null; count: number; top: ReactionKey[]; onPick: (r: ReactionKey | null) => void; onShowList: () => void }) {
+  const [open, setOpen] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const long = useRef(false);
+  const clear = () => timer.current && clearTimeout(timer.current);
+  const current = mine ? reactionOf(mine) : null;
+  return (
+    <span className="relative flex items-center" onMouseLeave={() => (clear(), setOpen(false))}>
+      {open && (
+        <span role="menu" className="animate-pop-in absolute bottom-full left-0 z-20 mb-2 flex gap-0.5 rounded-full border border-white/10 bg-space-surface/95 p-1 shadow-[0_12px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+          {REACTIONS.map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              role="menuitem"
+              aria-label={r.label}
+              title={r.label}
+              onClick={() => (setOpen(false), onPick(mine === r.key ? null : r.key))}
+              className={clsx("flex h-10 w-10 items-center justify-center rounded-full text-[22px] transition hover:-translate-y-1 hover:scale-125", mine === r.key && "bg-white/15")}
+            >
+              {r.emoji}
+            </button>
+          ))}
+        </span>
+      )}
+      <button
+        type="button"
+        aria-pressed={!!mine}
+        aria-label={mine ? `Sua reação: ${current?.label}. Toque para remover` : "Curtir (segure para mais reações)"}
+        onMouseEnter={() => {
+          clear();
+          timer.current = setTimeout(() => setOpen(true), 450);
+        }}
+        onTouchStart={() => {
+          long.current = false;
+          clear();
+          timer.current = setTimeout(() => ((long.current = true), setOpen(true)), 420);
+        }}
+        onTouchEnd={(e) => {
+          clear();
+          if (long.current) e.preventDefault();
+        }}
+        onContextMenu={(e) => e.preventDefault()}
+        onClick={() => {
+          if (long.current) return (long.current = false);
+          setOpen(false);
+          onPick(mine ? null : "like");
+        }}
+        className={clsx("flex min-h-[40px] select-none items-center gap-1.5 rounded-full px-3 transition hover:bg-white/5", mine && (mine === "like" ? "text-orbit-pink" : "text-white"))}
+      >
+        {current && mine !== "like" ? <span className="text-[18px] leading-none">{current.emoji}</span> : <Heart className={clsx("h-[18px] w-[18px]", mine && "fill-orbit-pink")} />}
+      </button>
+      <button type="button" onClick={onShowList} disabled={!count} className="-ml-1.5 flex min-h-[40px] items-center gap-1 rounded-full pr-2 disabled:cursor-default">
+        {count > 0 && top.length > 0 && (
+          <span className="flex -space-x-1 text-[13px] leading-none">
+            {top.map((t) => (
+              <span key={t}>{reactionOf(t).emoji}</span>
+            ))}
+          </span>
+        )}
+        {compactNumber(count)}
+      </button>
+    </span>
+  );
+}
 
 function MediaGrid({ post, onOpen }: { post: CommunityPost; onOpen: (i: number) => void }) {
   const images = post.media.filter((m) => m.type === "image");
@@ -126,8 +197,18 @@ export function CommunityPostCard({
 }) {
   const { supabase, viewer, role, community, toast } = useCommunity();
   const [post, setPost] = useState(initial);
-  const [liked, setLiked] = useState(initial.likedByMe);
+  const [reaction, setReaction] = useState<ReactionKey | null>(initial.myReaction ?? (initial.likedByMe ? "like" : null));
   const [likes, setLikes] = useState(initial.likeCount);
+  const [top, setTop] = useState<ReactionKey[]>(initial.topReactions ?? []);
+  const [reactors, setReactors] = useState<Reactor[] | null>(null);
+  const [showReactors, setShowReactors] = useState(false);
+  const [reactorTab, setReactorTab] = useState<ReactionKey | "all">("all");
+  const [replyTo, setReplyTo] = useState<CommentRow | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [repostText, setRepostText] = useState("");
+  const [reposting, setReposting] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const commentInput = useRef<HTMLInputElement>(null);
   const [saved, setSaved] = useState(false);
   const [menu, setMenu] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -151,7 +232,7 @@ export function CommunityPostCard({
 
   const mine = viewer?.id === post.author.id;
   const staff = rank(role) >= 2;
-  const admin = rank(role) >= 3;
+  const admin = isEditorOrAdmin(role);
   const url = typeof window !== "undefined" ? `${window.location.origin}/comunidades/${community.slug}?post=${post.id}` : "";
 
   // One view per person per post (counted on the server when the card is on screen).
@@ -189,18 +270,47 @@ export function CommunityPostCard({
       .then(({ data }) => setSaved(!!data));
   }, [viewer, post.id, supabase]);
 
-  async function toggleLike() {
+  async function react(next: ReactionKey | null) {
     if (!viewer) return toast("Entre na sua conta para reagir.", true);
-    const next = !liked;
-    setLiked(next);
-    setLikes((c) => c + (next ? 1 : -1));
-    const { error } = next
-      ? await supabase.from("Like").insert({ id: crypto.randomUUID(), postId: post.id, userId: viewer.id })
-      : await supabase.from("Like").delete().eq("postId", post.id).eq("userId", viewer.id);
+    const prev = reaction;
+    if (prev === next) return;
+    setReaction(next);
+    setLikes((c) => c + (next && !prev ? 1 : !next && prev ? -1 : 0));
+    if (next && !top.includes(next)) setTop((t) => [...t, next].slice(-3));
+    setReactors(null);
+    const { error } = !next
+      ? await supabase.from("Like").delete().eq("postId", post.id).eq("userId", viewer.id)
+      : prev
+        ? await supabase.from("Like").update({ reaction: next }).eq("postId", post.id).eq("userId", viewer.id)
+        : await supabase.from("Like").insert({ id: crypto.randomUUID(), postId: post.id, userId: viewer.id, reaction: next });
     if (error) {
-      setLiked(!next);
-      setLikes((c) => c + (next ? -1 : 1));
+      setReaction(prev);
+      setLikes((c) => c - (next && !prev ? 1 : !next && prev ? -1 : 0));
+      toast("Não foi possível reagir agora.", true);
     }
+  }
+
+  async function openReactors() {
+    setShowReactors(true);
+    setReactorTab("all");
+    const { data } = await supabase
+      .from("Like")
+      .select("reaction, user:User!Like_userId_fkey(id, name, username, avatarUrl)")
+      .eq("postId", post.id)
+      .order("createdAt", { ascending: false })
+      .limit(300);
+    setReactors(((data ?? []) as unknown as Reactor[]).filter((r) => r.user));
+  }
+
+  async function repost() {
+    setReposting(true);
+    const { error } = await supabase.rpc("community_repost", { p_post: post.id, p_comment: repostText.trim() });
+    setReposting(false);
+    if (error) return toast(communityError(error.message), true);
+    setShareOpen(false);
+    setRepostText("");
+    update({ shareCount: post.shareCount + 1 });
+    toast("Repostado no seu perfil.");
   }
 
   async function toggleSave() {
@@ -214,7 +324,8 @@ export function CommunityPostCard({
     else toast(next ? "Salvo nos seus itens salvos." : "Removido dos salvos.");
   }
 
-  async function share() {
+  async function nativeShare() {
+    setShareOpen(false);
     try {
       if (navigator.share) await navigator.share({ title: community.name, text: post.content.slice(0, 120), url });
       else {
@@ -278,7 +389,7 @@ export function CommunityPostCard({
   async function loadComments() {
     const { data } = await supabase
       .from("Comment")
-      .select("id, content, createdAt, status, userId, user:User!Comment_userId_fkey(name, username, avatarUrl)")
+      .select(COMMENT_COLUMNS)
       .eq("postId", post.id)
       .neq("status", "removed")
       .order("createdAt", { ascending: true })
@@ -297,12 +408,13 @@ export function CommunityPostCard({
     setSending(true);
     const { data, error } = await supabase
       .from("Comment")
-      .insert({ id: crypto.randomUUID(), postId: post.id, userId: viewer.id, content: text.slice(0, 2000), updatedAt: new Date().toISOString() })
-      .select("id, content, createdAt, status, userId, user:User!Comment_userId_fkey(name, username, avatarUrl)")
+      .insert({ id: crypto.randomUUID(), postId: post.id, userId: viewer.id, content: text.slice(0, 2000), updatedAt: new Date().toISOString(), parentId: replyTo?.id ?? null })
+      .select(COMMENT_COLUMNS)
       .single();
     setSending(false);
     if (error) return toast(communityError(error.message), true);
     setCommentText("");
+    setReplyTo(null);
     const row = data as unknown as CommentRow;
     setComments((c) => [...(c ?? []), row]);
     if (row.status === "visible") update({ commentCount: post.commentCount + 1 });
@@ -316,7 +428,7 @@ export function CommunityPostCard({
       setComments((l) => (l ?? []).map((x) => (x.id === c.id ? { ...x, status: "visible" } : x)));
       update({ commentCount: post.commentCount + 1 });
     } else {
-      setComments((l) => (l ?? []).filter((x) => x.id !== c.id));
+      setComments((l) => (l ?? []).filter((x) => x.id !== c.id && x.parentId !== c.id));
       if (c.status === "visible") update({ commentCount: Math.max(0, post.commentCount - 1) });
     }
   }
@@ -339,6 +451,57 @@ export function CommunityPostCard({
     >
       {icon} {label}
     </button>
+  );
+
+  const renderComment = (c: CommentRow, isReply: boolean) => (
+    <div className="flex items-start gap-2">
+      <Avatar name={c.user.name} url={c.user.avatarUrl} size={isReply ? 26 : 30} />
+      <div className="min-w-0 flex-1">
+        <div className={clsx("inline-block max-w-full rounded-2xl px-3 py-2", c.status === "pending" ? "border border-dashed border-amber-400/40 bg-amber-400/[0.05]" : "bg-white/[0.05]")}>
+          <Link href={`/perfil/${c.user.username}`} className="text-xs font-semibold text-white hover:underline">
+            {c.user.name}
+          </Link>
+          <RichText text={c.content} className="whitespace-pre-wrap break-words text-[13px] text-white/80" />
+        </div>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 px-2 text-[11px] text-white/40">
+          <span>{timeAgo(c.createdAt)}</span>
+          {c.status === "pending" && <span className="text-amber-400">aguardando aprovação</span>}
+          {canComment && c.status === "visible" && (
+            <button
+              type="button"
+              onClick={() => {
+                setReplyTo(c);
+                setCommentText((t) => (t.startsWith(`@${c.user.username}`) ? t : `@${c.user.username} ${t}`));
+                commentInput.current?.focus();
+              }}
+              className="flex items-center gap-1 font-semibold text-white/60 hover:text-white"
+            >
+              <Reply className="h-3 w-3" /> Responder
+            </button>
+          )}
+          {staff && c.status === "pending" && (
+            <button type="button" onClick={() => commentAction(c, "approve")} className="font-semibold text-emerald-400 hover:underline">
+              Aprovar
+            </button>
+          )}
+          {staff && c.userId !== viewer?.id && (
+            <button type="button" onClick={() => commentAction(c, "remove")} className="font-semibold text-red-300 hover:underline">
+              Remover
+            </button>
+          )}
+          {c.userId === viewer?.id && (
+            <button type="button" onClick={() => commentAction(c, "delete")} className="hover:text-white">
+              Excluir
+            </button>
+          )}
+          {viewer && c.userId !== viewer.id && !staff && (
+            <button type="button" onClick={() => setReport({ type: "community_comment", id: c.id, label: "comentário" })} className="hover:text-white">
+              Denunciar
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 
   return (
@@ -407,11 +570,29 @@ export function CommunityPostCard({
             </button>
           </div>
         </div>
+      ) : post.kind === "article" ? (
+        <div className="mt-3">
+          {images[0] && (
+            <button type="button" onClick={() => setLightbox(0)} className="mb-3 block w-full overflow-hidden rounded-2xl bg-white/[0.04]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={images[0].url} alt="" loading="lazy" className="max-h-80 w-full object-cover" />
+            </button>
+          )}
+          <span className="inline-flex items-center gap-1 rounded-full bg-orbit-cyan/10 px-2 py-0.5 text-[11px] font-semibold text-orbit-cyan">📰 Artigo · {Math.max(1, Math.round(post.content.split(/\s+/).length / 200))} min de leitura</span>
+          <h3 className="mt-2 font-display text-xl font-bold leading-snug text-white">{post.meta.article?.title}</h3>
+          <RichText text={post.content} className={clsx("mt-2 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-white/85", !expanded && "line-clamp-[8]")} />
+          {!expanded && post.content.length > 600 && (
+            <button type="button" onClick={() => setExpanded(true)} className="mt-1 text-sm font-semibold text-orbit-cyan">
+              Continuar lendo
+            </button>
+          )}
+        </div>
       ) : (
         post.content && <RichText text={post.content} className="mt-3 whitespace-pre-wrap break-words text-[15px] leading-relaxed text-white/90" />
       )}
 
-      <MediaGrid post={post} onOpen={setLightbox} />
+      {post.kind !== "article" && <MediaGrid post={post} onOpen={setLightbox} />}
+      {video && post.meta.video?.title && <p className="mt-3 font-semibold text-white">{post.meta.video.title}</p>}
       {video && (
         <div className={clsx("mt-3 overflow-hidden rounded-2xl bg-black", post.kind === "clip" && "mx-auto max-w-[340px]")}>
           {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
@@ -469,9 +650,7 @@ export function CommunityPostCard({
 
       {post.moderationStatus === "visible" && (
         <footer className="mt-3.5 flex items-center gap-1 border-t border-white/[0.06] pt-2.5 text-xs text-white/55">
-          <button type="button" onClick={toggleLike} aria-pressed={liked} className={clsx("flex min-h-[40px] items-center gap-1.5 rounded-full px-3 transition hover:bg-white/5", liked && "text-orbit-pink")}>
-            <Heart className={clsx("h-[18px] w-[18px]", liked && "fill-orbit-pink")} /> {compactNumber(likes)}
-          </button>
+          <ReactionButton mine={reaction} count={likes} top={top} onPick={react} onShowList={openReactors} />
           <button
             type="button"
             onClick={() => setShowComments((s) => !s)}
@@ -480,7 +659,7 @@ export function CommunityPostCard({
           >
             {post.commentsEnabled ? <MessageCircle className="h-[18px] w-[18px]" /> : <MessageSquareOff className="h-[18px] w-[18px]" />} {compactNumber(post.commentCount)}
           </button>
-          <button type="button" onClick={share} className="flex min-h-[40px] items-center gap-1.5 rounded-full px-3 transition hover:bg-white/5" aria-label="Compartilhar">
+          <button type="button" onClick={() => setShareOpen(true)} className="flex min-h-[40px] items-center gap-1.5 rounded-full px-3 transition hover:bg-white/5" aria-label="Compartilhar">
             <Share2 className="h-[18px] w-[18px]" /> {post.shareCount > 0 && compactNumber(post.shareCount)}
           </button>
           <span className="ml-auto flex items-center gap-1 px-2" title="Visualizações">
@@ -501,47 +680,34 @@ export function CommunityPostCard({
           ) : comments.length === 0 ? (
             <p className="px-1 text-xs text-white/40">{post.commentsEnabled ? "Seja a primeira pessoa a comentar." : "Comentários desativados."}</p>
           ) : (
-            comments.map((c) => (
-              <div key={c.id} className="flex items-start gap-2">
-                <Avatar name={c.user.name} url={c.user.avatarUrl} size={30} />
-                <div className="min-w-0 flex-1">
-                  <div className={clsx("inline-block max-w-full rounded-2xl px-3 py-2", c.status === "pending" ? "border border-dashed border-amber-400/40 bg-amber-400/[0.05]" : "bg-white/[0.05]")}>
-                    <Link href={`/perfil/${c.user.username}`} className="text-xs font-semibold text-white hover:underline">
-                      {c.user.name}
-                    </Link>
-                    <RichText text={c.content} className="whitespace-pre-wrap break-words text-[13px] text-white/80" />
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-3 px-2 text-[11px] text-white/40">
-                    <span>{timeAgo(c.createdAt)}</span>
-                    {c.status === "pending" && <span className="text-amber-400">aguardando aprovação</span>}
-                    {staff && c.status === "pending" && (
-                      <button type="button" onClick={() => commentAction(c, "approve")} className="font-semibold text-emerald-400 hover:underline">
-                        Aprovar
-                      </button>
-                    )}
-                    {staff && c.userId !== viewer?.id && (
-                      <button type="button" onClick={() => commentAction(c, "remove")} className="font-semibold text-red-300 hover:underline">
-                        Remover
-                      </button>
-                    )}
-                    {c.userId === viewer?.id && (
-                      <button type="button" onClick={() => commentAction(c, "delete")} className="hover:text-white">
-                        Excluir
-                      </button>
-                    )}
-                    {viewer && c.userId !== viewer.id && !staff && (
-                      <button type="button" onClick={() => setReport({ type: "community_comment", id: c.id, label: "comentário" })} className="hover:text-white">
-                        Denunciar
-                      </button>
-                    )}
-                  </div>
+            comments
+              .filter((c) => !c.parentId || !comments.some((p) => p.id === c.parentId))
+              .map((c) => (
+                <div key={c.id} className="space-y-2">
+                  {renderComment(c, false)}
+                  {comments
+                    .filter((r) => r.parentId === c.id)
+                    .map((r) => (
+                      <div key={r.id} className="ml-9 border-l border-white/[0.08] pl-3">
+                        {renderComment(r, true)}
+                      </div>
+                    ))}
                 </div>
-              </div>
-            ))
+              ))
           )}
           {canComment ? (
-            <form onSubmit={sendComment} className="flex items-center gap-2 pt-1">
+            <form onSubmit={sendComment} className="pt-1">
+              {replyTo && (
+                <p className="mb-1.5 flex items-center gap-2 px-2 text-[11px] text-white/55">
+                  <Reply className="h-3 w-3" /> Respondendo a <strong className="text-white/80">{replyTo.user.name}</strong>
+                  <button type="button" onClick={() => (setReplyTo(null), setCommentText(""))} className="ml-auto font-semibold text-white/50 hover:text-white">
+                    Cancelar
+                  </button>
+                </p>
+              )}
+              <div className="flex items-center gap-2">
               <input
+                ref={commentInput}
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 maxLength={2000}
@@ -551,6 +717,7 @@ export function CommunityPostCard({
               <button type="submit" disabled={sending || !commentText.trim()} aria-label="Enviar comentário" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orbit-gradient text-snow disabled:opacity-40">
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </button>
+              </div>
             </form>
           ) : (
             viewer &&
@@ -580,6 +747,66 @@ export function CommunityPostCard({
           {(mine || admin) && menuItem(<Trash2 className="h-5 w-5" />, "Excluir", () => (setMenu(false), setConfirmDelete(true)), true)}
           {!mine && !staff && menuItem(<Flag className="h-5 w-5" />, "Denunciar", () => (setMenu(false), setReport({ type: "community_post", id: post.id, label: "publicação" })), true)}
         </div>
+      </Sheet>
+
+      <Sheet open={shareOpen} onClose={() => setShareOpen(false)} title="Compartilhar publicação">
+        <div className="space-y-3 pt-1">
+          {viewer && !community.isPrivate && post.moderationStatus === "visible" && (
+            <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-3">
+              <p className="flex items-center gap-2 text-sm font-semibold text-white">
+                <Repeat2 className="h-4 w-4 text-orbit-cyan" /> Repostar no seu perfil
+              </p>
+              <textarea
+                value={repostText}
+                onChange={(e) => setRepostText(e.target.value)}
+                maxLength={2000}
+                rows={2}
+                placeholder="Adicione um comentário (opcional)"
+                className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-space-bg/60 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/35 focus:border-orbit-purple/60"
+              />
+              <button type="button" onClick={repost} disabled={reposting} className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-orbit-gradient text-sm font-semibold text-snow disabled:opacity-60">
+                {reposting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Repeat2 className="h-4 w-4" />} Repostar
+              </button>
+            </div>
+          )}
+          {menuItem(<Share2 className="h-5 w-5" />, "Enviar para outro app", nativeShare)}
+          {menuItem(<Link2 className="h-5 w-5" />, "Copiar link", () => {
+            navigator.clipboard.writeText(url).then(() => toast("Link copiado."));
+            setShareOpen(false);
+          })}
+        </div>
+      </Sheet>
+
+      <Sheet open={showReactors} onClose={() => setShowReactors(false)} title={`Reações · ${likes}`}>
+        {reactors === null ? (
+          <div className="flex justify-center py-6">
+            <Loader2 className="h-5 w-5 animate-spin text-white/40" />
+          </div>
+        ) : (
+          <>
+            <div className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 [scrollbar-width:none]">
+              <button type="button" onClick={() => setReactorTab("all")} className={clsx("shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold", reactorTab === "all" ? "bg-orbit-gradient text-snow" : "border border-white/10 text-white/65")}>
+                Todas {reactors.length}
+              </button>
+              {REACTIONS.filter((r) => reactors.some((x) => x.reaction === r.key)).map((r) => (
+                <button key={r.key} type="button" onClick={() => setReactorTab(r.key)} className={clsx("shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold", reactorTab === r.key ? "bg-orbit-gradient text-snow" : "border border-white/10 text-white/65")}>
+                  {r.emoji} {reactors.filter((x) => x.reaction === r.key).length}
+                </button>
+              ))}
+            </div>
+            <div className="space-y-0.5">
+              {reactors
+                .filter((r) => reactorTab === "all" || r.reaction === reactorTab)
+                .map((r) => (
+                  <Link key={r.user.id} href={`/perfil/${r.user.username}`} className="flex min-h-[52px] items-center gap-3 rounded-2xl px-2 hover:bg-white/[0.04]">
+                    <Avatar name={r.user.name} url={r.user.avatarUrl} size={38} />
+                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{r.user.name}</span>
+                    <span className="text-xl">{reactionOf(r.reaction).emoji}</span>
+                  </Link>
+                ))}
+            </div>
+          </>
+        )}
       </Sheet>
 
       <Confirm

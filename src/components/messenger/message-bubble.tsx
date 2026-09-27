@@ -2,7 +2,7 @@
 
 import { memo, useRef } from "react";
 import { clsx } from "clsx";
-import { AlertCircle, Ban, Bookmark, Clock, CornerUpRight, Star, Timer } from "lucide-react";
+import { AlertCircle, Ban, Bookmark, BookOpen, Clock, CornerUpRight, Star, Timer } from "lucide-react";
 import { formatTime, isEmojiOnly, messagePreview, URL_PATTERN } from "@/lib/messenger/format";
 import type { ChatMessage, Member, PollVote, Reaction } from "@/lib/messenger/types";
 import {
@@ -203,6 +203,24 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
     </span>
   );
 
+  const story = m.meta.storyReply && !deleted && (
+    <a
+      href={`/comunidades/${m.meta.storyReply.slug}?story=${m.meta.storyReply.id}`}
+      className={clsx("mb-1.5 flex max-w-[260px] items-center gap-2 rounded-xl px-2 py-1.5 text-[11px]", mine ? "bg-black/15 text-snow/85" : "bg-white/[0.06] text-white/60")}
+    >
+      {m.meta.storyReply.thumb ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={m.meta.storyReply.thumb} alt="" className="h-9 w-6 shrink-0 rounded object-cover" />
+      ) : (
+        <BookOpen className="h-4 w-4 shrink-0" />
+      )}
+      <span className="min-w-0">
+        <span className="block font-semibold">Respondeu à história · {m.meta.storyReply.community}</span>
+        <span className="block truncate opacity-80">{m.meta.storyReply.preview}</span>
+      </span>
+    </a>
+  );
+
   let body: React.ReactNode;
   if (deleted) {
     body = (
@@ -282,6 +300,7 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
         >
           {!bare && savedHeader}
           {!bare && forwarded}
+          {!bare && story}
           {!bare && replyBlock}
           {bare && !deleted && (m.replyToId || m.meta.forwarded || origin) && (
             <div className={clsx("mb-1 max-w-[240px] rounded-2xl px-3 py-2", mine ? "bg-chat-bubble text-snow" : "border border-white/[0.08] bg-white/[0.07]")}>

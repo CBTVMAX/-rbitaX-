@@ -4,12 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { ArrowLeft, BarChart3, Bell, ChevronRight, FileStack, KeyRound, Settings2, ShieldAlert, Users } from "lucide-react";
+import { ArrowLeft, BarChart3, Bell, CalendarDays, ChevronRight, FileStack, KeyRound, Lock, Palette, ScrollText, Settings2, ShieldAlert, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useStoreToast } from "@/components/store/store-view";
 import { accentOf, rank, type Community, type Role, type Viewer } from "@/lib/communities";
 import { CommunityContext, type CommunityCtx } from "../context";
-import { Composer, type CreateKind } from "../composer";
+import { Composer, type ComposerKind } from "../composer";
 import { OfficialBadge, RoleBadge } from "../ui";
 import { GeneralSection } from "./general";
 import { ContentSection } from "./content";
@@ -18,17 +18,23 @@ import { PermissionsSection } from "./permissions";
 import { ModerationSection } from "./moderation";
 import { NotificationsSection } from "./notifications";
 import { StatsSection } from "./stats";
+import { EventsSection } from "./events";
+import { LogSection } from "./log";
 
-type Section = "geral" | "conteudo" | "membros" | "permissoes" | "moderacao" | "notificacoes" | "estatisticas";
+type Section = "geral" | "personalizacao" | "privacidade" | "conteudo" | "eventos" | "membros" | "permissoes" | "moderacao" | "notificacoes" | "estatisticas" | "registro";
 
 const SECTIONS: { id: Section; label: string; desc: string; icon: React.ComponentType<{ className?: string }>; min: number }[] = [
-  { id: "geral", label: "Geral", desc: "Nome, @, categoria, foto, capa, tema e privacidade", icon: Settings2, min: 3 },
+  { id: "geral", label: "Editar informações", desc: "Nome, @, categoria, descrição, regras e links", icon: Settings2, min: 3 },
+  { id: "personalizacao", label: "Personalização", desc: "Foto, capa e tema da comunidade", icon: Palette, min: 3 },
+  { id: "privacidade", label: "Privacidade", desc: "Pública ou privada", icon: Lock, min: 3 },
   { id: "conteudo", label: "Conteúdo", desc: "Fixados, publicações e discussões", icon: FileStack, min: 2 },
+  { id: "eventos", label: "Eventos", desc: "Criar, editar, cancelar e excluir", icon: CalendarDays, min: 3 },
   { id: "membros", label: "Membros", desc: "Cargos, pedidos, bloqueados e removidos", icon: Users, min: 2 },
   { id: "permissoes", label: "Permissões", desc: "Quem pode publicar, comentar, enviar mídia…", icon: KeyRound, min: 3 },
   { id: "moderacao", label: "Moderação", desc: "Filtros, aprovações e denúncias", icon: ShieldAlert, min: 2 },
   { id: "notificacoes", label: "Notificações", desc: "Avisos para membros e anúncios", icon: Bell, min: 2 },
   { id: "estatisticas", label: "Estatísticas", desc: "Membros, alcance e engajamento", icon: BarChart3, min: 3 },
+  { id: "registro", label: "Registro de ações", desc: "Quem fez o quê na administração", icon: ScrollText, min: 3 },
 ];
 
 export function ManageView(props: {
@@ -37,6 +43,7 @@ export function ManageView(props: {
   role: Role;
   notify: boolean;
   initialSection: string;
+  initialMembersTab?: string;
   badges: { pending: number; requests: number; reports: number };
 }) {
   const { viewer, role } = props;
@@ -45,7 +52,7 @@ export function ManageView(props: {
   const { toast, node } = useStoreToast();
   const [community, setCommunity] = useState(props.community);
   const [badges, setBadges] = useState(props.badges);
-  const [composer, setComposer] = useState<CreateKind | null>(null);
+  const [composer, setComposer] = useState<ComposerKind | null>(null);
   const allowed = SECTIONS.filter((s) => rank(role) >= s.min);
   const valid = (s: string): s is Section => allowed.some((x) => x.id === s);
   // Empty = the section list (phones). Desktop always shows a section.
@@ -74,13 +81,27 @@ export function ManageView(props: {
   let content: React.ReactNode;
   switch (active) {
     case "geral":
-      content = <GeneralSection onSaved={(p) => setCommunity((c) => ({ ...c, ...p, category: p.category ?? c.category }))} />;
+    case "personalizacao":
+    case "privacidade":
+      content = (
+        <GeneralSection
+          key={active}
+          part={active === "geral" ? "info" : active === "personalizacao" ? "appearance" : "privacy"}
+          onSaved={(p) => setCommunity((c) => ({ ...c, ...p, category: p.category ?? c.category }))}
+        />
+      );
+      break;
+    case "eventos":
+      content = <EventsSection />;
+      break;
+    case "registro":
+      content = <LogSection />;
       break;
     case "conteudo":
       content = <ContentSection />;
       break;
     case "membros":
-      content = <MembersSection badges={badges} onBadge={(requests) => setBadges((b) => ({ ...b, requests }))} />;
+      content = <MembersSection badges={badges} initialTab={props.initialMembersTab} onBadge={(requests) => setBadges((b) => ({ ...b, requests }))} />;
       break;
     case "permissoes":
       content = <PermissionsSection onSaved={(permissions) => setCommunity((c) => ({ ...c, permissions }))} />;
@@ -89,7 +110,7 @@ export function ManageView(props: {
       content = <ModerationSection badges={badges} onBadges={(b) => setBadges((x) => ({ ...x, ...b }))} />;
       break;
     case "notificacoes":
-      content = <NotificationsSection notify={props.notify} onAnnounce={() => setComposer("post")} />;
+      content = <NotificationsSection notify={props.notify} onAnnounce={() => setComposer("announcement")} />;
       break;
     case "estatisticas":
       content = <StatsSection />;

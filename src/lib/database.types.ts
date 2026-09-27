@@ -18,8 +18,8 @@ type BookmarkRow = { createdAt: string; id: string; postId: string; userId: stri
 type BookmarkInsert = { createdAt?: string; id: string; postId: string; userId: string };
 type BookmarkUpdate = Partial<BookmarkInsert>;
 
-type CommentRow = { content: string; createdAt: string; id: string; postId: string; updatedAt: string; userId: string; status: string };
-type CommentInsert = { content: string; createdAt?: string; id: string; postId: string; updatedAt: string; userId: string };
+type CommentRow = { content: string; createdAt: string; id: string; postId: string; updatedAt: string; userId: string; status: string; parentId: string | null };
+type CommentInsert = { content: string; createdAt?: string; id: string; postId: string; updatedAt: string; userId: string; parentId?: string | null };
 type CommentUpdate = Partial<CommentInsert>;
 
 type CommunityRow = { avatarUrl: string | null; category: string | null; coverUrl: string | null; createdAt: string; description: string | null; id: string; isPrivate: boolean; name: string; slug: string; username: string; isOfficial: boolean; accentColor: string | null; rules: string | null; links: Json; permissions: Json; moderation: Json; notifyPrefs: Json; memberCount: number; createdById: string | null; updatedAt: string };
@@ -30,7 +30,7 @@ type CommunityMemberRow = { communityId: string; createdAt: string; id: string; 
 type CommunityMemberInsert = { communityId: string; createdAt?: string; id: string; role?: string; userId: string };
 type CommunityMemberUpdate = Partial<CommunityMemberInsert>;
 
-type ConversationRow = { createdAt: string; id: string; updatedAt: string; isGroup: boolean; isSaved: boolean; name: string | null; avatarUrl: string | null; description: string | null; createdById: string | null; messageTtlSeconds: number | null; lastMessageAt: string | null };
+type ConversationRow = { createdAt: string; id: string; updatedAt: string; isGroup: boolean; isSaved: boolean; name: string | null; avatarUrl: string | null; description: string | null; createdById: string | null; messageTtlSeconds: number | null; lastMessageAt: string | null; communityId: string | null };
 type ConversationInsert = { createdAt?: string; id: string; updatedAt?: string };
 type ConversationUpdate = Partial<ConversationInsert>;
 
@@ -42,11 +42,11 @@ type FollowRow = { createdAt: string; followerId: string; followingId: string; i
 type FollowInsert = { createdAt?: string; followerId: string; followingId: string; id: string; status?: string };
 type FollowUpdate = Partial<FollowInsert>;
 
-type LikeRow = { createdAt: string; id: string; postId: string; userId: string };
-type LikeInsert = { createdAt?: string; id: string; postId: string; userId: string };
+type LikeRow = { createdAt: string; id: string; postId: string; userId: string; reaction: string };
+type LikeInsert = { createdAt?: string; id: string; postId: string; userId: string; reaction?: string };
 type LikeUpdate = Partial<LikeInsert>;
 
-type MediaRow = { createdAt: string; height: number | null; id: string; mimeType: string | null; position: number; postId: string; sizeBytes: number | null; thumbnailUrl: string | null; type: string; url: string; width: number | null };
+type MediaRow = { createdAt: string; height: number | null; id: string; mimeType: string | null; position: number; postId: string; sizeBytes: number | null; thumbnailUrl: string | null; type: string; url: string; width: number | null; name: string | null };
 type MediaInsert = { createdAt?: string; height?: number | null; id: string; mimeType?: string | null; position?: number; postId: string; sizeBytes?: number | null; thumbnailUrl?: string | null; type: string; url: string; width?: number | null };
 type MediaUpdate = Partial<MediaInsert>;
 
@@ -71,19 +71,28 @@ type UserInventoryRow = { userId: string; productId: string; source: string; isF
 type VirtualGiftRow = { id: string; productId: string; senderId: string; recipientId: string; conversationId: string | null; messageId: string | null; priceCoins: number; note: string | null; createdAt: string };
 type CommunityAlbumRow = { id: string; communityId: string; title: string; description: string; coverUrl: string | null; createdById: string | null; createdAt: string };
 type PostPollVoteRow = { postId: string; userId: string; optionIndex: number; createdAt: string };
-type CommunityDiscussionRow = { id: string; communityId: string; authorId: string; title: string; body: string; imageUrl: string | null; isPinned: boolean; isClosed: boolean; status: string; replyCount: number; createdAt: string; updatedAt: string; lastActivityAt: string };
+type CommunityDiscussionRow = { id: string; communityId: string; authorId: string; title: string; body: string; imageUrl: string | null; isPinned: boolean; isClosed: boolean; status: string; replyCount: number; createdAt: string; updatedAt: string; lastActivityAt: string; category: string; likeCount: number };
 type CommunityDiscussionReplyRow = { id: string; discussionId: string; userId: string; content: string; status: string; createdAt: string };
 type CommunityJoinRequestRow = { communityId: string; userId: string; message: string; status: string; createdAt: string; decidedAt: string | null; decidedById: string | null };
 type UserSessionRow = { id: string; userId: string; sessionId: string; deviceId: string; deviceType: string; authSessionId: string | null; lastHeartbeatAt: string; lastActivityAt: string; visibilityState: string; isActive: boolean; createdAt: string; updatedAt: string };
 type UserPresenceRow = { userId: string; status: string; lastSeenAt: string | null; updatedAt: string };
 type CommunityMemberEventRow = { id: number; communityId: string; userId: string | null; kind: string; createdAt: string };
 type CommunityBanRow = { communityId: string; userId: string; reason: string; bannedById: string | null; createdAt: string };
+type CommunityMuteRow = { communityId: string; userId: string; until: string | null; reason: string; mutedById: string | null; createdAt: string };
+type CommunityActionLogRow = { id: number; communityId: string; actorId: string | null; action: string; targetType: string | null; targetId: string | null; details: Json; createdAt: string };
+type CommunityEventRow = { id: string; communityId: string; createdById: string | null; title: string; description: string; startsAt: string; endsAt: string | null; location: string; locationUrl: string | null; imageUrl: string | null; maxParticipants: number | null; status: string; goingCount: number; interestedCount: number; remindedAt: string | null; createdAt: string; updatedAt: string };
+type CommunityEventRsvpRow = { eventId: string; userId: string; status: string; createdAt: string };
+type CommunityFavoriteRow = { userId: string; communityId: string; createdAt: string };
+type CommunityDiscussionLikeRow = { discussionId: string; userId: string; createdAt: string };
+type MomentViewRow = { momentId: string; userId: string; createdAt: string };
+type MomentReactionRow = { momentId: string; userId: string; emoji: string; createdAt: string };
+type MomentPollVoteRow = { momentId: string; userId: string; option: number; createdAt: string };
 type UserStickerPackRow = { userId: string; packId: string; acquiredAt: string; installed: boolean; source: string; updatedAt: string };
 type ReadOnly<R> = { Row: R; Insert: never; Update: never; Relationships: [] };
 type MessageUpdate = Partial<MessageInsert>;
 
-type MomentRow = { createdAt: string; expiresAt: string; id: string; mediaUrl: string; text: string | null; type: string; userId: string };
-type MomentInsert = { createdAt?: string; expiresAt: string; id: string; mediaUrl: string; text?: string | null; type?: string; userId: string };
+type MomentRow = { createdAt: string; expiresAt: string; id: string; mediaUrl: string | null; text: string | null; type: string; userId: string; communityId: string | null; asCommunity: boolean; meta: Json; thumbnailUrl: string | null; viewCount: number };
+type MomentInsert = { createdAt?: string; expiresAt: string; id: string; mediaUrl?: string | null; text?: string | null; type?: string; userId: string };
 type MomentUpdate = Partial<MomentInsert>;
 
 type NotificationRow = { actorId: string | null; commentId: string | null; createdAt: string; href: string | null; id: string; isRead: boolean; message: string; postId: string | null; title: string; type: string; userId: string; dedupeKey: string | null };
@@ -208,6 +217,24 @@ export type Database = {
       CommunityMemberEvent: { Row: CommunityMemberEventRow; Insert: never; Update: never; Relationships: [
         { foreignKeyName: "CommunityMemberEvent_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
       ] };
+      CommunityMute: ReadOnly<CommunityMuteRow>;
+      CommunityActionLog: { Row: CommunityActionLogRow; Insert: never; Update: never; Relationships: [
+        { foreignKeyName: "CommunityActionLog_actorId_fkey"; columns: ["actorId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
+      ] };
+      CommunityEvent: { Row: CommunityEventRow; Insert: never; Update: never; Relationships: [
+        { foreignKeyName: "CommunityEvent_createdById_fkey"; columns: ["createdById"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
+      ] };
+      CommunityEventRsvp: { Row: CommunityEventRsvpRow; Insert: never; Update: never; Relationships: [
+        { foreignKeyName: "CommunityEventRsvp_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
+        { foreignKeyName: "CommunityEventRsvp_eventId_fkey"; columns: ["eventId"]; isOneToOne: false; referencedRelation: "CommunityEvent"; referencedColumns: ["id"] }
+      ] };
+      CommunityFavorite: { Row: CommunityFavoriteRow; Insert: { userId: string; communityId: string }; Update: never; Relationships: [
+        { foreignKeyName: "CommunityFavorite_communityId_fkey"; columns: ["communityId"]; isOneToOne: false; referencedRelation: "Community"; referencedColumns: ["id"] }
+      ] };
+      CommunityDiscussionLike: ReadOnly<CommunityDiscussionLikeRow>;
+      MomentView: ReadOnly<MomentViewRow>;
+      MomentReaction: ReadOnly<MomentReactionRow>;
+      MomentPollVote: ReadOnly<MomentPollVoteRow>;
       UserSession: ReadOnly<UserSessionRow>;
       UserPresence: ReadOnly<UserPresenceRow>;
       CoinWallet: ReadOnly<CoinWalletRow>;
@@ -222,7 +249,8 @@ export type Database = {
         { foreignKeyName: "VirtualGift_recipientId_fkey"; columns: ["recipientId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
       ] };
       Moment: { Row: MomentRow; Insert: MomentInsert; Update: MomentUpdate; Relationships: [
-        { foreignKeyName: "Moment_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
+        { foreignKeyName: "Moment_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
+        { foreignKeyName: "Moment_communityId_fkey"; columns: ["communityId"]; isOneToOne: false; referencedRelation: "Community"; referencedColumns: ["id"] }
       ] };
       Notification: { Row: NotificationRow; Insert: NotificationInsert; Update: NotificationUpdate; Relationships: [
         { foreignKeyName: "Notification_actorId_fkey"; columns: ["actorId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
@@ -407,7 +435,25 @@ export type Database = {
       community_comment_action: { Args: { p_comment: string; p_action: string }; Returns: undefined };
       community_vote_poll: { Args: { p_post: string; p_options: number[] }; Returns: undefined };
       community_view: { Args: { p_post: string }; Returns: undefined };
-      community_create_discussion: { Args: { p_community: string; p_title: string; p_body: string; p_image?: string | null }; Returns: Json };
+      community_create_discussion: { Args: { p_community: string; p_title: string; p_body: string; p_image?: string | null; p_category?: string }; Returns: Json };
+      community_edit_discussion: { Args: { p_discussion: string; p_title: string; p_body: string; p_category: string }; Returns: undefined };
+      community_discussion_like: { Args: { p_discussion: string }; Returns: Json };
+      community_repost: { Args: { p_post: string; p_comment?: string }; Returns: string };
+      community_mute: { Args: { p_community: string; p_user: string; p_minutes?: number | null; p_reason?: string }; Returns: undefined };
+      community_unmute: { Args: { p_community: string; p_user: string }; Returns: undefined };
+      community_save_event: { Args: { p_community: string; p_id: string | null; p: Json }; Returns: string };
+      community_event_action: { Args: { p_event: string; p_action: string }; Returns: undefined };
+      community_event_rsvp: { Args: { p_event: string; p_status: string | null }; Returns: Json };
+      community_create_story: { Args: { p_community: string; p: Json }; Returns: string };
+      story_view: { Args: { p_moment: string }; Returns: undefined };
+      story_react: { Args: { p_moment: string; p_emoji: string | null }; Returns: undefined };
+      story_vote: { Args: { p_moment: string; p_option: number }; Returns: Json };
+      story_poll_results: { Args: { p_moment: string }; Returns: Json };
+      story_delete: { Args: { p_moment: string }; Returns: undefined };
+      story_viewers: { Args: { p_moment: string }; Returns: { userId: string; name: string; username: string; avatarUrl: string | null; emoji: string | null; viewedAt: string }[] };
+      community_open_chat: { Args: { p_community: string }; Returns: string };
+      community_invite: { Args: { p_community: string; p_users: string[] }; Returns: number };
+      community_moments: { Args: { p_community: string; p_before?: string | null; p_limit?: number }; Returns: Json };
       community_reply_discussion: { Args: { p_discussion: string; p_content: string }; Returns: Json };
       community_discussion_action: { Args: { p_discussion: string; p_action: string }; Returns: undefined };
       community_reply_action: { Args: { p_reply: string; p_action: string }; Returns: undefined };

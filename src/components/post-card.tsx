@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo, initials } from "@/lib/format";
-import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Repeat2 } from "lucide-react";
+import type { SharedEmbed } from "@/lib/shared-posts";
 import { clsx } from "clsx";
 import { VerifiedBadge } from "@/components/verified-badge";
 
@@ -19,6 +20,8 @@ export type FeedPost = {
   likeCount: number;
   commentCount: number;
   likedByMe: boolean;
+  /** Repost of a community publication: undefined = not a repost, null = original no longer available. */
+  shared?: SharedEmbed | null;
 };
 
 type CommentRow = {
@@ -157,6 +160,8 @@ export function PostCard({
 
       {post.content && <p className="mb-3 whitespace-pre-wrap text-sm text-white/90">{post.content}</p>}
 
+      {post.shared !== undefined && <SharedCard shared={post.shared} />}
+
       {post.media.length > 0 && (
         <div className={clsx("mb-3 grid gap-1 overflow-hidden rounded-xl", post.media.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
           {post.media.map((m) =>
@@ -217,6 +222,48 @@ export function PostCard({
         </div>
       )}
     </article>
+  );
+}
+
+function SharedCard({ shared }: { shared: SharedEmbed | null }) {
+  if (!shared)
+    return (
+      <p className="mb-3 flex items-center gap-2 rounded-xl border border-dashed border-white/10 px-3 py-3 text-xs text-white/45">
+        <Repeat2 className="h-4 w-4" /> Esta publicação não está mais disponível.
+      </p>
+    );
+  const href = shared.community ? `/comunidades/${shared.community.slug}?post=${shared.id}` : `/perfil/${shared.author.username}`;
+  return (
+    <Link href={href} className="mb-3 block overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition hover:border-orbit-purple/40">
+      {shared.community && (
+        <span className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2 text-xs text-white/60">
+          <Repeat2 className="h-3.5 w-3.5 text-orbit-cyan" />
+          <span className="flex h-5 w-5 items-center justify-center overflow-hidden rounded-md bg-space-card text-[10px] font-bold text-white">
+            {shared.community.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={shared.community.avatarUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              shared.community.name.slice(0, 1).toUpperCase()
+            )}
+          </span>
+          <span className="truncate font-semibold text-white/80">{shared.community.name}</span>
+        </span>
+      )}
+      <span className="flex gap-3 p-3">
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-1 text-xs font-semibold text-white">
+            {shared.author.name} {shared.author.isVerified && <VerifiedBadge />}
+            <span className="font-normal text-white/40">· {timeAgo(shared.createdAt)}</span>
+          </span>
+          {shared.title && <span className="mt-1 line-clamp-1 block text-sm font-semibold text-white">{shared.title}</span>}
+          {shared.content && <span className="mt-0.5 line-clamp-3 block whitespace-pre-wrap text-sm text-white/75">{shared.content}</span>}
+        </span>
+        {shared.image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={shared.image} alt="" loading="lazy" className="h-20 w-20 shrink-0 rounded-xl object-cover" />
+        )}
+      </span>
+    </Link>
   );
 }
 

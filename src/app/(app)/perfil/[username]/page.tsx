@@ -3,6 +3,7 @@ import { parseFriendState } from "@/lib/friends";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, PUBLIC_USER_COLUMNS } from "@/lib/current-user";
 import type { FeedPost } from "@/components/post-card";
+import { loadSharedEmbeds } from "@/lib/shared-posts";
 import {
   ProfileView,
   type ProfileCommunity,
@@ -100,7 +101,7 @@ export default async function ProfilePage({ params }: { params: { username: stri
   });
 
   const postSelect =
-    "id, content, createdAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url)" as const;
+    "id, content, createdAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url), sharedPostId" as const;
 
   const { data: recentPosts } = await supabase
     .from("Post")
@@ -123,12 +124,13 @@ export default async function ProfilePage({ params }: { params: { username: stri
   const pinnedPostId = user.pinnedPostId && posts.some((p) => p.id === user.pinnedPostId) ? user.pinnedPostId : null;
 
   const postIds = posts.map((p) => p.id);
-  const [{ data: likeRows }, { data: myLikes }, { data: commentRows }] = await Promise.all([
+  const [{ data: likeRows }, { data: myLikes }, { data: commentRows }, shared] = await Promise.all([
     postIds.length ? supabase.from("Like").select("postId").in("postId", postIds) : Promise.resolve({ data: [] as { postId: string }[] }),
     postIds.length && current
       ? supabase.from("Like").select("postId").in("postId", postIds).eq("userId", current.authId)
       : Promise.resolve({ data: [] as { postId: string }[] }),
     postIds.length ? supabase.from("Comment").select("postId").in("postId", postIds) : Promise.resolve({ data: [] as { postId: string }[] }),
+    loadSharedEmbeds(supabase, posts.map((p) => p.sharedPostId)),
   ]);
 
   const likeCountByPost = new Map<string, number>();
@@ -147,6 +149,7 @@ export default async function ProfilePage({ params }: { params: { username: stri
     likeCount: likeCountByPost.get(p.id) ?? 0,
     commentCount: commentCountByPost.get(p.id) ?? 0,
     likedByMe: likedSet.has(p.id),
+    ...(p.sharedPostId ? { shared: shared.get(p.sharedPostId) ?? null } : {}),
   }));
 
   const communities: ProfileCommunity[] = (membershipRows ?? []).flatMap((m) => {

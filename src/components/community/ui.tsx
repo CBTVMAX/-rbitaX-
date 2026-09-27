@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { clsx } from "clsx";
-import { AlertTriangle, BadgeCheck, Crown, Loader2, Shield, ShieldCheck, X } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Crown, Loader2, PenLine, Shield, ShieldCheck, X } from "lucide-react";
 import { ROLE_LABEL, type Role } from "@/lib/communities";
 
 /** Bottom sheet on phones, centered dialog on larger screens. */
@@ -131,12 +131,12 @@ export function OfficialBadge({ className }: { className?: string }) {
 
 export function RoleBadge({ role, className }: { role: Role | null | undefined; className?: string }) {
   if (!role || role === "member") return null;
-  const Icon = role === "owner" ? Crown : role === "admin" ? ShieldCheck : Shield;
+  const Icon = role === "owner" ? Crown : role === "admin" ? ShieldCheck : role === "editor" ? PenLine : Shield;
   return (
     <span
       className={clsx(
         "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold",
-        role === "owner" ? "bg-amber-400/15 text-amber-400" : role === "admin" ? "bg-orbit-cyan/15 text-orbit-cyan" : "bg-orbit-purple/15 text-orbit-purple",
+        role === "owner" ? "bg-amber-400/15 text-amber-400" : role === "admin" ? "bg-orbit-cyan/15 text-orbit-cyan" : role === "editor" ? "bg-orbit-pink/15 text-orbit-pink" : "bg-orbit-purple/15 text-orbit-purple",
         className
       )}
     >

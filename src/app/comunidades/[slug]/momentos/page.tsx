@@ -1,0 +1,32 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { CommunityShell } from "@/components/community/community-shell";
+import { CommunityProvider } from "@/components/community/provider";
+import { MomentsView, type Moment } from "@/components/community/pages/moments";
+import { findCommunity } from "@/lib/community-server";
+import { loadCommunityAccess } from "@/lib/community-access";
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const c = await findCommunity(params.slug);
+  return { title: c ? `Momentos · ${c.name}` : "Momentos · Órbita X" };
+}
+
+export default async function MomentsPage({ params }: { params: { slug: string } }) {
+  const access = await loadCommunityAccess(params.slug);
+  if (!access) notFound();
+  const { current, community, supabase, membership, canSee, viewer } = access;
+  let moments: Moment[] = [];
+  if (canSee) {
+    const { data } = await supabase.rpc("community_moments", { p_community: community.id, p_limit: 30 });
+    moments = (data ?? []) as unknown as Moment[];
+  }
+  return (
+    <CommunityShell current={current}>
+      <CommunityProvider community={community} viewer={viewer} membership={membership}>
+        <MomentsView canSee={canSee} initial={moments} />
+      </CommunityProvider>
+    </CommunityShell>
+  );
+}

@@ -10,7 +10,9 @@ const PREFS: { key: keyof NotifyPrefs; label: string; desc: string }[] = [
   { key: "newPost", label: "Novas publicações", desc: "Membros são avisados quando sai um post novo." },
   { key: "newDiscussion", label: "Novas discussões", desc: "Membros são avisados quando alguém abre um tópico." },
   { key: "announcements", label: "Anúncios", desc: "Posts marcados como Anúncio, Evento, Novidade etc. avisam todos os membros." },
+  { key: "events", label: "Eventos", desc: "Membros são avisados de novos eventos; quem confirmar presença recebe lembrete 1 hora antes." },
   { key: "joinRequests", label: "Pedidos para entrar", desc: "Administradores são avisados quando chega um pedido (comunidade privada)." },
+  { key: "newMembers", label: "Novos membros", desc: "Proprietário e administradores são avisados quando alguém entra." },
 ];
 
 export function NotificationsSection({ notify, onAnnounce }: { notify: boolean; onAnnounce: () => void }) {
@@ -42,7 +44,7 @@ export function NotificationsSection({ notify, onAnnounce }: { notify: boolean; 
   return (
     <div className="space-y-4">
       <Card title="Para você" desc="Vale só para a sua conta.">
-        <Toggle checked={mine} disabled={busy === "mine"} onChange={toggleMine} label="Receber notificações desta comunidade" desc="Posts, discussões, anúncios e menções." />
+        <Toggle checked={mine} disabled={busy === "mine"} onChange={toggleMine} label="Receber notificações desta comunidade" desc="Posts, discussões, eventos e avisos. Menções e respostas a você sempre chegam." />
       </Card>
       <Card title="Para os membros" desc="O que a comunidade envia de notificação. Menções e respostas aos seus posts sempre chegam, sem duplicar.">
         {!admin && <ReadOnlyNote>Só administradores e o proprietário mudam essas opções.</ReadOnlyNote>}

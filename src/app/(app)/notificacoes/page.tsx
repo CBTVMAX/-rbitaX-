@@ -5,7 +5,7 @@ import { Avatar } from "@/components/post-card";
 import { timeAgo } from "@/lib/format";
 import Link from "next/link";
 import { FriendRequestActions } from "@/components/friend-button";
-import { AtSign, Bell, Heart, Megaphone, MessageCircle, MessagesSquare, ShieldCheck, UserCheck, UserPlus, Users } from "lucide-react";
+import { AtSign, Bell, CalendarDays, CircleDot, Heart, Megaphone, MessageCircle, MessagesSquare, Repeat2, Reply, ShieldCheck, UserCheck, UserPlus, Users, VolumeX } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +23,14 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   community_join_request: UserPlus,
   community_join_approved: UserCheck,
   community_role: ShieldCheck,
+  community_member: UserPlus,
+  community_mute: VolumeX,
+  community_event: CalendarDays,
+  community_invite: Users,
+  community_repost: Repeat2,
+  community_discussion_like: Heart,
+  comment_reply: Reply,
+  story_reaction: CircleDot,
 };
 
 export default async function NotificacoesPage() {

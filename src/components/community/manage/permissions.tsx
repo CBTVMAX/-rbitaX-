@@ -17,6 +17,8 @@ const KEYS: { key: PermissionKey; hint: string }[] = [
   { key: "invite", hint: "Compartilhar convites da comunidade" },
   { key: "link", hint: "Links em posts e comentários" },
   { key: "mention", hint: "Marcar pessoas com @ (gera notificação)" },
+  { key: "story", hint: "Histórias que somem após o prazo (foto, vídeo, texto, música, enquete, link)" },
+  { key: "event", hint: "Criar eventos com data, local e lista de presença" },
 ];
 const LEVELS: PermissionLevel[] = ["all", "members", "admins", "owner"];
 
@@ -24,8 +26,9 @@ export function PermissionsSection({ onSaved }: { onSaved: (p: Permissions) => v
   const { community, role, supabase, toast } = useCommunity();
   const router = useRouter();
   const owner = role === "owner";
-  const [saved, setSaved] = useState<Permissions>(community.permissions);
-  const [perm, setPerm] = useState<Permissions>(community.permissions);
+  const initial: Permissions = { ...community.permissions, story: community.permissions.story ?? "admins", event: community.permissions.event ?? "admins" };
+  const [saved, setSaved] = useState<Permissions>(initial);
+  const [perm, setPerm] = useState<Permissions>(initial);
   const [busy, setBusy] = useState(false);
   const dirty = KEYS.some(({ key }) => perm[key] !== saved[key]);
 
@@ -47,7 +50,7 @@ export function PermissionsSection({ onSaved }: { onSaved: (p: Permissions) => v
         desc={
           <>
             <strong className="text-white/70">Todos</strong>: qualquer pessoa logada (em comunidade privada, só membros) · <strong className="text-white/70">Membros</strong>: quem participa ·{" "}
-            <strong className="text-white/70">Administradores</strong>: administradores e proprietário · <strong className="text-white/70">Somente proprietário</strong>. Moderadores contam como membros aqui.
+            <strong className="text-white/70">Administradores</strong>: administradores, editores e proprietário · <strong className="text-white/70">Somente proprietário</strong>. Moderadores contam como membros aqui. Membros silenciados não publicam, seja qual for a regra.
           </>
         }
       >

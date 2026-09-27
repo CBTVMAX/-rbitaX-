@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 /** Staff area. The page only decides what to show — every change goes through a community_* RPC that re-checks the role. */
-export default async function ManageCommunityPage({ params, searchParams }: { params: { slug: string }; searchParams: { secao?: string } }) {
+export default async function ManageCommunityPage({ params, searchParams }: { params: { slug: string }; searchParams: { secao?: string; papel?: string } }) {
   const current = await getCurrentUser();
   if (!current) redirect(`/entrar?next=/comunidades/${encodeURIComponent(params.slug)}/gerenciar`);
   const community = await findCommunity(params.slug);
@@ -24,7 +24,8 @@ export default async function ManageCommunityPage({ params, searchParams }: { pa
   const supabase = createClient();
   const { data: mine } = await supabase.from("CommunityMember").select("role, notify").eq("communityId", community.id).eq("userId", current.authId).maybeSingle();
   const role = (mine?.role as Role) ?? null;
-  if (!role || role === "member") redirect(`/comunidades/${community.slug}`);
+  // Editors publish (avisos, eventos, histórias) from the community pages; Gerenciar is for moderators and above.
+  if (!role || role === "member" || role === "editor") redirect(`/comunidades/${community.slug}`);
 
   const [pp, pd, rq, rp] = await Promise.all([
     supabase.from("Post").select("id", { count: "exact", head: true }).eq("communityId", community.id).eq("moderationStatus", "pending"),
@@ -41,6 +42,7 @@ export default async function ManageCommunityPage({ params, searchParams }: { pa
         role={role}
         notify={mine?.notify ?? true}
         initialSection={searchParams.secao ?? ""}
+        initialMembersTab={searchParams.papel}
         badges={{ pending: (pp.count ?? 0) + (pd.count ?? 0), requests: rq.count ?? 0, reports: rp.count ?? 0 }}
       />
     </CommunityShell>

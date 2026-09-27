@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { PostComposer } from "@/components/post-composer";
 import { PostCard, type FeedPost } from "@/components/post-card";
+import { loadSharedEmbeds } from "@/lib/shared-posts";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,7 @@ export default async function FeedPage() {
   const { data: posts } = await supabase
     .from("Post")
     .select(
-      "id, content, createdAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url)"
+      "id, content, createdAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url), sharedPostId"
     )
     .is("communityId", null)
     .order("createdAt", { ascending: false })
@@ -23,7 +24,7 @@ export default async function FeedPage() {
 
   const postIds = (posts ?? []).map((p) => p.id);
 
-  const [{ data: likeRows }, { data: myLikes }, { data: commentRows }] = await Promise.all([
+  const [{ data: likeRows }, { data: myLikes }, { data: commentRows }, shared] = await Promise.all([
     postIds.length
       ? supabase.from("Like").select("postId").in("postId", postIds)
       : Promise.resolve({ data: [] as { postId: string }[] }),
@@ -33,6 +34,7 @@ export default async function FeedPage() {
     postIds.length
       ? supabase.from("Comment").select("postId").in("postId", postIds)
       : Promise.resolve({ data: [] as { postId: string }[] }),
+    loadSharedEmbeds(supabase, (posts ?? []).map((p) => p.sharedPostId)),
   ]);
 
   const likeCountByPost = new Map<string, number>();
@@ -51,6 +53,7 @@ export default async function FeedPage() {
     likeCount: likeCountByPost.get(p.id) ?? 0,
     commentCount: commentCountByPost.get(p.id) ?? 0,
     likedByMe: likedSet.has(p.id),
+    ...(p.sharedPostId ? { shared: shared.get(p.sharedPostId) ?? null } : {}),
   }));
 
   return (

@@ -3,7 +3,7 @@
 import { createContext, useContext } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
-import type { Community, Role, Viewer } from "@/lib/communities";
+import type { Community, Membership, Role, Viewer } from "@/lib/communities";
 
 export type CommunityCtx = {
   community: Community;
@@ -13,6 +13,8 @@ export type CommunityCtx = {
   toast: (text: string, error?: boolean) => void;
   /** Ask the page to reload its data after a change. */
   refresh: () => void;
+  membership?: Membership;
+  setRole?: (role: Role | null) => void;
 };
 
 export const CommunityContext = createContext<CommunityCtx | null>(null);

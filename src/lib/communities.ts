@@ -7,12 +7,12 @@ import type { Database } from "@/lib/database.types";
  * community_* RPCs). The client only uses these helpers to decide what to *show*.
  */
 
-export type Role = "owner" | "admin" | "moderator" | "member";
-export type PermissionKey = "post" | "comment" | "discussion" | "photo" | "video" | "poll" | "invite" | "link" | "mention";
+export type Role = "owner" | "admin" | "moderator" | "editor" | "member";
+export type PermissionKey = "post" | "comment" | "discussion" | "photo" | "video" | "poll" | "invite" | "link" | "mention" | "story" | "event";
 export type PermissionLevel = "all" | "members" | "admins" | "owner";
 export type Permissions = Record<PermissionKey, PermissionLevel>;
 export type Moderation = { wordFilter: string[]; approvePosts: boolean; approveComments: boolean; blockLinks: boolean; blockMedia: boolean };
-export type NotifyPrefs = { newPost: boolean; newDiscussion: boolean; announcements: boolean; joinRequests: boolean };
+export type NotifyPrefs = { newPost: boolean; newDiscussion: boolean; announcements: boolean; joinRequests: boolean; events: boolean; newMembers: boolean };
 export type CommunityLink = { label: string; url: string };
 
 export type Community = {
@@ -46,14 +46,19 @@ export type Membership = {
   notify: boolean;
   request: "pending" | "rejected" | null;
   banned: boolean;
+  /** Silenced by the moderation: can read and react, but not publish (null = not muted). */
+  muted?: { until: string | null; reason: string } | null;
+  favorite?: boolean;
 };
 
 export type Author = { id: string; name: string; username: string; avatarUrl: string | null; isVerified: boolean };
-export type MediaItem = { id: string; type: string; url: string; thumbnailUrl: string | null; width: number | null; height: number | null; mimeType: string | null; position: number };
+export type MediaItem = { id: string; type: string; url: string; thumbnailUrl: string | null; width: number | null; height: number | null; mimeType: string | null; position: number; sizeBytes?: number | null; name?: string | null };
 export type PostMeta = {
   poll?: { question: string; options: string[]; multiple: boolean };
   music?: { title: string; artist: string };
   tag?: PostTag;
+  article?: { title: string };
+  video?: { title: string };
 };
 export type PostTag = "anuncio" | "atualizacao" | "evento" | "manutencao" | "novidade" | "recurso";
 
@@ -76,11 +81,14 @@ export type CommunityPost = {
   commentCount: number;
   shareCount: number;
   likedByMe: boolean;
+  /** The viewer's reaction ("like" = ❤️) and the most used reactions on the post. */
+  myReaction: ReactionKey | null;
+  topReactions: ReactionKey[];
   poll?: { counts: number[]; mine: number[]; voters: number };
 };
 
 export const POST_COLUMNS =
-  "id, content, kind, linkUrl, createdAt, editedAt, isPinned, commentsEnabled, moderationStatus, viewCount, albumId, meta, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, thumbnailUrl, width, height, mimeType, position)";
+  "id, content, kind, linkUrl, createdAt, editedAt, isPinned, commentsEnabled, moderationStatus, viewCount, albumId, meta, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, thumbnailUrl, width, height, mimeType, position, sizeBytes, name)";
 
 export type Discussion = {
   id: string;
@@ -93,17 +101,38 @@ export type Discussion = {
   replyCount: number;
   createdAt: string;
   lastActivityAt: string;
+  category: DiscussionCategory;
+  likeCount: number;
   author: Author;
 };
 
 export const DISCUSSION_COLUMNS =
-  "id, title, body, imageUrl, isPinned, isClosed, status, replyCount, createdAt, lastActivityAt, author:User!CommunityDiscussion_authorId_fkey(id, name, username, avatarUrl, isVerified)";
+  "id, title, body, imageUrl, isPinned, isClosed, status, replyCount, createdAt, lastActivityAt, category, likeCount, author:User!CommunityDiscussion_authorId_fkey(id, name, username, avatarUrl, isVerified)";
+
+/** Column lists shared by server pages and client components (kept here, outside any "use client" module). */
+export const EVENT_COLUMNS =
+  "id, communityId, createdById, title, description, startsAt, endsAt, location, locationUrl, imageUrl, maxParticipants, status, goingCount, interestedCount, createdAt";
+export const STORY_COLUMNS =
+  "id, userId, asCommunity, type, mediaUrl, thumbnailUrl, text, meta, expiresAt, createdAt, viewCount, user:User!Moment_userId_fkey(id, name, username, avatarUrl)";
+export const MEMBER_COLUMNS = "role, createdAt, user:User!CommunityMember_userId_fkey(id, name, username, avatarUrl, isVerified)";
+export const CONTENT_TAB_IDS = ["tudo", "posts", "fotos", "videos", "clipes", "musica", "gifs", "arquivos"] as const;
+export type ContentTabId = (typeof CONTENT_TAB_IDS)[number];
 
 export type Album = { id: string; title: string; description: string; coverUrl: string | null; createdAt: string; count?: number };
 
-export const ROLE_LABEL: Record<Role, string> = { owner: "Proprietário", admin: "Administrador", moderator: "Moderador", member: "Membro" };
-export const ROLE_RANK: Record<Role, number> = { owner: 4, admin: 3, moderator: 2, member: 1 };
+export const ROLE_LABEL: Record<Role, string> = { owner: "Proprietário", admin: "Administrador", moderator: "Moderador", editor: "Editor", member: "Membro" };
+export const ROLE_DESC: Record<Role, string> = {
+  owner: "Controle total, inclusive privacidade, @ e transferência.",
+  admin: "Gerencia informações, membros, cargos, eventos e avisos.",
+  moderator: "Aprova conteúdo, remove, silencia e bane membros.",
+  editor: "Publica avisos, artigos, eventos e histórias pela comunidade; fixa e organiza conteúdo.",
+  member: "Participa conforme as permissões da comunidade.",
+};
+/** Editors are members with publishing powers; the hierarchy (who can manage whom) ignores them. */
+export const ROLE_RANK: Record<Role, number> = { owner: 4, admin: 3, moderator: 2, editor: 1, member: 1 };
 export const rank = (r: Role | null | undefined) => (r ? ROLE_RANK[r] : 0);
+/** Publishes as the community: announcements, articles, events, stories, pins. */
+export const isEditorOrAdmin = (r: Role | null | undefined) => rank(r) >= 3 || r === "editor";
 
 export const PERMISSION_LABEL: Record<PermissionKey, string> = {
   post: "Publicar",
@@ -115,6 +144,8 @@ export const PERMISSION_LABEL: Record<PermissionKey, string> = {
   invite: "Convidar membros",
   link: "Adicionar links",
   mention: "Marcar usuários",
+  story: "Publicar histórias",
+  event: "Criar eventos",
 };
 export const LEVEL_LABEL: Record<PermissionLevel, string> = { all: "Todos", members: "Membros", admins: "Administradores", owner: "Somente proprietário" };
 
@@ -140,13 +171,37 @@ export const accentOf = (id: string | null) => ACCENTS.find((a) => a.id === id) 
 
 /** Can (probably) do this — mirrors community_can() for the UI. The database decides for real. */
 export function can(c: Pick<Community, "permissions" | "isPrivate">, role: Role | null, key: PermissionKey) {
-  const need = c.permissions?.[key] ?? "members";
+  const need = c.permissions?.[key] ?? (key === "story" || key === "event" ? "admins" : "members");
   const r = rank(role);
   if (need === "all") return !c.isPrivate || r >= 1;
   if (need === "members") return r >= 1;
-  if (need === "admins") return r >= 3;
+  if (need === "admins") return r >= 3 || role === "editor";
   return r >= 4;
 }
+
+export type DiscussionCategory = "geral" | "apresentacoes" | "sugestoes" | "suporte" | "offtopic" | "eventos" | "noticias";
+export const DISCUSSION_CATEGORIES: { id: DiscussionCategory; label: string; emoji: string }[] = [
+  { id: "geral", label: "Geral", emoji: "💬" },
+  { id: "apresentacoes", label: "Apresentações", emoji: "👋" },
+  { id: "sugestoes", label: "Sugestões", emoji: "💡" },
+  { id: "suporte", label: "Suporte", emoji: "🛟" },
+  { id: "offtopic", label: "Off Topic", emoji: "🎲" },
+  { id: "eventos", label: "Eventos", emoji: "📅" },
+  { id: "noticias", label: "Notícias", emoji: "📰" },
+];
+export const categoryOf = (id: string | null | undefined) => DISCUSSION_CATEGORIES.find((c) => c.id === id) ?? DISCUSSION_CATEGORIES[0];
+
+export type ReactionKey = "like" | "haha" | "wow" | "sad" | "angry" | "fire" | "clap";
+export const REACTIONS: { key: ReactionKey; emoji: string; label: string }[] = [
+  { key: "like", emoji: "❤️", label: "Curtir" },
+  { key: "haha", emoji: "😂", label: "Haha" },
+  { key: "wow", emoji: "😮", label: "Uau" },
+  { key: "sad", emoji: "😢", label: "Triste" },
+  { key: "angry", emoji: "😡", label: "Grr" },
+  { key: "fire", emoji: "🔥", label: "Fogo" },
+  { key: "clap", emoji: "👏", label: "Palmas" },
+];
+export const reactionOf = (k: string | null | undefined) => REACTIONS.find((r) => r.key === k) ?? REACTIONS[0];
 
 const ERRORS: [RegExp, string][] = [
   [/community_forbidden|forbidden|insufficient_privilege/, "Você não tem permissão para isso nesta comunidade."],
@@ -170,6 +225,20 @@ const ERRORS: [RegExp, string][] = [
   [/too_long/, "Texto longo demais."],
   [/cannot_change_self/, "Você não pode mudar o próprio cargo."],
   [/not_member/, "Essa pessoa não é mais membro."],
+  [/muted/, "Você está silenciado nesta comunidade no momento."],
+  [/event_full/, "As vagas deste evento acabaram."],
+  [/event_closed/, "Este evento já terminou ou foi cancelado."],
+  [/invalid_date/, "Confira a data e o horário (o início não pode estar no passado)."],
+  [/invalid_event/, "Confira o nome (3 a 120 letras) e os demais campos do evento."],
+  [/invalid_category/, "Escolha uma categoria válida."],
+  [/invalid_article/, "O artigo precisa de um título (3 a 140 letras) e de pelo menos 20 caracteres de texto."],
+  [/invalid_discussion/, "O título precisa ter entre 3 e 140 caracteres."],
+  [/blocked_words/, "O texto tem palavras bloqueadas por esta comunidade."],
+  [/private_community/, "Publicações de comunidades privadas não podem ser repostadas."],
+  [/invalid_option/, "Opção inválida."],
+  [/invalid_members/, "Escolha de 1 a 50 amigos."],
+  [/is_staff/, "Você faz parte da administração: as mensagens dos membros chegam para você no Messenger."],
+  [/invalid_kind/, "Tipo de conteúdo não suportado."],
 ];
 export function communityError(message?: string) {
   if (!message) return "Não foi possível concluir agora. Tente de novo.";
@@ -249,5 +318,25 @@ export function compactNumber(n: number) {
 
 /** "agora" for the first minute, then "há 5 minutos", "há 2 dias"… */
 export function ago(iso: string) {
-  return Date.now() - new Date(iso).getTime() < 60_000 ? "agora" : timeAgo(iso);
+  const d = parseDbDate(iso);
+  return Date.now() - d.getTime() < 60_000 ? "agora" : timeAgo(d.toISOString());
+}
+
+/** Some columns are "timestamp without time zone" (stored in UTC): read them as UTC, not local time. */
+export function parseDbDate(iso: string) {
+  return new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`);
+}
+
+const pad = (n: number) => String(n).padStart(2, "0");
+/** "sáb., 12 de out. · 19:30" in the viewer's timezone. */
+export function eventDate(iso: string, withYear = false) {
+  const d = new Date(iso);
+  const day = d.toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short", ...(withYear ? { year: "numeric" } : {}) });
+  return `${day} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export function fileSize(bytes: number | null | undefined) {
+  if (!bytes) return "";
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB`;
 }

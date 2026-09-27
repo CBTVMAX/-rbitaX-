@@ -1,242 +1,123 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import {
   ArrowLeft,
   CalendarDays,
-  Camera,
   ChevronRight,
-  Clapperboard,
+  FileText,
   Film,
-  FolderPlus,
   Globe,
-  Heart,
-  Home,
   Images,
+  Info,
   Link2,
   Loader2,
   Lock,
-  MessageCircle,
+  MapPin,
+  Megaphone,
+  MessageSquareText,
   MessagesSquare,
-  Pin,
-  Play,
+  MoreHorizontal,
+  Music2,
   Plus,
-  ScrollText,
-  Search,
   Settings,
   Share2,
   ShieldAlert,
+  Sparkles,
   Users,
-  X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/post-card";
-import { VerifiedBadge } from "@/components/verified-badge";
 import { CommunityJoinButton } from "@/components/community-join-button";
 import { useStoreToast } from "@/components/store/store-view";
 import { categoryLabel } from "@/lib/community-categories";
-import { ago as timeAgo } from "@/lib/communities";
-import {
-  accentOf,
-  communityError,
-  compactNumber,
-  rank,
-  type Album,
-  type Community,
-  type CommunityPost,
-  type Discussion,
-  type Membership,
-  type Role,
-  type Viewer,
-} from "@/lib/communities";
-import { loadCommunityPosts } from "@/lib/community-data";
-import { CommunityContext, type CommunityCtx } from "./context";
+import { accentOf, ago, categoryOf, compactNumber, rank, type Album, type Community, type CommunityPost, type Discussion, type Membership, type Role, type Viewer } from "@/lib/communities";
+import { CommunityContext, useCommunity, type CommunityCtx } from "./context";
 import { CommunityPostCard } from "./post-card";
-import { Composer, CreateMenu, type CreateKind } from "./composer";
-import { EmptyState, OfficialBadge, RoleBadge, Sheet } from "./ui";
-import { Lightbox } from "./lightbox";
+import { useCreateOptions } from "./composer";
+import { useCreateFlow, type Created } from "./create-flow";
+import { ContentCenter, type ContentCounts, type ContentTab } from "./content-center";
+import { CommunityMenu, useCommunityChat, useShareCommunity } from "./community-menu";
+import { StoriesStrip } from "./stories";
+import { useTimeZone } from "@/lib/use-tz";
+import { DateBadge, eventLive, eventWhen, type CommunityEvent } from "./events";
+import { MutedNotice } from "./subpage";
+import { EmptyState, OfficialBadge, RoleBadge } from "./ui";
 
 export type MemberPreview = { role: Role; createdAt: string; user: { id: string; name: string; username: string; avatarUrl: string | null; isVerified: boolean } };
 
-type Tab = "inicio" | "posts" | "fotos" | "videos" | "clipes" | "discussoes" | "membros";
-const TABS: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: "inicio", label: "Início", icon: Home },
-  { id: "posts", label: "Posts", icon: ScrollText },
-  { id: "fotos", label: "Fotos", icon: Camera },
-  { id: "videos", label: "Vídeos", icon: Film },
-  { id: "clipes", label: "Clipes", icon: Clapperboard },
-  { id: "discussoes", label: "Discussões", icon: MessagesSquare },
-  { id: "membros", label: "Membros", icon: Users },
-];
-const POST_KINDS = ["text", "link", "poll", "music", "file"];
+const TAB_IDS: ContentTab[] = ["tudo", "posts", "fotos", "videos", "clipes", "musica", "gifs", "arquivos"];
 
-function usePaged(load: (before?: string) => Promise<CommunityPost[]>, initial: CommunityPost[] | null, deps: unknown[]) {
-  const [items, setItems] = useState<CommunityPost[] | null>(initial);
-  const [done, setDone] = useState(false);
-  const [loading, setLoading] = useState(false);
-  useEffect(() => {
-    if (initial) {
-      setItems(initial);
-      setDone(initial.length < 15);
-      return;
-    }
-    let alive = true;
-    setItems(null);
-    load().then((r) => {
-      if (!alive) return;
-      setItems(r);
-      setDone(r.length < 15);
-    });
-    return () => {
-      alive = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-  const more = async () => {
-    if (!items?.length || loading) return;
-    setLoading(true);
-    const r = await load(items[items.length - 1].createdAt);
-    setLoading(false);
-    setItems([...items, ...r]);
-    if (r.length < 15) setDone(true);
-  };
-  return { items, setItems, done, loading, more };
-}
-
-function Feed({ items, loading, done, more, setItems, empty, focusId }: {
-  items: CommunityPost[] | null;
-  loading: boolean;
-  done: boolean;
-  more: () => void;
-  setItems: (f: CommunityPost[]) => void;
-  empty: React.ReactNode;
-  focusId?: string;
-}) {
-  if (items === null)
-    return (
-      <div className="space-y-3">
-        {[0, 1].map((i) => (
-          <div key={i} className="h-40 animate-pulse rounded-3xl bg-white/[0.04]" />
-        ))}
-      </div>
-    );
-  if (!items.length) return <>{empty}</>;
+/** Round shortcuts under the header: each opens a real page of the community. */
+function Highlights({ slug, counts }: { slug: string; counts: { announcements: number; discussions: number; events: number } & ContentCounts }) {
+  const base = `/comunidades/${slug}`;
+  const items: { href: string; label: string; icon: React.ComponentType<{ className?: string }>; count?: number; tone: string }[] = [
+    { href: `${base}/avisos`, label: "Avisos", icon: Megaphone, count: counts.announcements, tone: "from-amber-400 to-orbit-pink" },
+    { href: `${base}/discussoes`, label: "Discussões", icon: MessagesSquare, count: counts.discussions, tone: "from-orbit-purple to-orbit-pink" },
+    { href: `${base}/eventos`, label: "Eventos", icon: CalendarDays, count: counts.events, tone: "from-orbit-cyan to-orbit-blue" },
+    { href: `${base}/conteudo?aba=fotos`, label: "Fotos", icon: Images, count: counts.fotos, tone: "from-emerald-400 to-orbit-cyan" },
+    { href: `${base}/conteudo?aba=videos`, label: "Vídeos", icon: Film, count: (counts.videos ?? 0) + (counts.clipes ?? 0), tone: "from-red-400 to-orbit-purple" },
+    { href: `${base}/conteudo?aba=musica`, label: "Música", icon: Music2, count: counts.musica, tone: "from-orbit-pink to-orbit-purple" },
+    { href: `${base}/conteudo?aba=arquivos`, label: "Arquivos", icon: FileText, count: counts.arquivos, tone: "from-slate-300 to-orbit-blue" },
+    { href: `${base}/momentos`, label: "Momentos", icon: Sparkles, tone: "from-orbit-cyan via-orbit-purple to-orbit-pink" },
+  ];
   return (
-    <div className="space-y-3">
-      {items.map((p) => (
-        <CommunityPostCard
-          key={p.id}
-          post={p}
-          highlight={p.id === focusId}
-          onChanged={(n) => setItems(items.map((x) => (x.id === n.id ? n : x)))}
-          onDeleted={(id) => setItems(items.filter((x) => x.id !== id))}
-        />
-      ))}
-      {!done && (
-        <button type="button" onClick={more} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 py-3 text-sm font-semibold text-white/75 hover:bg-white/5">
-          {loading && <Loader2 className="h-4 w-4 animate-spin" />} Carregar mais
-        </button>
-      )}
-    </div>
-  );
-}
-
-function DiscussionRow({ d, slug }: { d: Discussion; slug: string }) {
-  return (
-    <Link
-      href={`/comunidades/${slug}/discussoes/${d.id}`}
-      className="flex items-start gap-3 rounded-2xl border border-white/[0.08] bg-space-card/80 p-3.5 transition hover:border-orbit-purple/40"
-    >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orbit-purple/15 text-orbit-purple">
-        <MessagesSquare className="h-5 w-5" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5">
-          {d.isPinned && <Pin className="h-3.5 w-3.5 shrink-0 text-orbit-cyan" />}
-          <span className="truncate text-sm font-semibold text-white">{d.title}</span>
-          {d.isClosed && <Lock className="h-3.5 w-3.5 shrink-0 text-white/40" />}
-        </span>
-        <span className="mt-0.5 block truncate text-xs text-white/45">
-          {d.author.name} · {d.replyCount} {d.replyCount === 1 ? "resposta" : "respostas"} · {timeAgo(d.lastActivityAt)}
-        </span>
-      </span>
-      <ChevronRight className="mt-2.5 h-4 w-4 shrink-0 text-white/30" />
-    </Link>
-  );
-}
-
-/** Vertical, full-screen clips: scroll snaps one clip at a time and plays only the one on screen. */
-function ClipViewer({ clips, start, onClose, onOpenPost }: { clips: CommunityPost[]; start: number; onClose: () => void; onOpenPost: (p: CommunityPost) => void }) {
-  const box = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    el.scrollTo({ top: start * el.clientHeight });
-    const videos = Array.from(el.querySelectorAll("video"));
-    const io = new IntersectionObserver(
-      (entries) => entries.forEach((e) => (e.isIntersecting ? (e.target as HTMLVideoElement).play().catch(() => {}) : (e.target as HTMLVideoElement).pause())),
-      { root: el, threshold: 0.7 }
-    );
-    videos.forEach((v) => io.observe(v));
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      io.disconnect();
-      document.body.style.overflow = prev;
-    };
-  }, [start]);
-  return (
-    <div className="fixed inset-0 z-[85] bg-black" role="dialog" aria-label="Clipes">
-      <button type="button" onClick={onClose} aria-label="Fechar" className="absolute left-3 top-[max(0.75rem,env(safe-area-inset-top))] z-10 flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur">
-        <X className="h-5 w-5" />
-      </button>
-      <div ref={box} className="h-full snap-y snap-mandatory overflow-y-auto [scrollbar-width:none]">
-        {clips.map((c) => {
-          const v = c.media.find((m) => m.type === "video");
+    <nav aria-label="Destaques da comunidade" className="-mx-4 md:mx-0">
+      <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:px-0 lg:grid lg:grid-cols-8 lg:gap-2">
+        {items.map((it) => {
+          const Icon = it.icon;
           return (
-            <section key={c.id} className="relative flex h-full snap-start items-center justify-center">
-              {v && (
-                // eslint-disable-next-line jsx-a11y/media-has-caption
-                <video src={v.url} loop playsInline preload="metadata" className="h-full max-h-full w-full max-w-[min(100vw,56.25vh)] object-cover" onClick={(e) => (e.currentTarget.paused ? e.currentTarget.play() : e.currentTarget.pause())} />
-              )}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-16">
-                <div className="mx-auto flex max-w-[min(100vw,56.25vh)] items-end gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-1 text-sm font-semibold text-white">
-                      {c.author.name} {c.author.isVerified && <VerifiedBadge />}
-                    </p>
-                    {c.content && <p className="mt-1 line-clamp-3 text-sm text-white/85">{c.content}</p>}
-                  </div>
-                  <div className="pointer-events-auto flex flex-col items-center gap-3 text-white">
-                    <button type="button" onClick={() => onOpenPost(c)} className="flex flex-col items-center text-[11px]">
-                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 backdrop-blur">
-                        <Heart className={clsx("h-5 w-5", c.likedByMe && "fill-orbit-pink text-orbit-pink")} />
-                      </span>
-                      {compactNumber(c.likeCount)}
-                    </button>
-                    <button type="button" onClick={() => onOpenPost(c)} className="flex flex-col items-center text-[11px]">
-                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 backdrop-blur">
-                        <MessageCircle className="h-5 w-5" />
-                      </span>
-                      {compactNumber(c.commentCount)}
-                    </button>
-                    <button type="button" onClick={() => onOpenPost(c)} className="flex flex-col items-center text-[11px]">
-                      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 backdrop-blur">
-                        <Share2 className="h-5 w-5" />
-                      </span>
-                      Mais
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </section>
+            <Link key={it.href} href={it.href} className="group flex w-[76px] shrink-0 flex-col items-center gap-1.5 rounded-2xl py-1 text-center lg:w-auto">
+              <span className={clsx("relative flex h-14 w-14 items-center justify-center rounded-[20px] bg-gradient-to-br p-[1.5px] transition group-hover:scale-105 group-active:scale-95", it.tone)}>
+                <span className="flex h-full w-full items-center justify-center rounded-[18.5px] bg-space-card/95 text-white">
+                  <Icon className="h-6 w-6" />
+                </span>
+                {!!it.count && (
+                  <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-space-bg bg-white px-1 text-[10px] font-bold tabular-nums text-space-bg">
+                    {compactNumber(it.count)}
+                  </span>
+                )}
+              </span>
+              <span className="text-[11px] font-medium text-white/75 group-hover:text-white">{it.label}</span>
+            </Link>
           );
         })}
       </div>
-    </div>
+    </nav>
+  );
+}
+
+function NextEvent({ e, slug, rsvp }: { e: CommunityEvent; slug: string; rsvp: string | null }) {
+  const tz = useTimeZone();
+  const live = eventLive(e);
+  return (
+    <Link
+      href={`/comunidades/${slug}/eventos/${e.id}`}
+      className="flex items-center gap-3 overflow-hidden rounded-3xl border border-orbit-cyan/25 bg-[linear-gradient(120deg,rgb(34_211_238/0.12),rgb(var(--app-accent,139_92_246)/0.08)_60%,transparent)] p-3 transition hover:border-orbit-cyan/50"
+    >
+      <DateBadge iso={e.startsAt} />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-orbit-cyan">
+          {live ? <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" /> : <CalendarDays className="h-3.5 w-3.5" />}
+          {live ? "Acontecendo agora" : "Próximo evento"}
+        </span>
+        <span className="block truncate font-semibold text-white">{e.title}</span>
+        <span className="block truncate text-xs text-white/55">
+          {eventWhen(e, tz)}
+          {e.location && (
+            <>
+              {" · "}
+              <MapPin className="-mt-0.5 inline h-3 w-3" /> {e.location}
+            </>
+          )}
+        </span>
+      </span>
+      <span className="hidden shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white sm:block">{rsvp === "going" ? "Você vai ✓" : `${e.goingCount} vão`}</span>
+      <ChevronRight className="h-4 w-4 shrink-0 text-white/35" />
+    </Link>
   );
 }
 
@@ -252,31 +133,24 @@ export function CommunityView(props: {
   discussions: Discussion[];
   albums: Album[];
   members: MemberPreview[];
-  counts: { photos: number; videos: number; clips: number; discussions: number };
+  counts: ContentCounts & { discussions: number; announcements: number; events: number };
+  nextEvent: { event: CommunityEvent; rsvp: string | null } | null;
   staffBadges: { pending: number; requests: number; reports: number };
 }) {
   const { community, viewer, membership, canSee } = props;
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const { toast, node } = useStoreToast();
-  const [tab, setTab] = useState<Tab>((TABS.some((t) => t.id === props.initialTab) ? props.initialTab : "inicio") as Tab);
   const [role, setRole] = useState<Role | null>(membership.role);
-  const [menu, setMenu] = useState(false);
-  const [composer, setComposer] = useState<CreateKind | null>(null);
-  const [albumTarget, setAlbumTarget] = useState<string | null>(null);
-  const [descOpen, setDescOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [pinned, setPinned] = useState(props.pinned);
-  const [discussions, setDiscussions] = useState(props.discussions);
-  const [albums, setAlbums] = useState(props.albums);
-  const [album, setAlbum] = useState<string | null>(null);
-  const [albumForm, setAlbumForm] = useState<{ id?: string; title: string; description: string } | null>(null);
-  const [photoView, setPhotoView] = useState<number | null>(null);
-  const [clipIndex, setClipIndex] = useState<number | null>(null);
-  const [clipPost, setClipPost] = useState<CommunityPost | null>(null);
-  const [memberQuery, setMemberQuery] = useState("");
-  const accent = accentOf(community.accentColor);
+  const [menu, setMenu] = useState(false);
+  const [descOpen, setDescOpen] = useState(false);
   const [fab, setFab] = useState(false);
+  const accent = accentOf(community.accentColor);
+  const base = `/comunidades/${community.slug}`;
+
+  useEffect(() => setPinned(props.pinned), [props.pinned]);
   useEffect(() => {
     const onScroll = () => setFab(window.scrollY > 520);
     onScroll();
@@ -285,84 +159,119 @@ export function CommunityView(props: {
   }, []);
 
   const ctx: CommunityCtx = useMemo(
-    () => ({ community, viewer, role, supabase, toast, refresh: () => (setRefreshKey((k) => k + 1), router.refresh()) }),
+    () => ({ community, viewer, role, setRole, membership, supabase, toast, refresh: () => (setRefreshKey((k) => k + 1), router.refresh()) }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [community, viewer, role, supabase]
+    [community, viewer, role, membership, supabase]
   );
-
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    if (tab === "inicio") url.searchParams.delete("aba");
-    else url.searchParams.set("aba", tab);
-    window.history.replaceState(window.history.state, "", url.toString());
-  }, [tab]);
-
-  const me = viewer?.id ?? null;
-  const load = useCallback(
-    (f: Parameters<typeof loadCommunityPosts>[3]) => (before?: string) => loadCommunityPosts(supabase, community.id, me, { ...f, before, limit: 15 }),
-    [supabase, community.id, me]
-  );
-  const home = usePaged(load({ pinned: false, excludeKinds: ["clip"] }), refreshKey === 0 ? props.posts : null, [refreshKey]);
-  const postsTab = usePaged(load({ kinds: POST_KINDS }), null, [tab === "posts", refreshKey]);
-  const photos = usePaged(load({ kinds: ["image"], ...(album ? { albumId: album } : {}) }), null, [tab === "fotos", album, refreshKey]);
-  const videos = usePaged(load({ kinds: ["video"] }), null, [tab === "videos", refreshKey]);
-  const clips = usePaged(load({ kinds: ["clip"] }), null, [tab === "clipes", refreshKey]);
 
   const staff = rank(role) >= 2;
-  const admin = rank(role) >= 3;
   const badgeTotal = props.staffBadges.pending + props.staffBadges.requests + props.staffBadges.reports;
+  const initialTab = (TAB_IDS.includes(props.initialTab as ContentTab) ? props.initialTab : "tudo") as ContentTab;
 
-  async function onCreated(r: { id: string; status: string; kind: CreateKind }) {
-    if (r.status === "pending") toast("Enviado! A moderação vai revisar antes de aparecer.");
-    if (r.kind === "discussion") {
-      if (r.status === "visible") router.push(`/comunidades/${community.slug}/discussoes/${r.id}`);
-      return;
-    }
-    setRefreshKey((k) => k + 1);
-    const target: Tab = r.kind === "clip" ? "clipes" : r.kind === "video" ? "videos" : r.kind === "photo" ? "fotos" : "inicio";
-    setTab(target);
-    router.refresh();
-  }
-
-  async function saveAlbum() {
-    if (!albumForm) return;
-    const { data, error } = await supabase.rpc("community_save_album", {
-      p_community: community.id,
-      p_id: albumForm.id ?? null,
-      p_title: albumForm.title,
-      p_description: albumForm.description,
-      p_cover: null,
-    });
-    if (error) return toast(communityError(error.message), true);
-    const id = data as string;
-    setAlbums((l) =>
-      albumForm.id ? l.map((a) => (a.id === id ? { ...a, title: albumForm.title, description: albumForm.description } : a)) : [{ id, title: albumForm.title, description: albumForm.description, coverUrl: null, createdAt: new Date().toISOString() }, ...l]
-    );
-    setAlbumForm(null);
-    toast(albumForm.id ? "Álbum atualizado." : "Álbum criado. Envie as primeiras fotos!");
-  }
-
-  async function deleteAlbum(id: string) {
-    if (!window.confirm("Excluir este álbum? As fotos continuam na comunidade, só saem do álbum.")) return;
-    const { error } = await supabase.rpc("community_delete_album", { p_album: id });
-    if (error) return toast(communityError(error.message), true);
-    setAlbums((l) => l.filter((a) => a.id !== id));
-    setAlbum(null);
-    toast("Álbum excluído.");
-  }
-
-  function share() {
-    const url = `${window.location.origin}/comunidades/${community.slug}`;
-    if (navigator.share) navigator.share({ title: community.name, url }).catch(() => {});
-    else navigator.clipboard.writeText(url).then(() => toast("Link da comunidade copiado."));
-  }
-
-  const photoItems = (photos.items ?? []).flatMap((p) => p.media.filter((m) => m.type === "image").map((m) => ({ ...m, post: p })));
-  const filteredMembers = props.members.filter(
-    (m) => !memberQuery.trim() || m.user.name.toLowerCase().includes(memberQuery.toLowerCase()) || m.user.username.toLowerCase().includes(memberQuery.toLowerCase())
+  return (
+    <CommunityContext.Provider value={ctx}>
+      <div style={{ ["--app-accent" as string]: accent.rgb }}>
+        <Hub
+          {...props}
+          initialTab={initialTab}
+          staff={staff}
+          badgeTotal={badgeTotal}
+          pinned={pinned}
+          setPinned={setPinned}
+          refreshKey={refreshKey}
+          bump={() => (setRefreshKey((k) => k + 1), router.refresh())}
+          openMenu={() => setMenu(true)}
+          descOpen={descOpen}
+          setDescOpen={setDescOpen}
+          fab={fab}
+          base={base}
+        />
+        <CommunityMenu open={menu} onClose={() => setMenu(false)} membership={membership} onLeft={() => setRole(null)} />
+        {node}
+      </div>
+    </CommunityContext.Provider>
   );
-  const staffMembers = props.members.filter((m) => m.role !== "member").sort((a, b) => rank(b.role) - rank(a.role));
-  const canCreate = !!viewer && canSee && (rank(role) >= 1 || !community.isPrivate);
+}
+
+type HubProps = Parameters<typeof CommunityView>[0] & {
+  initialTab: ContentTab;
+  staff: boolean;
+  badgeTotal: number;
+  setPinned: (f: (l: CommunityPost[]) => CommunityPost[]) => void;
+  refreshKey: number;
+  bump: () => void;
+  openMenu: () => void;
+  descOpen: boolean;
+  setDescOpen: (f: (v: boolean) => boolean) => void;
+  fab: boolean;
+  base: string;
+};
+
+/** Inside the context so the hooks (create options, chat, share) see the community. */
+function Hub(p: HubProps) {
+  const { community, viewer, membership, canSee, staff, base } = p;
+  const router = useRouter();
+  const { role, setRole, toast } = useCommunity();
+  const share = useShareCommunity();
+  const chat = useCommunityChat();
+  const options = useCreateOptions();
+  const canCreate = options.length > 0 && canSee;
+  const accent = accentOf(community.accentColor);
+  const tz = useTimeZone();
+
+  function onCreated(r: Created) {
+    if (r.status === "pending") toast("Enviado! A moderação vai revisar antes de aparecer.");
+    if (r.kind === "discussion" && r.status === "visible") return router.push(`${base}/discussoes/${r.id}`);
+    if (r.kind === "event") return router.push(`${base}/eventos/${r.id}`);
+    if (r.kind === "story") return;
+    p.bump();
+  }
+  const flow = useCreateFlow({ albums: p.albums, onCreated });
+
+  const iconBtn = "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-white transition hover:bg-white/[0.08]";
+  const actions = (
+    <>
+      {viewer ? (
+        <CommunityJoinButton
+          communityId={community.id}
+          initiallyMember={!!membership.role}
+          isPrivate={community.isPrivate}
+          role={role}
+          request={membership.request}
+          banned={membership.banned}
+          notify={membership.notify}
+          size="lg"
+          onChange={(s) => setRole?.(s === "member" ? role ?? "member" : null)}
+        />
+      ) : (
+        <Link href="/entrar" className="flex h-11 items-center rounded-full bg-orbit-gradient px-5 text-sm font-semibold text-snow shadow-glow">
+          Entrar para participar
+        </Link>
+      )}
+      {canCreate && (
+        <button type="button" onClick={flow.openMenu} className="flex h-11 items-center gap-1.5 rounded-full border border-orbit-purple/40 bg-orbit-purple/10 px-4 text-sm font-semibold text-white transition hover:bg-orbit-purple/20">
+          <Plus className="h-4 w-4" /> Criar
+        </button>
+      )}
+      {viewer && rank(role) < 3 && !membership.banned && (
+        <button type="button" onClick={chat.open} disabled={chat.busy} className="flex h-11 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.08]">
+          {chat.busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquareText className="h-4 w-4" />} Mensagem
+        </button>
+      )}
+      {staff && (
+        <Link href={`${base}/gerenciar`} className="relative flex h-11 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.08]">
+          <Settings className="h-4 w-4" /> Gerenciar
+          {p.badgeTotal > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orbit-pink px-1 text-[10px] font-bold text-snow">{p.badgeTotal}</span>}
+        </Link>
+      )}
+      <button type="button" onClick={share} aria-label="Compartilhar comunidade" className={iconBtn}>
+        <Share2 className="h-[18px] w-[18px]" />
+      </button>
+      <button type="button" onClick={p.openMenu} aria-label="Mais opções" className={iconBtn}>
+        <MoreHorizontal className="h-5 w-5" />
+      </button>
+    </>
+  );
 
   const header = (
     <div className="relative">
@@ -380,9 +289,6 @@ export function CommunityView(props: {
         <Link href="/comunidades" aria-label="Voltar para comunidades" className="absolute left-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur md:hidden">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <button type="button" onClick={share} aria-label="Compartilhar comunidade" className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur">
-          <Share2 className="h-[18px] w-[18px]" />
-        </button>
       </div>
       <div className="mx-auto max-w-6xl px-4 md:px-6 lg:px-10">
         <div className="-mt-10 flex items-end gap-3 sm:-mt-12">
@@ -397,7 +303,7 @@ export function CommunityView(props: {
             </span>
           </span>
           <div className="hidden min-w-0 flex-1 pb-1 md:block">
-            <div className="flex flex-wrap items-center justify-end gap-2">{actions()}</div>
+            <div className="flex flex-wrap items-center justify-end gap-2">{actions}</div>
           </div>
         </div>
         <div className="mt-3 min-w-0">
@@ -419,107 +325,34 @@ export function CommunityView(props: {
               </>
             )}
           </p>
-          <button type="button" onClick={() => setTab("membros")} className="mt-1.5 flex items-center gap-1.5 text-sm text-white/75 hover:text-white">
+          <Link href={`${base}/membros`} className="mt-1.5 inline-flex items-center gap-1.5 text-sm text-white/75 hover:text-white">
             <Users className="h-4 w-4 text-orbit-cyan" /> <strong className="font-semibold text-white">{compactNumber(community.memberCount)}</strong> {community.memberCount === 1 ? "membro" : "membros"}
             {role && <RoleBadge role={role} className="ml-1" />}
-          </button>
+          </Link>
           {community.description && (
             <div className="mt-2 max-w-2xl">
-              <p className={clsx("whitespace-pre-wrap text-sm leading-relaxed text-white/70", !descOpen && "line-clamp-3")}>{community.description}</p>
-              {community.description.length > 160 && (
-                <button type="button" onClick={() => setDescOpen((v) => !v)} className="mt-0.5 text-xs font-semibold text-orbit-cyan">
-                  {descOpen ? "Mostrar menos" : "Ler mais"}
-                </button>
-              )}
+              <p className={clsx("whitespace-pre-wrap text-sm leading-relaxed text-white/70", !p.descOpen && "line-clamp-3")}>{community.description}</p>
+              <div className="mt-0.5 flex gap-3">
+                {community.description.length > 160 && (
+                  <button type="button" onClick={() => p.setDescOpen((v) => !v)} className="text-xs font-semibold text-orbit-cyan">
+                    {p.descOpen ? "Mostrar menos" : "Ler mais"}
+                  </button>
+                )}
+                <Link href={`${base}/sobre`} className="text-xs font-semibold text-white/55 hover:text-white">
+                  Sobre a comunidade
+                </Link>
+              </div>
             </div>
           )}
-          <div className="mt-3 flex flex-wrap items-center gap-2 md:hidden">{actions()}</div>
+          <div className="mt-3 flex flex-wrap items-center gap-2 md:hidden">{actions}</div>
         </div>
       </div>
     </div>
   );
 
-  function actions() {
-    return (
-      <>
-        {viewer ? (
-          <CommunityJoinButton
-            communityId={community.id}
-            initiallyMember={!!membership.role}
-            isPrivate={community.isPrivate}
-            role={role}
-            request={membership.request}
-            banned={membership.banned}
-            notify={membership.notify}
-            size="lg"
-            onChange={(s) => setRole(s === "member" ? role ?? "member" : null)}
-          />
-        ) : (
-          <Link href="/entrar" className="flex h-11 items-center rounded-full bg-orbit-gradient px-5 text-sm font-semibold text-snow shadow-glow">
-            Entrar para participar
-          </Link>
-        )}
-        {canCreate && (
-          <button type="button" onClick={() => setMenu(true)} className="flex h-11 items-center gap-1.5 rounded-full border border-orbit-purple/40 bg-orbit-purple/10 px-5 text-sm font-semibold text-white transition hover:bg-orbit-purple/20">
-            <Plus className="h-4 w-4" /> Criar
-          </button>
-        )}
-        {staff && (
-          <Link
-            href={`/comunidades/${community.slug}/gerenciar`}
-            className="relative flex h-11 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-5 text-sm font-semibold text-white transition hover:bg-white/[0.08]"
-          >
-            <Settings className="h-4 w-4" /> Gerenciar
-            {badgeTotal > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orbit-pink px-1 text-[10px] font-bold text-snow">{badgeTotal}</span>}
-          </Link>
-        )}
-      </>
-    );
-  }
-
-  const tabs = (
-    <div className="sticky top-14 z-20 -mx-4 border-b border-white/[0.06] bg-space-bg/85 px-2 backdrop-blur-xl md:top-16 md:mx-0 md:rounded-2xl md:border md:px-1.5">
-      <div className="flex gap-0.5 overflow-x-auto py-1.5 [scrollbar-width:none]" role="tablist" aria-label="Seções da comunidade">
-        {TABS.map((t) => {
-          const Icon = t.icon;
-          const count = t.id === "fotos" ? props.counts.photos : t.id === "videos" ? props.counts.videos : t.id === "clipes" ? props.counts.clips : t.id === "discussoes" ? props.counts.discussions : 0;
-          return (
-            <button
-              key={t.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === t.id}
-              onClick={() => setTab(t.id)}
-              className={clsx(
-                "flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-xl px-3.5 text-[13px] font-semibold transition",
-                tab === t.id ? "bg-orbit-gradient text-snow shadow-[0_0_16px_rgb(var(--app-accent,139_92_246)/0.35)]" : "text-white/60 hover:text-white",
-                t.id === "membros" && "lg:hidden"
-              )}
-            >
-              <Icon className="h-4 w-4" /> {t.label}
-              {count > 0 && <span className={clsx("text-[11px] tabular-nums", tab === t.id ? "text-snow/80" : "text-white/35")}>{compactNumber(count)}</span>}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-
-  const locked = (
-    <EmptyState
-      icon={<Lock className="h-6 w-6" />}
-      title={membership.banned ? "Você não tem acesso a esta comunidade" : "Comunidade privada"}
-      text={membership.banned ? "A moderação bloqueou sua participação." : "Somente membros aprovados veem as publicações, fotos e discussões. Peça para entrar e aguarde a aprovação."}
-    />
-  );
-
-  const composerPrompt = canCreate && (
-    <button
-      type="button"
-      onClick={() => setMenu(true)}
-      className="flex w-full items-center gap-3 rounded-3xl border border-white/[0.08] bg-space-card/80 p-3 text-left transition hover:border-orbit-purple/40"
-    >
-      <Avatar name={viewer!.name} url={viewer!.avatarUrl} size={40} />
+  const composerPrompt = canCreate && viewer && (
+    <button type="button" onClick={flow.openMenu} className="flex w-full items-center gap-3 rounded-3xl border border-white/[0.08] bg-space-card/80 p-3 text-left transition hover:border-orbit-purple/40">
+      <Avatar name={viewer.name} url={viewer.avatarUrl} size={40} />
       <span className="flex min-h-[44px] flex-1 items-center rounded-2xl border border-white/10 bg-space-bg/60 px-4 text-sm text-white/40">Compartilhe algo com a comunidade…</span>
       <span className="flex h-11 w-11 items-center justify-center rounded-full bg-orbit-gradient text-snow shadow-glow">
         <Plus className="h-5 w-5" />
@@ -527,251 +360,56 @@ export function CommunityView(props: {
     </button>
   );
 
-  let content: React.ReactNode;
-  if (!canSee) content = locked;
-  else if (tab === "inicio")
-    content = (
-      <div className="space-y-3">
-        {composerPrompt}
-        {props.focus && !pinned.some((p) => p.id === props.focus!.id) && <CommunityPostCard post={props.focus} highlight />}
-        {pinned.map((p) => (
-          <CommunityPostCard
-            key={p.id}
-            post={p}
-            highlight={p.id === props.focus?.id}
-            onChanged={(n) => setPinned((l) => (n.isPinned ? l.map((x) => (x.id === n.id ? n : x)) : l.filter((x) => x.id !== n.id)))}
-            onDeleted={(id) => setPinned((l) => l.filter((x) => x.id !== id))}
-          />
-        ))}
-        {discussions.length > 0 && (
-          <section className="rounded-3xl border border-white/[0.08] bg-space-card/60 p-3.5 lg:hidden">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="flex items-center gap-1.5 text-sm font-semibold text-white">
-                <MessagesSquare className="h-4 w-4 text-orbit-purple" /> Discussões ativas
-              </h2>
-              <button type="button" onClick={() => setTab("discussoes")} className="text-xs font-semibold text-orbit-cyan">
-                Ver todas
-              </button>
-            </div>
-            <div className="space-y-2">
-              {discussions.slice(0, 2).map((d) => (
-                <DiscussionRow key={d.id} d={d} slug={community.slug} />
-              ))}
-            </div>
-          </section>
-        )}
-        <Feed
-          {...home}
-          setItems={home.setItems}
-          focusId={props.focus?.id}
-          empty={<EmptyState icon={<ScrollText className="h-6 w-6" />} title="Nenhuma publicação ainda" text={canCreate ? "Toque em + Criar para começar a conversa." : "Volte em breve para ver as novidades."} />}
-        />
-      </div>
-    );
-  else if (tab === "posts")
-    content = (
-      <div className="space-y-3">
-        {composerPrompt}
-        <Feed {...postsTab} setItems={postsTab.setItems} empty={<EmptyState icon={<ScrollText className="h-6 w-6" />} title="Sem posts por aqui" text="Textos, enquetes, links, músicas e arquivos aparecem nesta aba." />} />
-      </div>
-    );
-  else if (tab === "fotos")
-    content = (
-      <div className="space-y-4">
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:px-0">
-          <button
-            type="button"
-            onClick={() => setAlbum(null)}
-            className={clsx("shrink-0 rounded-full px-4 py-2 text-xs font-semibold", album === null ? "bg-orbit-gradient text-snow" : "border border-white/10 text-white/65")}
-          >
-            Todas as fotos
-          </button>
-          {albums.map((a) => (
-            <button
-              key={a.id}
-              type="button"
-              onClick={() => setAlbum(a.id)}
-              className={clsx("shrink-0 rounded-full px-4 py-2 text-xs font-semibold", album === a.id ? "bg-orbit-gradient text-snow" : "border border-white/10 text-white/65")}
-            >
-              <Images className="mr-1 inline h-3.5 w-3.5" /> {a.title}
-            </button>
-          ))}
-          {admin && (
-            <button type="button" onClick={() => setAlbumForm({ title: "", description: "" })} className="flex shrink-0 items-center gap-1 rounded-full border border-dashed border-white/20 px-4 py-2 text-xs font-semibold text-white/70 hover:text-white">
-              <FolderPlus className="h-3.5 w-3.5" /> Novo álbum
-            </button>
-          )}
-        </div>
-        {album && (
-          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/[0.08] bg-space-card/60 p-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-white">{albums.find((a) => a.id === album)?.title}</p>
-              {albums.find((a) => a.id === album)?.description && <p className="text-xs text-white/50">{albums.find((a) => a.id === album)?.description}</p>}
-            </div>
-            {canCreate && (
-              <button type="button" onClick={() => (setAlbumTarget(album), setComposer("photo"))} className="flex h-10 items-center gap-1.5 rounded-full bg-orbit-gradient px-4 text-xs font-semibold text-snow">
-                <Plus className="h-4 w-4" /> Enviar fotos
-              </button>
-            )}
-            {admin && (
-              <>
-                <button type="button" onClick={() => { const a = albums.find((x) => x.id === album)!; setAlbumForm({ id: a.id, title: a.title, description: a.description }); }} className="h-10 rounded-full border border-white/10 px-4 text-xs font-semibold text-white/80">
-                  Editar
-                </button>
-                <button type="button" onClick={() => deleteAlbum(album)} className="h-10 rounded-full border border-red-400/30 px-4 text-xs font-semibold text-red-300">
-                  Excluir
-                </button>
-              </>
-            )}
-          </div>
-        )}
-        {photos.items === null ? (
-          <div className="grid grid-cols-3 gap-1 md:grid-cols-4">
-            {Array.from({ length: 9 }, (_, i) => (
-              <div key={i} className="aspect-square animate-pulse rounded-lg bg-white/[0.04]" />
-            ))}
-          </div>
-        ) : photoItems.length === 0 ? (
-          <EmptyState
-            icon={<Camera className="h-6 w-6" />}
-            title="Nenhuma foto ainda"
-            action={canCreate ? <button type="button" onClick={() => (setAlbumTarget(album), setComposer("photo"))} className="rounded-full bg-orbit-gradient px-5 py-2.5 text-xs font-semibold text-snow">Enviar fotos</button> : undefined}
-          />
-        ) : (
-          <>
-            <div className="grid grid-cols-3 gap-1 overflow-hidden rounded-2xl md:grid-cols-4">
-              {photoItems.map((m, i) => (
-                <button key={m.id} type="button" onClick={() => setPhotoView(i)} className="group relative aspect-square overflow-hidden bg-white/[0.04]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={m.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
-                </button>
-              ))}
-            </div>
-            {!photos.done && (
-              <button type="button" onClick={photos.more} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 py-3 text-sm font-semibold text-white/75">
-                {photos.loading && <Loader2 className="h-4 w-4 animate-spin" />} Carregar mais
-              </button>
-            )}
-          </>
-        )}
-      </div>
-    );
-  else if (tab === "videos")
-    content = <Feed {...videos} setItems={videos.setItems} empty={<EmptyState icon={<Film className="h-6 w-6" />} title="Nenhum vídeo ainda" />} />;
-  else if (tab === "clipes")
-    content =
-      clips.items === null ? (
-        <div className="grid grid-cols-3 gap-1">
-          {Array.from({ length: 6 }, (_, i) => (
-            <div key={i} className="aspect-[9/16] animate-pulse rounded-xl bg-white/[0.04]" />
-          ))}
-        </div>
-      ) : clips.items.length === 0 ? (
-        <EmptyState icon={<Clapperboard className="h-6 w-6" />} title="Nenhum clipe ainda" text="Clipes são vídeos verticais curtos, feitos para o celular." />
-      ) : (
-        <div className="grid grid-cols-3 gap-1 md:grid-cols-4">
-          {clips.items.map((c, i) => {
-            const v = c.media.find((m) => m.type === "video");
-            return (
-              <button key={c.id} type="button" onClick={() => setClipIndex(i)} className="relative aspect-[9/16] overflow-hidden rounded-xl bg-black">
-                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-                {v && <video src={`${v.url}#t=0.5`} muted playsInline preload="metadata" className="h-full w-full object-cover" />}
-                <span className="absolute bottom-1.5 left-1.5 flex items-center gap-1 text-[11px] font-semibold text-white drop-shadow">
-                  <Play className="h-3.5 w-3.5 fill-white" /> {compactNumber(c.viewCount)}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      );
-  else if (tab === "discussoes")
-    content = (
-      <div className="space-y-2.5">
-        {viewer && rank(role) >= 1 && (
-          <button type="button" onClick={() => setComposer("discussion")} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-orbit-purple/40 text-sm font-semibold text-white hover:bg-orbit-purple/[0.06]">
-            <Plus className="h-4 w-4" /> Criar tópico
-          </button>
-        )}
-        {discussions.length === 0 ? (
-          <EmptyState icon={<MessagesSquare className="h-6 w-6" />} title="Nenhuma discussão ainda" text="Abra um tópico, por exemplo: “Quais recursos vocês querem no Órbita X?”" />
-        ) : (
-          discussions.map((d) => <DiscussionRow key={d.id} d={d} slug={community.slug} />)
-        )}
-      </div>
-    );
-  else
-    content = (
-      <div className="space-y-3">
-        <label className="flex items-center gap-2 rounded-2xl border border-white/10 bg-space-card/70 px-4 py-2.5">
-          <Search className="h-4 w-4 text-white/40" />
-          <input value={memberQuery} onChange={(e) => setMemberQuery(e.target.value)} placeholder="Buscar membros" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35" />
-        </label>
-        <div className="divide-y divide-white/[0.05] overflow-hidden rounded-3xl border border-white/[0.08] bg-space-card/70">
-          {filteredMembers.map((m) => (
-            <Link key={m.user.id} href={`/perfil/${m.user.username}`} className="flex min-h-[60px] items-center gap-3 px-4 py-2.5 transition hover:bg-white/[0.03]">
-              <Avatar name={m.user.name} url={m.user.avatarUrl} size={40} />
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-1 truncate text-sm font-semibold text-white">
-                  {m.user.name} {m.user.isVerified && <VerifiedBadge />}
-                </span>
-                <span className="block truncate text-xs text-white/45">@{m.user.username}</span>
-              </span>
-              <RoleBadge role={m.role} />
-            </Link>
-          ))}
-          {filteredMembers.length === 0 && <p className="p-6 text-center text-sm text-white/45">Ninguém encontrado.</p>}
-        </div>
-        {community.memberCount > props.members.length && <p className="text-center text-xs text-white/40">Mostrando {props.members.length} de {community.memberCount} membros.</p>}
-      </div>
-    );
+  const staffMembers = p.members.filter((m) => m.role !== "member").sort((a, b) => rank(b.role) - rank(a.role));
 
   const sidebar = (
     <aside className="hidden space-y-3 lg:block">
       {staff && (
-        <Link
-          href={`/comunidades/${community.slug}/gerenciar`}
-          className="block rounded-3xl border border-orbit-purple/30 bg-[linear-gradient(135deg,rgb(var(--app-accent,139_92_246)/0.18),transparent_70%)] p-4 transition hover:border-orbit-purple/60"
-        >
+        <Link href={`${base}/gerenciar`} className="block rounded-3xl border border-orbit-purple/30 bg-[linear-gradient(135deg,rgb(var(--app-accent,139_92_246)/0.18),transparent_70%)] p-4 transition hover:border-orbit-purple/60">
           <p className="flex items-center gap-2 text-sm font-semibold text-white">
             <Settings className="h-4 w-4" /> Gerenciar comunidade
           </p>
           <div className="mt-2 grid grid-cols-3 gap-2 text-center">
-            {[
-              ["Pendentes", props.staffBadges.pending],
-              ["Pedidos", props.staffBadges.requests],
-              ["Denúncias", props.staffBadges.reports],
-            ].map(([l, v]) => (
-              <span key={l as string} className="rounded-2xl bg-black/20 py-2">
-                <span className={clsx("block font-display text-lg font-bold", (v as number) > 0 ? "text-orbit-pink" : "text-white")}>{v as number}</span>
-                <span className="block text-[10px] uppercase tracking-wide text-white/45">{l as string}</span>
+            {(
+              [
+                ["Pendentes", p.staffBadges.pending],
+                ["Pedidos", p.staffBadges.requests],
+                ["Denúncias", p.staffBadges.reports],
+              ] as const
+            ).map(([l, v]) => (
+              <span key={l} className="rounded-2xl bg-black/20 py-2">
+                <span className={clsx("block font-display text-lg font-bold", v > 0 ? "text-orbit-pink" : "text-white")}>{v}</span>
+                <span className="block text-[10px] uppercase tracking-wide text-white/45">{l}</span>
               </span>
             ))}
           </div>
         </Link>
       )}
       <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
-        <h2 className="text-sm font-semibold text-white">Sobre</h2>
-        {community.description && <p className="mt-2 line-clamp-6 whitespace-pre-wrap text-sm text-white/65">{community.description}</p>}
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-white">Sobre</h2>
+          <Link href={`${base}/sobre`} className="text-xs font-semibold text-orbit-cyan">
+            Ver tudo
+          </Link>
+        </div>
+        {community.description && <p className="mt-2 line-clamp-5 whitespace-pre-wrap text-sm text-white/65">{community.description}</p>}
         <ul className="mt-3 space-y-2 text-xs text-white/55">
           <li className="flex items-center gap-2">
             {community.isPrivate ? <Lock className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
             {community.isPrivate ? "Privada · só membros veem o conteúdo" : "Pública · qualquer pessoa pode ver e participar"}
           </li>
           <li className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4" /> Criada em {new Date(community.createdAt).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+            <CalendarDays className="h-4 w-4" /> Criada em {new Date(community.createdAt).toLocaleDateString("pt-BR", { month: "long", year: "numeric", timeZone: tz })}
           </li>
         </ul>
-        {community.rules && (
-          <details className="mt-3 rounded-2xl bg-white/[0.03] p-3 text-xs text-white/65">
-            <summary className="cursor-pointer font-semibold text-white/80">Regras</summary>
-            <p className="mt-2 whitespace-pre-wrap">{community.rules}</p>
-          </details>
-        )}
       </section>
       {canSee && (
         <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-white">Membros · {compactNumber(community.memberCount)}</h2>
+            <Link href={`${base}/membros`} className="text-xs font-semibold text-orbit-cyan">
+              Ver todos
+            </Link>
           </div>
           {staffMembers.length > 0 && (
             <div className="mt-3 space-y-2">
@@ -785,47 +423,41 @@ export function CommunityView(props: {
             </div>
           )}
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {props.members.filter((m) => m.role === "member").slice(0, 16).map((m) => (
-              <Link key={m.user.id} href={`/perfil/${m.user.username}`} title={m.user.name}>
-                <Avatar name={m.user.name} url={m.user.avatarUrl} size={34} />
-              </Link>
-            ))}
+            {p.members
+              .filter((m) => m.role === "member")
+              .slice(0, 16)
+              .map((m) => (
+                <Link key={m.user.id} href={`/perfil/${m.user.username}`} title={m.user.name}>
+                  <Avatar name={m.user.name} url={m.user.avatarUrl} size={34} />
+                </Link>
+              ))}
           </div>
         </section>
       )}
-      {canSee && discussions.length > 0 && (
+      {canSee && p.discussions.length > 0 && (
         <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-white">Discussões</h2>
-            <button type="button" onClick={() => setTab("discussoes")} className="text-xs font-semibold text-orbit-cyan">
+            <h2 className="text-sm font-semibold text-white">Discussões ativas</h2>
+            <Link href={`${base}/discussoes`} className="text-xs font-semibold text-orbit-cyan">
               Ver todas
-            </button>
+            </Link>
           </div>
-          <ul className="space-y-2">
-            {discussions.slice(0, 5).map((d) => (
+          <ul className="space-y-1">
+            {p.discussions.slice(0, 5).map((d) => (
               <li key={d.id}>
-                <Link href={`/comunidades/${community.slug}/discussoes/${d.id}`} className="block rounded-xl px-2 py-1.5 hover:bg-white/[0.04]">
-                  <span className="line-clamp-2 text-sm text-white/85">{d.title}</span>
-                  <span className="text-[11px] text-white/40">{d.replyCount} respostas</span>
+                <Link href={`${base}/discussoes/${d.id}`} className="block rounded-xl px-2 py-1.5 hover:bg-white/[0.04]">
+                  <span className="line-clamp-2 text-sm text-white/85">
+                    {categoryOf(d.category).emoji} {d.title}
+                  </span>
+                  <span className="text-[11px] text-white/40">
+                    {d.replyCount} {d.replyCount === 1 ? "resposta" : "respostas"} · {ago(d.lastActivityAt)}
+                  </span>
                 </Link>
               </li>
             ))}
           </ul>
         </section>
       )}
-      <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
-        <h2 className="mb-2 text-sm font-semibold text-white">Atalhos</h2>
-        <div className="grid grid-cols-2 gap-1.5">
-          {TABS.filter((t) => t.id !== "inicio" && t.id !== "membros").map((t) => {
-            const Icon = t.icon;
-            return (
-              <button key={t.id} type="button" onClick={() => setTab(t.id)} className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-left text-xs font-semibold text-white/70 transition hover:bg-white/[0.05] hover:text-white">
-                <Icon className="h-4 w-4 text-orbit-cyan" /> {t.label}
-              </button>
-            );
-          })}
-        </div>
-      </section>
       {community.links.length > 0 && (
         <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
           <h2 className="mb-2 text-sm font-semibold text-white">Links</h2>
@@ -844,97 +476,79 @@ export function CommunityView(props: {
   );
 
   return (
-    <CommunityContext.Provider value={ctx}>
-      <div style={{ ["--app-accent" as string]: accent.rgb }}>
-        {header}
-        {staff && badgeTotal > 0 && (
-          <div className="mx-auto mt-3 max-w-6xl px-4 md:px-6 lg:hidden">
-            <Link href={`/comunidades/${community.slug}/gerenciar?secao=moderacao`} className="flex items-center gap-2 rounded-2xl border border-orbit-pink/30 bg-orbit-pink/[0.06] px-3 py-2.5 text-xs text-white/85">
-              <ShieldAlert className="h-4 w-4 text-orbit-pink" />
-              {[
-                props.staffBadges.pending && `${props.staffBadges.pending} aguardando aprovação`,
-                props.staffBadges.requests && `${props.staffBadges.requests} ${props.staffBadges.requests === 1 ? "pedido" : "pedidos"} para entrar`,
-                props.staffBadges.reports && `${props.staffBadges.reports} ${props.staffBadges.reports === 1 ? "denúncia" : "denúncias"}`,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-              <ChevronRight className="ml-auto h-4 w-4" />
-            </Link>
-          </div>
+    <>
+      {header}
+      <div className="mx-auto mt-3 max-w-6xl space-y-3 px-4 md:px-6 lg:px-10">
+        <MutedNotice />
+        {staff && p.badgeTotal > 0 && (
+          <Link href={`${base}/gerenciar?secao=moderacao`} className="flex items-center gap-2 rounded-2xl border border-orbit-pink/30 bg-orbit-pink/[0.06] px-3 py-2.5 text-xs text-white/85 lg:hidden">
+            <ShieldAlert className="h-4 w-4 text-orbit-pink" />
+            {[
+              p.staffBadges.pending && `${p.staffBadges.pending} aguardando aprovação`,
+              p.staffBadges.requests && `${p.staffBadges.requests} ${p.staffBadges.requests === 1 ? "pedido" : "pedidos"} para entrar`,
+              p.staffBadges.reports && `${p.staffBadges.reports} ${p.staffBadges.reports === 1 ? "denúncia" : "denúncias"}`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            <ChevronRight className="ml-auto h-4 w-4" />
+          </Link>
         )}
-        <div className="mx-auto mt-4 max-w-6xl px-4 pb-10 md:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:px-10">
-          <div className="min-w-0 space-y-4">
-            {canSee && tabs}
-            {content}
-          </div>
-          {sidebar}
-        </div>
-
-        {canCreate && fab && (
-          <button
-            type="button"
-            onClick={() => setMenu(true)}
-            aria-label="Criar"
-            className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-orbit-gradient text-snow shadow-[0_10px_30px_rgb(var(--app-accent,139_92_246)/0.55)] animate-pop-in transition active:scale-95 md:hidden"
-          >
-            <Plus className="h-6 w-6" />
-          </button>
-        )}
-
-        <CreateMenu open={menu} onClose={() => setMenu(false)} onPick={(k) => (setMenu(false), setAlbumTarget(null), setComposer(k))} />
-        <Composer kind={composer} onClose={() => setComposer(null)} onCreated={onCreated} albums={albums} defaultAlbum={albumTarget} />
-
-        <Sheet open={!!albumForm} onClose={() => setAlbumForm(null)} title={albumForm?.id ? "Editar álbum" : "Novo álbum"}>
-          {albumForm && (
-            <div className="space-y-3 pt-1">
-              <input
-                value={albumForm.title}
-                onChange={(e) => setAlbumForm({ ...albumForm, title: e.target.value })}
-                maxLength={80}
-                placeholder="Nome do álbum"
-                autoFocus
-                className="w-full rounded-2xl border border-white/10 bg-space-bg/60 px-4 py-3 text-sm text-white outline-none focus:border-orbit-purple/60"
-              />
-              <textarea
-                value={albumForm.description}
-                onChange={(e) => setAlbumForm({ ...albumForm, description: e.target.value })}
-                maxLength={500}
-                rows={3}
-                placeholder="Descrição (opcional)"
-                className="w-full resize-none rounded-2xl border border-white/10 bg-space-bg/60 px-4 py-3 text-sm text-white outline-none focus:border-orbit-purple/60"
-              />
-              <button type="button" onClick={saveAlbum} disabled={!albumForm.title.trim()} className="w-full rounded-full bg-orbit-gradient py-3 text-sm font-semibold text-snow disabled:opacity-50">
-                Salvar álbum
-              </button>
-            </div>
-          )}
-        </Sheet>
-
-        {photoView !== null && photoItems.length > 0 && (
-          <Lightbox
-            images={photoItems}
-            start={photoView}
-            onClose={() => setPhotoView(null)}
-            caption={
-              <Link href={`/comunidades/${community.slug}?post=${photoItems[photoView]?.post.id}`} onClick={() => setPhotoView(null)} className="inline-flex items-center gap-1.5 text-orbit-cyan">
-                <MessageCircle className="h-4 w-4" /> Ver publicação, reações e comentários
-              </Link>
-            }
-          />
-        )}
-        {clipIndex !== null && clips.items && <ClipViewer clips={clips.items} start={clipIndex} onClose={() => setClipIndex(null)} onOpenPost={setClipPost} />}
-        <Sheet open={!!clipPost} onClose={() => setClipPost(null)} wide title="Clipe">
-          {clipPost && (
-            <CommunityPostCard
-              post={clipPost}
-              highlight
-              onChanged={(n) => clips.setItems((clips.items ?? []).map((x) => (x.id === n.id ? n : x)))}
-              onDeleted={(id) => (setClipPost(null), setClipIndex(null), clips.setItems((clips.items ?? []).filter((x) => x.id !== id)))}
-            />
-          )}
-        </Sheet>
-        {node}
+        {canSee && <StoriesStrip canSee={canSee} />}
+        {canSee && <Highlights slug={community.slug} counts={p.counts} />}
       </div>
-    </CommunityContext.Provider>
+      <div className="mx-auto mt-4 max-w-6xl px-4 pb-10 md:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:px-10">
+        <div className="min-w-0 space-y-4">
+          {!canSee ? (
+            <EmptyState
+              icon={<Lock className="h-6 w-6" />}
+              title={membership.banned ? "Você não tem acesso a esta comunidade" : "Comunidade privada"}
+              text={membership.banned ? "A moderação bloqueou sua participação." : "Somente membros aprovados veem as publicações, fotos e discussões. Peça para entrar e aguarde a aprovação."}
+              action={
+                <Link href={`${base}/sobre`} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-4 py-2 text-xs font-semibold text-white/80">
+                  <Info className="h-4 w-4" /> Sobre a comunidade
+                </Link>
+              }
+            />
+          ) : (
+            <>
+              {p.nextEvent && <NextEvent e={p.nextEvent.event} rsvp={p.nextEvent.rsvp} slug={community.slug} />}
+              {p.focus && !p.pinned.some((x) => x.id === p.focus!.id) && <CommunityPostCard post={p.focus} highlight />}
+              {p.pinned.map((x) => (
+                <CommunityPostCard
+                  key={x.id}
+                  post={x}
+                  highlight={x.id === p.focus?.id}
+                  onChanged={(n) => p.setPinned((l) => (n.isPinned ? l.map((y) => (y.id === n.id ? n : y)) : l.filter((y) => y.id !== n.id)))}
+                  onDeleted={(id) => p.setPinned((l) => l.filter((y) => y.id !== id))}
+                />
+              ))}
+              <ContentCenter
+                initialTab={p.initialTab}
+                initialItems={p.posts}
+                albums={p.albums}
+                counts={p.counts}
+                refreshKey={p.refreshKey}
+                focusId={p.focus?.id}
+                onCompose={flow.start}
+                header={composerPrompt}
+              />
+            </>
+          )}
+        </div>
+        {sidebar}
+      </div>
+
+      {canCreate && p.fab && (
+        <button
+          type="button"
+          onClick={flow.openMenu}
+          aria-label="Criar"
+          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-orbit-gradient text-snow shadow-[0_10px_30px_rgb(var(--app-accent,139_92_246)/0.55)] animate-pop-in transition active:scale-95 md:hidden"
+        >
+          <Plus className="h-6 w-6" />
+        </button>
+      )}
+      {flow.element}
+    </>
   );
 }

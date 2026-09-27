@@ -34,7 +34,7 @@ export default async function DiscussionPage({ params }: { params: { slug: strin
   const supabase = createClient();
   const me = current?.authId ?? null;
 
-  const [mine, replies] = await Promise.all([
+  const [mine, replies, liked, mute] = await Promise.all([
     me ? supabase.from("CommunityMember").select("role").eq("communityId", community.id).eq("userId", me).maybeSingle() : Promise.resolve({ data: null }),
     supabase
       .from("CommunityDiscussionReply")
@@ -43,7 +43,11 @@ export default async function DiscussionPage({ params }: { params: { slug: strin
       .neq("status", "removed")
       .order("createdAt", { ascending: true })
       .limit(300),
+    me ? supabase.from("CommunityDiscussionLike").select("userId").eq("discussionId", discussion.id).eq("userId", me).maybeSingle() : Promise.resolve({ data: null }),
+    me ? supabase.from("CommunityMute").select("until").eq("communityId", community.id).eq("userId", me).maybeSingle() : Promise.resolve({ data: null }),
   ]);
+  const muteUntil = (mute.data as { until: string | null } | null) ?? null;
+  const muted = !!muteUntil && (!muteUntil.until || new Date(muteUntil.until).getTime() > Date.now());
 
   const viewer = current ? { id: current.authId, name: current.profile.name, username: current.profile.username, avatarUrl: current.profile.avatarUrl } : null;
 
@@ -55,6 +59,8 @@ export default async function DiscussionPage({ params }: { params: { slug: strin
         role={(mine.data?.role as Role) ?? null}
         discussion={discussion}
         replies={((replies.data ?? []) as unknown as Reply[]).filter((x) => x.user)}
+        liked={!!liked.data}
+        muted={muted}
       />
     </CommunityShell>
   );

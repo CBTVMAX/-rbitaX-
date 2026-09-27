@@ -23,7 +23,9 @@ type Form = {
   links: CommunityLink[];
 };
 
-export function GeneralSection({ onSaved }: { onSaved: (patch: Partial<Form>) => void }) {
+/** "info" = name, @, category, description, rules and links · "appearance" = photo, cover and theme · "privacy" = public/private. */
+export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Partial<Form>) => void; part?: "all" | "info" | "appearance" | "privacy" }) {
+  const show = (p: "info" | "appearance" | "privacy") => part === "all" || part === p;
   const { community, role, supabase, viewer, toast } = useCommunity();
   const router = useRouter();
   const owner = role === "owner";
@@ -89,6 +91,7 @@ export function GeneralSection({ onSaved }: { onSaved: (patch: Partial<Form>) =>
 
   return (
     <div className="space-y-4">
+      {show("appearance") && (
       <Card title="Aparência" desc="Foto, capa e cor de destaque aparecem no topo da comunidade e nos cards da lista.">
         <div className="overflow-hidden rounded-3xl border border-white/[0.08]">
           <div className="relative h-32 md:h-40" style={{ background: `linear-gradient(135deg, ${accent.from}, rgb(${accent.rgb}) 55%, ${accent.to})` }}>
@@ -150,7 +153,9 @@ export function GeneralSection({ onSaved }: { onSaved: (patch: Partial<Form>) =>
           ))}
         </div>
       </Card>
+      )}
 
+      {show("info") && (
       <Card title="Informações">
         <div className="grid gap-4 md:grid-cols-2">
           <Field label="Nome">
@@ -189,7 +194,9 @@ export function GeneralSection({ onSaved }: { onSaved: (patch: Partial<Form>) =>
           </div>
         </div>
       </Card>
+      )}
 
+      {show("info") && (
       <Card title="Links" desc="Site, canal, suporte… até 8 links.">
         <div className="space-y-2">
           {f.links.map((l, i) => (
@@ -210,7 +217,9 @@ export function GeneralSection({ onSaved }: { onSaved: (patch: Partial<Form>) =>
           )}
         </div>
       </Card>
+      )}
 
+      {show("privacy") && (
       <Card title="Privacidade">
         {!owner && <ReadOnlyNote>Somente o proprietário pode mudar a privacidade.</ReadOnlyNote>}
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -244,7 +253,9 @@ export function GeneralSection({ onSaved }: { onSaved: (patch: Partial<Form>) =>
             );
           })}
         </div>
+        <p className="mt-3 text-xs text-white/45">Quem pode publicar, comentar, criar eventos e histórias é definido em Permissões.</p>
       </Card>
+      )}
 
       {changed.length > 0 && (
       <div className="animate-sheet-up sticky bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-20 flex items-center justify-end gap-3 rounded-full border border-white/10 bg-space-surface/95 p-2 pl-5 shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur-xl md:bottom-4">
