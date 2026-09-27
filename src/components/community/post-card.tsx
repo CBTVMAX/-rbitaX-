@@ -27,6 +27,7 @@ import {
   Send,
   Share2,
   ShieldX,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { Avatar } from "@/components/post-card";
@@ -342,6 +343,17 @@ export function CommunityPostCard({
     }
   }
 
+  async function toggleOriginal() {
+    setMenu(false);
+    setBusy(true);
+    const next = !post.meta.original;
+    const { error } = await supabase.rpc("community_mark_original", { p_post: post.id, p_on: next });
+    setBusy(false);
+    if (error) return toast(communityError(error.message), true);
+    update({ meta: { ...post.meta, original: next } });
+    toast(next ? "Marcado como conteúdo original." : "Marca de original removida.");
+  }
+
   async function action(a: "pin" | "unpin" | "comments_on" | "comments_off" | "approve" | "remove" | "restore") {
     setMenu(false);
     setBusy(true);
@@ -524,6 +536,11 @@ export function CommunityPostCard({
           {tag && (
             <span className="inline-flex items-center gap-1 rounded-full bg-orbit-gradient px-2 py-0.5 text-[11px] font-semibold text-snow">
               {tag.emoji} {tag.label}
+            </span>
+          )}
+          {post.meta.original && (
+            <span className="inline-flex items-center gap-1 rounded-full border border-orbit-cyan/40 bg-orbit-cyan/10 px-2 py-0.5 text-[11px] font-semibold text-orbit-cyan" title={`Conteúdo original de ${community.name}`}>
+              <Sparkles className="h-3 w-3" /> Original · {community.name}
             </span>
           )}
           {post.moderationStatus === "pending" && <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[11px] font-semibold text-amber-400">Aguardando aprovação</span>}
@@ -750,6 +767,7 @@ export function CommunityPostCard({
       <Sheet open={menu} onClose={() => setMenu(false)} title="Publicação">
         <div className="space-y-0.5">
           {mine && menuItem(<Pencil className="h-5 w-5" />, "Editar", () => (setMenu(false), setEditing(true)))}
+          {(mine || admin) && post.moderationStatus === "visible" && menuItem(<Sparkles className="h-5 w-5 text-orbit-cyan" />, post.meta.original ? "Remover marca de original" : "Marcar como conteúdo original", toggleOriginal)}
           {admin && post.moderationStatus === "visible" && menuItem(post.isPinned ? <PinOff className="h-5 w-5" /> : <Pin className="h-5 w-5" />, post.isPinned ? "Desafixar" : "Fixar no topo", () => action(post.isPinned ? "unpin" : "pin"))}
           {(mine || staff) &&
             post.moderationStatus === "visible" &&

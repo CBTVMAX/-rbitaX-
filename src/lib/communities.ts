@@ -62,6 +62,8 @@ export type PostMeta = {
   tag?: PostTag;
   article?: { title: string };
   video?: { title: string };
+  /** Marcado pelo autor/admin como conteúdo original da comunidade (§8). */
+  original?: boolean;
 };
 export type PostTag = "anuncio" | "atualizacao" | "evento" | "manutencao" | "novidade" | "recurso";
 
@@ -228,6 +230,12 @@ export const ACCENTS: { id: string; label: string; rgb: string; from: string; to
   { id: "magenta", label: "Magenta", rgb: "236 72 153", from: "#db2777", to: "#8b5cf6" },
   { id: "aurora", label: "Aurora", rgb: "16 185 129", from: "#10b981", to: "#22d3ee" },
   { id: "solar", label: "Solar", rgb: "245 158 11", from: "#f59e0b", to: "#ef4444" },
+  { id: "indigo", label: "Índigo", rgb: "99 102 241", from: "#6366f1", to: "#22d3ee" },
+  { id: "rosa", label: "Rosa", rgb: "244 63 94", from: "#f43f5e", to: "#8b5cf6" },
+  { id: "limao", label: "Limão", rgb: "132 204 22", from: "#84cc16", to: "#22d3ee" },
+  { id: "ouro", label: "Ouro", rgb: "234 179 8", from: "#eab308", to: "#f97316" },
+  { id: "gelo", label: "Gelo", rgb: "56 189 248", from: "#94a3b8", to: "#38bdf8" },
+  { id: "rubi", label: "Rubi", rgb: "244 63 94", from: "#e11d48", to: "#f59e0b" },
 ];
 export const accentOf = (id: string | null) => ACCENTS.find((a) => a.id === id) ?? ACCENTS[0];
 

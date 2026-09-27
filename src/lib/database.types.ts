@@ -491,6 +491,7 @@ export type Database = {
       community_set_rules: { Args: { p_community: string; p: Json }; Returns: undefined };
       community_set_notify_level: { Args: { p_community: string; p_level: string }; Returns: undefined };
       community_send_broadcast: { Args: { p_community: string; p_title: string; p_message: string; p_href?: string | null }; Returns: undefined };
+      community_mark_original: { Args: { p_post: string; p_on: boolean }; Returns: undefined };
       community_edit_discussion: { Args: { p_discussion: string; p_title: string; p_body: string; p_category: string }; Returns: undefined };
       community_discussion_like: { Args: { p_discussion: string }; Returns: Json };
       community_repost: { Args: { p_post: string; p_comment?: string }; Returns: string };
