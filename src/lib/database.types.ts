@@ -510,6 +510,12 @@ export type Database = {
         Args: { p_user: string };
         Returns: { id: string; name: string; tier: string; published: boolean; ownedSource: string | null }[];
       };
+      admin_grant_product: { Args: { p_user: string; p_product: string }; Returns: undefined };
+      admin_revoke_product: { Args: { p_user: string; p_product: string }; Returns: undefined };
+      admin_products_for: {
+        Args: { p_user: string; p_kind: string };
+        Returns: { id: string; refId: string | null; name: string; image: string | null; kind: string; tier: string | null; priceCoins: number; ownedSource: string | null }[];
+      };
       my_coin_balance: { Args: Record<string, never>; Returns: number };
       acquire_product: { Args: { p_product_id: string }; Returns: Json };
       toggle_inventory_favorite: { Args: { p_product_id: string }; Returns: boolean };

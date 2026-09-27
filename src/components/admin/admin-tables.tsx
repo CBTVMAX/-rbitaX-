@@ -99,55 +99,70 @@ function UserAvatar({ name, url }: { name: string; url: string | null }) {
   );
 }
 
-// ============================================================ Liberar adesivo para um usuário
-function GrantPackModal({ user, onClose }: { user: { id: string; name: string }; onClose: () => void }) {
+// ============================================================ Liberar itens da loja para um usuário
+const ITEM_KINDS = [
+  { id: "sticker_pack", label: "Adesivos" },
+  { id: "frame", label: "Molduras" },
+  { id: "wallpaper", label: "Papéis de parede" },
+] as const;
+
+function GrantItemModal({ user, onClose }: { user: { id: string; name: string }; onClose: () => void }) {
   const supabase = useMemo(() => createClient(), []);
-  const [packs, setPacks] = useState<any[] | null>(null);
+  const [kind, setKind] = useState<string>("sticker_pack");
+  const [items, setItems] = useState<any[] | null>(null);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [flash, setFlash] = useState<{ text: string; error?: boolean } | null>(null);
 
   const load = useCallback(async () => {
-    const { data } = await supabase.rpc("admin_packs_for", { p_user: user.id });
-    setPacks((data as any[]) ?? []);
-  }, [supabase, user.id]);
+    setItems(null);
+    const { data } = await supabase.rpc("admin_products_for", { p_user: user.id, p_kind: kind });
+    setItems((data as any[]) ?? []);
+  }, [supabase, user.id, kind]);
   useEffect(() => { load(); }, [load]);
 
-  async function toggle(pack: any) {
-    const granting = pack.ownedSource !== "grant" && pack.ownedSource !== "purchase";
-    setBusy(pack.id);
-    const { error } = await supabase.rpc(granting ? "admin_grant_pack" : "admin_revoke_pack", { p_user: user.id, p_pack: pack.id });
+  async function toggle(item: any) {
+    const granting = item.ownedSource !== "grant" && item.ownedSource !== "purchase";
+    setBusy(item.id);
+    const { error } = await supabase.rpc(granting ? "admin_grant_product" : "admin_revoke_product", { p_user: user.id, p_product: item.id });
     setBusy(null);
     if (error) {
-      if (/nao_e_liberacao/.test(error.message)) return setFlash({ text: "Esse pacote foi comprado pelo usuário — não dá para remover.", error: true });
+      if (/nao_e_liberacao/.test(error.message)) return setFlash({ text: "Esse item foi comprado pelo usuário — não dá para remover.", error: true });
       return setFlash({ text: adminError(error.message), error: true });
     }
-    setFlash({ text: granting ? `“${pack.name}” liberado.` : `“${pack.name}” removido.` });
+    setFlash({ text: granting ? `“${item.name}” liberado.` : `“${item.name}” removido.` });
     load();
   }
 
-  const shown = (packs ?? []).filter((p) => !q.trim() || p.name.toLowerCase().includes(q.trim().toLowerCase()));
+  const shown = (items ?? []).filter((p) => !q.trim() || p.name.toLowerCase().includes(q.trim().toLowerCase()));
   return (
     <div className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />
-      <div className="animate-sheet-up relative flex max-h-[85vh] w-full flex-col rounded-t-3xl border border-white/10 bg-space-surface sm:max-w-lg sm:rounded-3xl">
+      <div className="animate-sheet-up relative flex max-h-[88vh] w-full flex-col rounded-t-3xl border border-white/10 bg-space-surface sm:max-w-lg sm:rounded-3xl">
         <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orbit-gradient text-snow"><Gift className="h-5 w-5" /></span>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-white">Liberar adesivo</p>
+            <p className="truncate text-sm font-semibold text-white">Liberar itens da loja</p>
             <p className="truncate text-xs text-white/50">para {user.name}</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-full p-1.5 text-white/60 hover:bg-white/5"><X className="h-5 w-5" /></button>
         </div>
         <div className="space-y-2 px-4 pt-3">
           {flash && <Flash flash={flash} />}
+          <div className="flex gap-1.5">
+            {ITEM_KINDS.map((k) => (
+              <button key={k.id} type="button" onClick={() => setKind(k.id)} className={clsx("flex-1 rounded-full px-3 py-2 text-xs font-semibold transition", kind === k.id ? "bg-orbit-gradient text-snow" : "border border-white/10 text-white/60 hover:bg-white/5")}>
+                {k.label}
+              </button>
+            ))}
+          </div>
           <label className="flex items-center gap-2 rounded-full border border-white/10 bg-space-card/70 px-3.5 py-2.5 focus-within:border-orbit-purple/50">
             <Search className="h-4 w-4 shrink-0 text-white/40" />
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar pacote" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/40" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar item" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/40" />
           </label>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-3">
-          {packs === null ? (
+          {items === null ? (
             <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-white/40" /></div>
           ) : (
             <ul className="space-y-1">
@@ -156,10 +171,15 @@ function GrantPackModal({ user, onClose }: { user: { id: string; name: string };
                 const purchased = p.ownedSource === "purchase";
                 return (
                   <li key={p.id} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-white/[0.03]">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-space-bg text-white/50"><Sticker className="h-4 w-4" /></span>
+                    {p.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={p.image} alt="" className="h-9 w-9 shrink-0 rounded-xl border border-white/10 object-cover" />
+                    ) : (
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-space-bg text-white/50"><Sticker className="h-4 w-4" /></span>
+                    )}
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-white">{p.name}</p>
-                      <p className="text-xs text-white/45">{p.tier === "free" ? "Grátis" : "Premium"}{purchased ? " · comprado" : p.ownedSource === "grant" ? " · liberado" : ""}</p>
+                      <p className="text-xs text-white/45">{p.priceCoins > 0 ? "Premium" : "Grátis"}{purchased ? " · comprado" : p.ownedSource === "grant" ? " · liberado" : ""}</p>
                     </div>
                     <button
                       type="button"
@@ -175,7 +195,7 @@ function GrantPackModal({ user, onClose }: { user: { id: string; name: string };
                   </li>
                 );
               })}
-              {shown.length === 0 && <li className="py-8 text-center text-sm text-white/40">Nenhum pacote encontrado.</li>}
+              {shown.length === 0 && <li className="py-8 text-center text-sm text-white/40">Nenhum item encontrado.</li>}
             </ul>
           )}
         </div>
@@ -237,7 +257,7 @@ export function AdminUsers() {
                   <p className="truncate text-xs text-white/45">@{u.username} · {u.posts} posts · desde {date(u.createdAt)}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-0.5">
-                  <button type="button" onClick={() => setGrantFor({ id: u.id, name: u.name })} title="Liberar adesivo" className={clsx(iconBtn, "text-orbit-pink hover:bg-white/5")}>
+                  <button type="button" onClick={() => setGrantFor({ id: u.id, name: u.name })} title="Liberar itens da loja" className={clsx(iconBtn, "text-orbit-pink hover:bg-white/5")}>
                     <Gift className="h-4 w-4" />
                   </button>
                   <button type="button" disabled={!!busy} onClick={() => act(u.id, u.isVerified ? "unverify" : "verify")} title={u.isVerified ? "Remover verificação" : "Verificar"} className={clsx(iconBtn, "text-orbit-cyan hover:bg-white/5")}>
@@ -262,7 +282,7 @@ export function AdminUsers() {
           </div>
         </>
       )}
-      {grantFor && <GrantPackModal user={grantFor} onClose={() => setGrantFor(null)} />}
+      {grantFor && <GrantItemModal user={grantFor} onClose={() => setGrantFor(null)} />}
     </div>
   );
 }
