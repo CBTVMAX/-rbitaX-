@@ -19,11 +19,11 @@ export default async function AnnouncementsPage(props: { params: Promise<{ slug:
   const params = await props.params;
   const access = await loadCommunityAccess(params.slug);
   if (!access) notFound();
-  const { current, community, supabase, me, membership, canSee, viewer } = access;
+  const { current, community, supabase, me, membership, canSee, viewer, canAsCommunity } = access;
   const posts = canSee ? await loadCommunityPosts(supabase, community.id, me, { tagged: true, limit: 15 }) : [];
   return (
     <CommunityShell current={current}>
-      <CommunityProvider community={community} viewer={viewer} membership={membership}>
+      <CommunityProvider community={community} viewer={viewer} membership={membership} canAsCommunity={canAsCommunity}>
         <AnnouncementsView canSee={canSee} initial={posts} />
       </CommunityProvider>
     </CommunityShell>

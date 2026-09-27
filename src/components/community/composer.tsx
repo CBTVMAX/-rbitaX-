@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { FileText, Film, Image as ImageIcon, Link2, Loader2, Music2, Pin, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, FileText, Film, Image as ImageIcon, Link2, Loader2, Music2, Pin, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import { Avatar } from "@/components/post-card";
 import { videoPoster } from "@/lib/media-thumb";
 import {
@@ -175,7 +175,10 @@ export function Composer({
   /** Pre-selects a tag (e.g. the announcement tool in Gerenciar). */
   defaultTag?: PostTag | null;
 }) {
-  const { supabase, community, viewer, role, toast } = useCommunity();
+  const { supabase, community, viewer, role, toast, canAsCommunity } = useCommunity();
+  // Identidade da publicação: perfil pessoal x comunidade (§7). Lembra a última escolha (§42).
+  const [asCommunity, setAsCommunity] = useState(false);
+  const [idOpen, setIdOpen] = useState(false);
   const [text, setText] = useState("");
   const [title, setTitle] = useState("");
   const [link, setLink] = useState("");
@@ -215,10 +218,38 @@ export function Composer({
     setComments(true);
     setError(null);
     setProgress("");
+    setIdOpen(false);
   }, [kind, defaultAlbum, defaultTag]);
+
+  // Restaura a última identidade escolhida nesta comunidade (só se a pessoa puder publicar como comunidade).
+  useEffect(() => {
+    if (!kind) return;
+    if (!canAsCommunity) return setAsCommunity(false);
+    try {
+      setAsCommunity(localStorage.getItem(`orbitax:comm-as:${community.id}`) === "1");
+    } catch {
+      /* localStorage indisponível: mantém perfil pessoal */
+    }
+  }, [kind, canAsCommunity, community.id]);
+
+  function chooseIdentity(next: boolean) {
+    setAsCommunity(next);
+    setIdOpen(false);
+    try {
+      localStorage.setItem(`orbitax:comm-as:${community.id}`, next ? "1" : "0");
+    } catch {
+      /* ok */
+    }
+  }
 
   if (!kind || !viewer) return null;
   const editor = isEditorOrAdmin(role);
+  const identityName = asCommunity ? community.name : viewer.name;
+  const identityAvatar = asCommunity ? community.avatarUrl : viewer.avatarUrl;
+  const identities = [
+    { as: false, name: viewer.name, url: viewer.avatarUrl, sub: "Seu perfil pessoal" },
+    { as: true, name: community.name, url: community.avatarUrl, sub: "Perfil da comunidade" },
+  ];
   const uploadKind: UploadKind | null =
     kind === "photo" || kind === "post" || kind === "discussion" || kind === "gif" || kind === "article" || kind === "announcement"
       ? "image"
@@ -292,6 +323,7 @@ export function Composer({
           p_body: text.trim(),
           p_image: uploaded[0]?.url ?? null,
           p_category: category,
+          p_as_community: asCommunity,
         });
         if (e) throw new Error(communityError(e.message));
         onCreated({ ...(data as { id: string; status: string }), kind });
@@ -327,6 +359,7 @@ export function Composer({
         if (kind === "music") payload.music = { title: musicTitle.trim() || files[0]?.file.name.replace(/\.[^.]+$/, "") || "Áudio", artist: artist.trim() };
         if (kind === "article") payload.article = { title: title.trim() };
         if ((kind === "video" || kind === "clip") && title.trim()) payload.video = { title: title.trim() };
+        if (asCommunity) payload.asCommunity = true;
         if (tag && editor) payload.tag = tag;
         if (pin && editor) payload.pin = true;
         if (album && postKind === "image") payload.albumId = album;
@@ -379,8 +412,44 @@ export function Composer({
       }
     >
       <div className="flex gap-3 pt-1">
-        <Avatar name={viewer.name} url={viewer.avatarUrl} size={40} />
+        <Avatar name={identityName} url={identityAvatar} size={40} />
         <div className="min-w-0 flex-1 space-y-3">
+          {canAsCommunity && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIdOpen((o) => !o)}
+                aria-expanded={idOpen}
+                className="flex max-w-full items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs transition hover:border-orbit-purple/40 hover:bg-white/[0.06]"
+              >
+                <span className="shrink-0 text-white/45">Publicar como</span>
+                <span className="truncate font-semibold text-white">{identityName}</span>
+                <ChevronDown className={clsx("h-3.5 w-3.5 shrink-0 text-white/45 transition", idOpen && "rotate-180")} />
+              </button>
+              {idOpen && (
+                <>
+                  <button type="button" aria-hidden className="fixed inset-0 z-10 cursor-default" onClick={() => setIdOpen(false)} />
+                  <div className="absolute left-0 top-full z-20 mt-1.5 w-[min(20rem,calc(100vw-3rem))] overflow-hidden rounded-2xl border border-white/10 bg-space-surface p-1 shadow-[0_18px_50px_-12px_rgba(0,0,0,0.7)]">
+                    {identities.map((o) => (
+                      <button
+                        key={String(o.as)}
+                        type="button"
+                        onClick={() => chooseIdentity(o.as)}
+                        className={clsx("flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition hover:bg-white/5", asCommunity === o.as && "bg-white/[0.04]")}
+                      >
+                        <Avatar name={o.name} url={o.url} size={34} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold text-white">{o.name}</span>
+                          <span className="block truncate text-[11px] text-white/45">{o.sub}</span>
+                        </span>
+                        {asCommunity === o.as && <Check className="h-4 w-4 shrink-0 text-orbit-cyan" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           {(kind === "discussion" || kind === "article" || kind === "video" || kind === "clip") && (
             <input
               value={title}

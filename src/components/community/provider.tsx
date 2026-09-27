@@ -12,11 +12,13 @@ export function CommunityProvider({
   community,
   viewer,
   membership,
+  canAsCommunity = false,
   children,
 }: {
   community: Community;
   viewer: Viewer;
   membership: Membership;
+  canAsCommunity?: boolean;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -24,9 +26,9 @@ export function CommunityProvider({
   const { toast, node } = useStoreToast();
   const [role, setRole] = useState<Role | null>(membership.role);
   const ctx: CommunityCtx = useMemo(
-    () => ({ community, viewer, role, setRole, membership, supabase, toast, refresh: () => router.refresh() }),
+    () => ({ community, viewer, role, setRole, membership, supabase, toast, canAsCommunity, refresh: () => router.refresh() }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [community, viewer, role, membership, supabase]
+    [community, viewer, role, membership, supabase, canAsCommunity]
   );
   return (
     <CommunityContext.Provider value={ctx}>

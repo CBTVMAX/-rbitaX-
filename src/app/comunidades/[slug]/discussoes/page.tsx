@@ -22,7 +22,7 @@ export default async function DiscussionsPage(
   const params = await props.params;
   const access = await loadCommunityAccess(params.slug);
   if (!access) notFound();
-  const { current, community, supabase, membership, canSee, viewer } = access;
+  const { current, community, supabase, membership, canSee, viewer, canAsCommunity } = access;
   const category = DISCUSSION_CATEGORIES.some((c) => c.id === searchParams.categoria) ? (searchParams.categoria as DiscussionCategory) : null;
 
   let discussions: Discussion[] = [];
@@ -35,7 +35,7 @@ export default async function DiscussionsPage(
 
   return (
     <CommunityShell current={current}>
-      <CommunityProvider community={community} viewer={viewer} membership={membership}>
+      <CommunityProvider community={community} viewer={viewer} membership={membership} canAsCommunity={canAsCommunity}>
         <DiscussionsView canSee={canSee} initial={discussions} initialCategory={category} />
       </CommunityProvider>
     </CommunityShell>

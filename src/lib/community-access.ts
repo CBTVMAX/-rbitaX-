@@ -15,13 +15,15 @@ export async function loadCommunityAccess(slug: string) {
 
   const supabase = await createClient();
   const me = current?.authId ?? null;
-  const [mine, request, ban, siteAdmin, mute, favorite] = await Promise.all([
+  const [mine, request, ban, siteAdmin, mute, favorite, asComm] = await Promise.all([
     me ? supabase.from("CommunityMember").select("role, notify").eq("communityId", community.id).eq("userId", me).maybeSingle() : Promise.resolve({ data: null }),
     me ? supabase.from("CommunityJoinRequest").select("status").eq("communityId", community.id).eq("userId", me).maybeSingle() : Promise.resolve({ data: null }),
     me ? supabase.from("CommunityBan").select("userId").eq("communityId", community.id).eq("userId", me).maybeSingle() : Promise.resolve({ data: null }),
     me ? supabase.rpc("is_admin") : Promise.resolve({ data: false }),
     me ? supabase.from("CommunityMute").select("until, reason").eq("communityId", community.id).eq("userId", me).maybeSingle() : Promise.resolve({ data: null }),
     me ? supabase.from("CommunityFavorite").select("communityId").eq("communityId", community.id).eq("userId", me).maybeSingle() : Promise.resolve({ data: null }),
+    // Pode publicar em nome da comunidade? O banco decide (proprietário, cargo ou override individual).
+    me ? supabase.rpc("community_perm", { p_user: me, p_community: community.id, p_perm: "publish_as_community" }) : Promise.resolve({ data: false }),
   ]);
 
   const muteRow = mute.data as { until: string | null; reason: string } | null;
@@ -36,7 +38,8 @@ export async function loadCommunityAccess(slug: string) {
   const canSee = !membership.banned && (!community.isPrivate || !!membership.role || siteAdmin.data === true);
   const viewer: Viewer = current ? { id: current.authId, name: current.profile.name, username: current.profile.username, avatarUrl: current.profile.avatarUrl } : null;
 
-  return { current, community, supabase, me, membership, canSee, viewer };
+  const canAsCommunity = asComm.data === true;
+  return { current, community, supabase, me, membership, canSee, viewer, canAsCommunity };
 }
 
 export type CommunityAccess = NonNullable<Awaited<ReturnType<typeof loadCommunityAccess>>>;

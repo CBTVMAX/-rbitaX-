@@ -31,7 +31,7 @@ export default async function CommunityPage(
 
   const access = await loadCommunityAccess(params.slug);
   if (!access) notFound();
-  const { current, community, supabase, me, membership, canSee, viewer } = access;
+  const { current, community, supabase, me, membership, canSee, viewer, canAsCommunity } = access;
 
   type Posts = Awaited<ReturnType<typeof loadCommunityPosts>>;
   let pinned: Posts = [];
@@ -138,6 +138,7 @@ export default async function CommunityPage(
         counts={counts}
         nextEvent={nextEvent}
         staffBadges={staffBadges}
+        canAsCommunity={canAsCommunity}
       />
     </CommunityShell>
   );

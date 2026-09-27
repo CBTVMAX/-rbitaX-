@@ -136,6 +136,7 @@ export function CommunityView(props: {
   counts: ContentCounts & { discussions: number; announcements: number; events: number };
   nextEvent: { event: CommunityEvent; rsvp: string | null } | null;
   staffBadges: { pending: number; requests: number; reports: number };
+  canAsCommunity: boolean;
 }) {
   const { community, viewer, membership, canSee } = props;
   const router = useRouter();
@@ -159,9 +160,9 @@ export function CommunityView(props: {
   }, []);
 
   const ctx: CommunityCtx = useMemo(
-    () => ({ community, viewer, role, setRole, membership, supabase, toast, refresh: () => (setRefreshKey((k) => k + 1), router.refresh()) }),
+    () => ({ community, viewer, role, setRole, membership, supabase, toast, canAsCommunity: props.canAsCommunity, refresh: () => (setRefreshKey((k) => k + 1), router.refresh()) }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [community, viewer, role, membership, supabase]
+    [community, viewer, role, membership, supabase, props.canAsCommunity]
   );
 
   const staff = rank(role) >= 2;

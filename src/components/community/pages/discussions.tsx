@@ -15,11 +15,14 @@ import { EmptyState } from "../ui";
 type Sort = "ativas" | "recentes" | "curtidas";
 const PAGE = 25;
 
-export function DiscussionRow({ d, slug }: { d: Discussion; slug: string }) {
+export function DiscussionRow({ d, slug, community }: { d: Discussion; slug: string; community?: { name: string; avatarUrl: string | null } }) {
   const c = categoryOf(d.category);
+  const asComm = d.authorType === "community" && !!community;
+  const authorName = asComm ? community!.name : d.author.name;
+  const authorAvatar = asComm ? community!.avatarUrl : d.author.avatarUrl;
   return (
     <Link href={`/comunidades/${slug}/discussoes/${d.id}`} className="flex items-start gap-3 rounded-3xl border border-white/[0.08] bg-space-card/80 p-3.5 transition hover:border-orbit-purple/40">
-      <Avatar name={d.author.name} url={d.author.avatarUrl} size={40} />
+      <Avatar name={authorName} url={authorAvatar} size={40} />
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-1.5">
           <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold text-white/70">
@@ -39,7 +42,7 @@ export function DiscussionRow({ d, slug }: { d: Discussion; slug: string }) {
         <span className="mt-1 line-clamp-2 block text-[15px] font-semibold leading-snug text-white">{d.title}</span>
         {d.body && <span className="mt-0.5 line-clamp-1 block text-xs text-white/50">{d.body}</span>}
         <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/45">
-          <span>{d.author.name}</span>
+          <span>{authorName}</span>
           <span className="inline-flex items-center gap-1">
             <MessagesSquare className="h-3.5 w-3.5" /> {d.replyCount}
           </span>
@@ -179,7 +182,7 @@ export function DiscussionsView({ canSee, initial, initialCategory }: { canSee: 
         ) : (
           <div className="space-y-2.5">
             {items.map((d) => (
-              <DiscussionRow key={d.id} d={d} slug={community.slug} />
+              <DiscussionRow key={d.id} d={d} slug={community.slug} community={community} />
             ))}
             {!done && (
               <button type="button" onClick={more} disabled={loading} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 py-3 text-sm font-semibold text-white/75 hover:bg-white/5">

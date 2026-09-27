@@ -531,19 +531,40 @@ export function CommunityPostCard({
       )}
 
       <header className="flex items-center gap-3">
-        <Link href={`/perfil/${post.author.username}`} className="shrink-0">
-          <Avatar name={post.author.name} url={post.author.avatarUrl} size={42} />
-        </Link>
-        <div className="min-w-0 flex-1">
-          <Link href={`/perfil/${post.author.username}`} className="flex items-center gap-1 truncate text-sm font-semibold text-white hover:underline">
-            <span className="truncate">{post.author.name}</span>
-            {post.author.isVerified && <VerifiedBadge />}
-          </Link>
-          <p className="truncate text-xs text-white/45">
-            @{post.author.username} · {timeAgo(post.createdAt)}
-            {post.editedAt && " · editada"}
-          </p>
-        </div>
+        {post.authorType === "community" ? (
+          // Publicação em nome da comunidade (§8): a autora pública é a comunidade.
+          <>
+            <Link href={`/comunidades/${community.slug}`} className="shrink-0">
+              <Avatar name={community.name} url={community.avatarUrl} size={42} />
+            </Link>
+            <div className="min-w-0 flex-1">
+              <Link href={`/comunidades/${community.slug}`} className="flex items-center gap-1 truncate text-sm font-semibold text-white hover:underline">
+                <span className="truncate">{community.name}</span>
+                {community.isOfficial && <VerifiedBadge />}
+              </Link>
+              <p className="truncate text-xs text-white/45">
+                @{community.username} · {timeAgo(post.createdAt)}
+                {post.editedAt && " · editada"}
+              </p>
+            </div>
+          </>
+        ) : (
+          <>
+            <Link href={`/perfil/${post.author.username}`} className="shrink-0">
+              <Avatar name={post.author.name} url={post.author.avatarUrl} size={42} />
+            </Link>
+            <div className="min-w-0 flex-1">
+              <Link href={`/perfil/${post.author.username}`} className="flex items-center gap-1 truncate text-sm font-semibold text-white hover:underline">
+                <span className="truncate">{post.author.name}</span>
+                {post.author.isVerified && <VerifiedBadge />}
+              </Link>
+              <p className="truncate text-xs text-white/45">
+                @{post.author.username} · {timeAgo(post.createdAt)}
+                {post.editedAt && " · editada"}
+              </p>
+            </div>
+          </>
+        )}
         {viewer && (
           <button type="button" onClick={() => setMenu(true)} aria-label="Opções da publicação" className="flex h-10 w-10 items-center justify-center rounded-full text-white/55 transition hover:bg-white/5 hover:text-white">
             {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <MoreHorizontal className="h-5 w-5" />}

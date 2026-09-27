@@ -22,11 +22,13 @@ type CommentRow = { content: string; createdAt: string; id: string; postId: stri
 type CommentInsert = { content: string; createdAt?: string; id: string; postId: string; updatedAt: string; userId: string; parentId?: string | null };
 type CommentUpdate = Partial<CommentInsert>;
 
-type CommunityRow = { avatarUrl: string | null; category: string | null; coverUrl: string | null; createdAt: string; description: string | null; id: string; isPrivate: boolean; name: string; slug: string; username: string; isOfficial: boolean; accentColor: string | null; rules: string | null; links: Json; permissions: Json; moderation: Json; notifyPrefs: Json; memberCount: number; createdById: string | null; updatedAt: string };
+type CommunityRow = { avatarUrl: string | null; category: string | null; coverUrl: string | null; createdAt: string; description: string | null; id: string; isPrivate: boolean; name: string; slug: string; username: string; isOfficial: boolean; accentColor: string | null; rules: string | null; links: Json; permissions: Json; moderation: Json; notifyPrefs: Json; memberCount: number; createdById: string | null; updatedAt: string; ownerId: string | null; status: string; tags: Json };
+type CommunityRoleRow = { id: string; communityId: string; name: string; description: string | null; color: string; icon: string; rank: number; permissions: Json; sortOrder: number; createdAt: string };
+type CommunityMemberRoleRow = { id: string; communityId: string; userId: string; roleId: string; assignedById: string | null; createdAt: string };
 type CommunityInsert = { avatarUrl?: string | null; category?: string | null; coverUrl?: string | null; createdAt?: string; description?: string | null; id: string; isPrivate?: boolean; name: string; slug: string };
 type CommunityUpdate = Partial<CommunityInsert>;
 
-type CommunityMemberRow = { communityId: string; createdAt: string; id: string; role: string; userId: string; notify: boolean };
+type CommunityMemberRow = { communityId: string; createdAt: string; id: string; role: string; userId: string; notify: boolean; overrides: Json };
 type CommunityMemberInsert = { communityId: string; createdAt?: string; id: string; role?: string; userId: string };
 type CommunityMemberUpdate = Partial<CommunityMemberInsert>;
 
@@ -71,7 +73,7 @@ type UserInventoryRow = { userId: string; productId: string; source: string; isF
 type VirtualGiftRow = { id: string; productId: string; senderId: string; recipientId: string; conversationId: string | null; messageId: string | null; priceCoins: number; note: string | null; createdAt: string };
 type CommunityAlbumRow = { id: string; communityId: string; title: string; description: string; coverUrl: string | null; createdById: string | null; createdAt: string };
 type PostPollVoteRow = { postId: string; userId: string; optionIndex: number; createdAt: string };
-type CommunityDiscussionRow = { id: string; communityId: string; authorId: string; title: string; body: string; imageUrl: string | null; isPinned: boolean; isClosed: boolean; status: string; replyCount: number; createdAt: string; updatedAt: string; lastActivityAt: string; category: string; likeCount: number };
+type CommunityDiscussionRow = { id: string; communityId: string; authorId: string; title: string; body: string; imageUrl: string | null; isPinned: boolean; isClosed: boolean; status: string; replyCount: number; createdAt: string; updatedAt: string; lastActivityAt: string; category: string; likeCount: number; authorType: string };
 type CommunityDiscussionReplyRow = { id: string; discussionId: string; userId: string; content: string; status: string; createdAt: string };
 type CommunityJoinRequestRow = { communityId: string; userId: string; message: string; status: string; createdAt: string; decidedAt: string | null; decidedById: string | null };
 type UserSessionRow = { id: string; userId: string; sessionId: string; deviceId: string; deviceType: string; authSessionId: string | null; lastHeartbeatAt: string; lastActivityAt: string; visibilityState: string; isActive: boolean; createdAt: string; updatedAt: string };
@@ -103,7 +105,7 @@ type PaymentRow = { amount: number; createdAt: string; externalId: string | null
 type PaymentInsert = { amount: number; createdAt?: string; externalId?: string | null; id: string; status?: string; type: string; updatedAt: string; userId: string };
 type PaymentUpdate = Partial<PaymentInsert>;
 
-type PostRow = { authorId: string; commentsEnabled: boolean; content: string; createdAt: string; editedAt: string | null; id: string; isArchived: boolean; isPinned: boolean; kind: string; linkUrl: string | null; location: string | null; moderationStatus: string; sharedPostId: string | null; updatedAt: string; viewCount: number; visibility: string; communityId: string | null; albumId: string | null; meta: Json };
+type PostRow = { authorId: string; commentsEnabled: boolean; content: string; createdAt: string; editedAt: string | null; id: string; isArchived: boolean; isPinned: boolean; kind: string; linkUrl: string | null; location: string | null; moderationStatus: string; sharedPostId: string | null; updatedAt: string; viewCount: number; visibility: string; communityId: string | null; albumId: string | null; meta: Json; authorType: string };
 type PostInsert = { authorId: string; commentsEnabled?: boolean; content: string; createdAt?: string; editedAt?: string | null; id: string; isArchived?: boolean; isPinned?: boolean; kind?: string; linkUrl?: string | null; location?: string | null; moderationStatus?: string; sharedPostId?: string | null; updatedAt: string; viewCount?: number; visibility?: string };
 type PostUpdate = Partial<PostInsert>;
 
@@ -157,6 +159,13 @@ export type Database = {
         { foreignKeyName: "Comment_postId_fkey"; columns: ["postId"]; isOneToOne: false; referencedRelation: "Post"; referencedColumns: ["id"] }
       ] };
       Community: { Row: CommunityRow; Insert: CommunityInsert; Update: CommunityUpdate; Relationships: [] };
+      CommunityRole: { Row: CommunityRoleRow; Insert: never; Update: never; Relationships: [
+        { foreignKeyName: "CommunityRole_communityId_fkey"; columns: ["communityId"]; isOneToOne: false; referencedRelation: "Community"; referencedColumns: ["id"] }
+      ] };
+      CommunityMemberRole: { Row: CommunityMemberRoleRow; Insert: never; Update: never; Relationships: [
+        { foreignKeyName: "CommunityMemberRole_roleId_fkey"; columns: ["roleId"]; isOneToOne: false; referencedRelation: "CommunityRole"; referencedColumns: ["id"] },
+        { foreignKeyName: "CommunityMemberRole_communityId_fkey"; columns: ["communityId"]; isOneToOne: false; referencedRelation: "Community"; referencedColumns: ["id"] }
+      ] };
       CommunityMember: { Row: CommunityMemberRow; Insert: CommunityMemberInsert; Update: CommunityMemberUpdate; Relationships: [
         { foreignKeyName: "CommunityMember_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
         { foreignKeyName: "CommunityMember_communityId_fkey"; columns: ["communityId"]; isOneToOne: false; referencedRelation: "Community"; referencedColumns: ["id"] }
@@ -448,7 +457,19 @@ export type Database = {
       community_comment_action: { Args: { p_comment: string; p_action: string }; Returns: undefined };
       community_vote_poll: { Args: { p_post: string; p_options: number[] }; Returns: undefined };
       community_view: { Args: { p_post: string }; Returns: undefined };
-      community_create_discussion: { Args: { p_community: string; p_title: string; p_body: string; p_image?: string | null; p_category?: string }; Returns: Json };
+      community_create_discussion: { Args: { p_community: string; p_title: string; p_body: string; p_image?: string | null; p_category?: string; p_as_community?: boolean }; Returns: Json };
+      community_perm: { Args: { p_user: string; p_community: string; p_perm: string }; Returns: boolean };
+      community_my_perms: { Args: { p_community: string }; Returns: Json };
+      community_roles_of: { Args: { p_user: string; p_community: string }; Returns: Json };
+      community_member_badges: { Args: { p_user: string }; Returns: Json };
+      community_eff_rank: { Args: { p_user: string; p_community: string }; Returns: number };
+      community_save_role: { Args: { p_community: string; p: Json }; Returns: string };
+      community_delete_role: { Args: { p_role: string }; Returns: undefined };
+      community_assign_role: { Args: { p_community: string; p_user: string; p_role: string; p_on: boolean }; Returns: undefined };
+      community_set_overrides: { Args: { p_community: string; p_user: string; p: Json }; Returns: undefined };
+      community_transfer_owner: { Args: { p_community: string; p_user: string }; Returns: undefined };
+      community_set_status: { Args: { p_community: string; p_status: string }; Returns: undefined };
+      community_delete: { Args: { p_community: string; p_confirm: string }; Returns: undefined };
       community_edit_discussion: { Args: { p_discussion: string; p_title: string; p_body: string; p_category: string }; Returns: undefined };
       community_discussion_like: { Args: { p_discussion: string }; Returns: Json };
       community_repost: { Args: { p_post: string; p_comment?: string }; Returns: string };

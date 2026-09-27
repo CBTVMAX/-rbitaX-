@@ -76,6 +76,8 @@ export type CommunityPost = {
   viewCount: number;
   albumId: string | null;
   meta: PostMeta;
+  /** "community" = a publicação pertence à comunidade (autor público = comunidade); "user" = perfil pessoal. */
+  authorType: "user" | "community";
   author: Author;
   media: MediaItem[];
   likeCount: number;
@@ -89,7 +91,7 @@ export type CommunityPost = {
 };
 
 export const POST_COLUMNS =
-  "id, content, kind, linkUrl, createdAt, editedAt, isPinned, commentsEnabled, moderationStatus, viewCount, albumId, meta, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, thumbnailUrl, width, height, mimeType, position, sizeBytes, name)";
+  "id, content, kind, linkUrl, createdAt, editedAt, isPinned, commentsEnabled, moderationStatus, viewCount, albumId, meta, authorType, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, thumbnailUrl, width, height, mimeType, position, sizeBytes, name)";
 
 export type Discussion = {
   id: string;
@@ -104,11 +106,12 @@ export type Discussion = {
   lastActivityAt: string;
   category: DiscussionCategory;
   likeCount: number;
+  authorType: "user" | "community";
   author: Author;
 };
 
 export const DISCUSSION_COLUMNS =
-  "id, title, body, imageUrl, isPinned, isClosed, status, replyCount, createdAt, lastActivityAt, category, likeCount, author:User!CommunityDiscussion_authorId_fkey(id, name, username, avatarUrl, isVerified)";
+  "id, title, body, imageUrl, isPinned, isClosed, status, replyCount, createdAt, lastActivityAt, category, likeCount, authorType, author:User!CommunityDiscussion_authorId_fkey(id, name, username, avatarUrl, isVerified)";
 
 /** Column lists shared by server pages and client components (kept here, outside any "use client" module). */
 export const EVENT_COLUMNS =

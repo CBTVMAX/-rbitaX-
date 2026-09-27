@@ -15,6 +15,8 @@ export type CommunityCtx = {
   refresh: () => void;
   membership?: Membership;
   setRole?: (role: Role | null) => void;
+  /** The viewer may publish in the community's name (perm publish_as_community). Decided on the server. */
+  canAsCommunity?: boolean;
 };
 
 export const CommunityContext = createContext<CommunityCtx | null>(null);

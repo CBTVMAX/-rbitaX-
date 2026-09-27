@@ -191,14 +191,15 @@ export function DiscussionView(props: { community: Community; viewer: Viewer; ro
               )}
             </div>
             <h1 className="mt-3 break-words font-display text-xl font-bold leading-snug text-white md:text-2xl">{d.title}</h1>
-            <Link href={`/perfil/${d.author.username}`} className="mt-3 flex items-center gap-2.5">
-              <Avatar name={d.author.name} url={d.author.avatarUrl} size={36} />
+            <Link href={d.authorType === "community" ? base : `/perfil/${d.author.username}`} className="mt-3 flex items-center gap-2.5">
+              <Avatar name={d.authorType === "community" ? community.name : d.author.name} url={d.authorType === "community" ? community.avatarUrl : d.author.avatarUrl} size={36} />
               <span className="min-w-0">
                 <span className="flex items-center gap-1 text-sm font-semibold text-white">
-                  {d.author.name} {d.author.isVerified && <VerifiedBadge />}
+                  {d.authorType === "community" ? community.name : d.author.name}{" "}
+                  {(d.authorType === "community" ? community.isOfficial : d.author.isVerified) && <VerifiedBadge />}
                 </span>
                 <span className="block text-xs text-white/45">
-                  @{d.author.username} · {timeAgo(d.createdAt)}
+                  @{d.authorType === "community" ? community.username : d.author.username} · {timeAgo(d.createdAt)}
                 </span>
               </span>
             </Link>
