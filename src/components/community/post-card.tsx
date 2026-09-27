@@ -7,6 +7,7 @@ import {
   Bookmark,
   Check,
   CheckCircle2,
+  Download,
   Eye,
   FileText,
   Flag,
@@ -31,7 +32,7 @@ import {
 import { Avatar } from "@/components/post-card";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { ago as timeAgo } from "@/lib/communities";
-import { can, communityError, compactNumber, isEditorOrAdmin, rank, reactionOf, REACTIONS, TAG_LABEL, type CommunityPost, type ReactionKey } from "@/lib/communities";
+import { can, communityError, compactNumber, downloadCommunityMedia, isEditorOrAdmin, rank, reactionOf, REACTIONS, TAG_LABEL, type CommunityPost, type ReactionKey } from "@/lib/communities";
 import { useCommunity } from "./context";
 import { Confirm, Sheet } from "./ui";
 import { RichText } from "./rich-text";
@@ -634,22 +635,21 @@ export function CommunityPostCard({
         </div>
       )}
       {files.map((f) => (
-        <a
+        <button
           key={f.id}
-          href={f.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          download
-          className="mt-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3 transition hover:border-orbit-purple/40"
+          type="button"
+          onClick={() => downloadCommunityMedia(supabase, post.id, f.id, f.url, f.name)}
+          className="mt-3 flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-left transition hover:border-orbit-purple/40"
         >
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-orbit-cyan">
             <FileText className="h-5 w-5" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-semibold text-white">{decodeURIComponent(f.url.split("/").pop() ?? "Arquivo")}</span>
-            <span className="block text-xs text-white/45">{f.mimeType === "application/pdf" ? "PDF" : f.mimeType === "application/zip" ? "ZIP" : "Arquivo"} · toque para abrir</span>
+            <span className="block truncate text-sm font-semibold text-white">{f.name || decodeURIComponent(f.url.split("/").pop() ?? "Arquivo")}</span>
+            <span className="block text-xs text-white/45">{f.mimeType === "application/pdf" ? "PDF" : f.mimeType === "application/zip" ? "ZIP" : "Arquivo"} · toque para baixar</span>
           </span>
-        </a>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/60"><Download className="h-4 w-4" /></span>
+        </button>
       ))}
       {post.kind === "poll" && post.meta.poll && <Poll post={post} onVoted={(p) => update({ poll: p })} />}
       {post.linkUrl && (

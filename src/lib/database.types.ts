@@ -483,6 +483,9 @@ export type Database = {
       community_tab_delete: { Args: { p_tab: string }; Returns: undefined };
       community_tab_reorder: { Args: { p_community: string; p_ids: string[] }; Returns: undefined };
       community_tab_assign: { Args: { p_post: string; p_tab: string; p_on: boolean }; Returns: undefined };
+      community_register_download: { Args: { p_post: string; p_media?: string | null }; Returns: undefined };
+      community_download_stats: { Args: { p_post: string }; Returns: Json };
+      community_download_audit: { Args: { p_community: string; p_limit?: number; p_offset?: number }; Returns: Json };
       community_edit_discussion: { Args: { p_discussion: string; p_title: string; p_body: string; p_category: string }; Returns: undefined };
       community_discussion_like: { Args: { p_discussion: string }; Returns: Json };
       community_repost: { Args: { p_post: string; p_comment?: string }; Returns: string };

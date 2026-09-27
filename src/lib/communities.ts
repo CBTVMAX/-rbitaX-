@@ -184,6 +184,7 @@ export const COMMUNITY_PERMISSIONS: { group: string; items: { key: string; label
       { key: "manage_media", label: "Gerenciar mídias" },
       { key: "manage_roles", label: "Gerenciar cargos" },
       { key: "view_stats", label: "Ver estatísticas" },
+      { key: "view_downloads", label: "Ver downloads e auditoria" },
     ],
   },
 ];
@@ -374,6 +375,37 @@ export async function uploadCommunityFile(supabase: SupabaseClient<Database>, us
 
 export function communityHref(slug: string, extra = "") {
   return `/comunidades/${slug}${extra}`;
+}
+
+/** Registra o download no Órbita X (privado, para a auditoria) e entrega o arquivo ao usuário. */
+export async function downloadCommunityMedia(
+  supabase: SupabaseClient<Database>,
+  postId: string,
+  mediaId: string | null,
+  url: string,
+  name?: string | null
+) {
+  try {
+    await supabase.rpc("community_register_download", { p_post: postId, p_media: mediaId });
+  } catch {
+    /* o registro é best-effort; o download continua */
+  }
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("fetch");
+    const blob = await res.blob();
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = name || url.split("/").pop() || "arquivo";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(href);
+  } catch {
+    // CORS ou rede: abre em nova aba como alternativa
+    window.open(url, "_blank", "noopener");
+  }
 }
 
 export function compactNumber(n: number) {

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { AlertTriangle, ArrowLeft, BarChart3, Bell, CalendarDays, ChevronRight, FileStack, KeyRound, LayoutGrid, Lock, Palette, ScrollText, Settings2, ShieldAlert, UserCog, Users } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BarChart3, Bell, CalendarDays, ChevronRight, Download, FileStack, KeyRound, LayoutGrid, Lock, Palette, ScrollText, Settings2, ShieldAlert, UserCog, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useStoreToast } from "@/components/store/store-view";
 import { accentOf, rank, type Community, type Role, type Viewer } from "@/lib/communities";
@@ -23,8 +23,9 @@ import { LogSection } from "./log";
 import { RolesSection } from "./roles";
 import { DangerSection } from "./danger";
 import { TabsSection } from "./tabs";
+import { DownloadsSection } from "./downloads";
 
-type Section = "geral" | "personalizacao" | "privacidade" | "conteudo" | "abas" | "eventos" | "membros" | "equipe" | "permissoes" | "moderacao" | "notificacoes" | "estatisticas" | "registro" | "perigo";
+type Section = "geral" | "personalizacao" | "privacidade" | "conteudo" | "abas" | "eventos" | "membros" | "equipe" | "permissoes" | "moderacao" | "notificacoes" | "estatisticas" | "downloads" | "registro" | "perigo";
 
 const SECTIONS: { id: Section; label: string; desc: string; icon: React.ComponentType<{ className?: string }>; min: number }[] = [
   { id: "geral", label: "Editar informações", desc: "Nome, @, categoria, descrição, regras e links", icon: Settings2, min: 3 },
@@ -39,6 +40,7 @@ const SECTIONS: { id: Section; label: string; desc: string; icon: React.Componen
   { id: "moderacao", label: "Moderação", desc: "Filtros, aprovações e denúncias", icon: ShieldAlert, min: 2 },
   { id: "notificacoes", label: "Notificações", desc: "Avisos para membros e anúncios", icon: Bell, min: 2 },
   { id: "estatisticas", label: "Estatísticas", desc: "Membros, alcance e engajamento", icon: BarChart3, min: 3 },
+  { id: "downloads", label: "Downloads", desc: "Rastreio e auditoria privada de downloads", icon: Download, min: 3 },
   { id: "registro", label: "Registro de ações", desc: "Quem fez o quê na administração", icon: ScrollText, min: 3 },
   { id: "perigo", label: "Zona de perigo", desc: "Transferir, desativar ou excluir a comunidade", icon: AlertTriangle, min: 4 },
 ];
@@ -129,6 +131,9 @@ export function ManageView(props: {
       break;
     case "estatisticas":
       content = <StatsSection />;
+      break;
+    case "downloads":
+      content = <DownloadsSection />;
       break;
   }
 
