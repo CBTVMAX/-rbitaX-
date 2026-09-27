@@ -483,6 +483,27 @@ export type Database = {
         Args: Record<string, never>;
         Returns: { userId: string; balance: number; ledgerSum: number; lastBalanceAfter: number; ok: boolean }[];
       };
+      admin_overview: { Args: Record<string, never>; Returns: Json };
+      admin_stats: { Args: { p_days?: number }; Returns: Json };
+      admin_users: {
+        Args: { p_search?: string | null; p_status?: string | null; p_limit?: number; p_offset?: number };
+        Returns: { id: string; name: string; username: string; avatarUrl: string | null; email: string | null; role: string; accountStatus: string; isVerified: boolean; presence: string | null; createdAt: string; lastSeenAt: string | null; posts: number; reports: number; total: number }[];
+      };
+      admin_user_action: { Args: { p_user: string; p_action: string }; Returns: undefined };
+      admin_contents: {
+        Args: { p_search?: string | null; p_kind?: string | null; p_limit?: number; p_offset?: number };
+        Returns: { id: string; content: string; kind: string | null; visibility: string; moderationStatus: string; createdAt: string; authorId: string; authorName: string; authorUsername: string; authorAvatarUrl: string | null; communityId: string | null; imageUrl: string | null; likes: number; comments: number; reports: number; total: number }[];
+      };
+      admin_content_action: { Args: { p_post: string; p_action: string }; Returns: undefined };
+      admin_communities: {
+        Args: { p_search?: string | null; p_limit?: number; p_offset?: number };
+        Returns: { id: string; name: string; slug: string; avatarUrl: string | null; category: string | null; isPrivate: boolean; isOfficial: boolean; memberCount: number; createdAt: string; ownerName: string | null; posts: number; total: number }[];
+      };
+      admin_reports: {
+        Args: { p_status?: string; p_limit?: number; p_offset?: number };
+        Returns: { id: string; targetType: string; targetId: string; reason: string; details: string | null; status: string; createdAt: string; reporterName: string | null; reporterUsername: string | null; targetLabel: string | null; total: number }[];
+      };
+      admin_resolve_report: { Args: { p_report: string; p_status: string }; Returns: undefined };
       my_coin_balance: { Args: Record<string, never>; Returns: number };
       acquire_product: { Args: { p_product_id: string }; Returns: Json };
       toggle_inventory_favorite: { Args: { p_product_id: string }; Returns: boolean };
