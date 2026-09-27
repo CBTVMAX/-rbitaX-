@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
+import { verifyUpload } from "@/lib/upload-guard";
 import { createClient } from "@/lib/supabase/client";
 import { saveCover } from "@/lib/cover-upload";
 import { CoverCropDialog } from "@/components/cover-crop-dialog";
@@ -252,9 +253,16 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
 
     setUploading(kind);
     setError(null);
+    let contentType: string;
+    try {
+      contentType = await verifyUpload(file, ["image"]);
+    } catch (e) {
+      setUploading(null);
+      return setError(e instanceof Error ? e.message : "Imagem inválida.");
+    }
     const ext = file.name.split(".").pop() || "jpg";
     const path = `${userId}/${kind}/${crypto.randomUUID()}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from("media").upload(path, file, { upsert: true });
+    const { error: uploadError } = await supabase.storage.from("media").upload(path, file, { upsert: true, contentType });
     if (uploadError) {
       setUploading(null);
       return setError("Não foi possível enviar a imagem.");

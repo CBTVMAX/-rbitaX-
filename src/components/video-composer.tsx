@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { verifyUpload } from "@/lib/upload-guard";
 import { createClient } from "@/lib/supabase/client";
 import { Film } from "lucide-react";
 
@@ -32,9 +33,10 @@ export function VideoComposer({ userId }: { userId: string }) {
       });
       if (postError) throw postError;
 
+      const contentType = await verifyUpload(file, ["video"]);
       const ext = file.name.split(".").pop();
       const path = `${userId}/videos/${postId}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("media").upload(path, file);
+      const { error: uploadError } = await supabase.storage.from("media").upload(path, file, { contentType });
       if (uploadError) throw uploadError;
 
       const { data: pub } = supabase.storage.from("media").getPublicUrl(path);

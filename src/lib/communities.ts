@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sniffFile } from "@/lib/upload-guard";
 import { timeAgo } from "@/lib/format";
 import type { Database } from "@/lib/database.types";
 
@@ -297,9 +298,14 @@ async function dimensions(file: File, kind: UploadKind): Promise<{ width: number
 export async function uploadCommunityFile(supabase: SupabaseClient<Database>, userId: string, communityId: string, file: File, kind: UploadKind) {
   const problem = checkFile(file, kind);
   if (problem) throw new Error(problem);
+  // Confirm the real bytes match the declared kind; store the verified type (documents keep their declared type).
+  const found = await sniffFile(file);
+  const sniffKind = kind === "file" ? "document" : kind;
+  if (!found || found.kind !== sniffKind) throw new Error("Este arquivo não é permitido ou está corrompido.");
+  const contentType = found.kind === "document" ? file.type : found.mime;
   const ext = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "bin";
   const path = `${userId}/communities/${communityId}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from("media").upload(path, file, { contentType: file.type, cacheControl: "31536000", upsert: false });
+  const { error } = await supabase.storage.from("media").upload(path, file, { contentType, cacheControl: "31536000", upsert: false });
   if (error) throw new Error("Falha no envio do arquivo. Tente de novo.");
   const { data } = supabase.storage.from("media").getPublicUrl(path);
   const dims = await dimensions(file, kind);

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { verifyUpload } from "@/lib/upload-guard";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/post-card";
 import {
@@ -60,7 +61,9 @@ export function PostComposer({
 
     try {
       const postId = crypto.randomUUID();
-      const isVideo = file?.type.startsWith("video");
+      // Confirm the real file type before creating anything, so a fake image cannot leave an orphan post.
+      const media = file ? await verifyUpload(file, ["image", "video"]) : null;
+      const isVideo = media?.startsWith("video") ?? false;
 
       const { error: postError } = await supabase.from("Post").insert({
         id: postId,
@@ -76,6 +79,7 @@ export function PostComposer({
         const path = `${userId}/posts/${postId}.${ext}`;
         const { error: uploadError } = await supabase.storage.from("media").upload(path, file, {
           upsert: true,
+          contentType: media!,
         });
         if (uploadError) throw uploadError;
 
@@ -85,7 +89,7 @@ export function PostComposer({
           postId,
           type: isVideo ? "video" : "image",
           url: pub.publicUrl,
-          mimeType: file.type,
+          mimeType: media!,
         });
         if (mediaError) throw mediaError;
       }

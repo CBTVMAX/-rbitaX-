@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { verifyUpload } from "@/lib/upload-guard";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/post-card";
 import { Pause, Play, Upload } from "lucide-react";
@@ -49,9 +50,10 @@ export function MusicApp({ userId, initialTracks }: { userId: string; initialTra
 
     try {
       const id = crypto.randomUUID();
+      const contentType = await verifyUpload(file, ["audio"]);
       const ext = file.name.split(".").pop();
       const path = `${userId}/tracks/${id}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from("media").upload(path, file);
+      const { error: uploadError } = await supabase.storage.from("media").upload(path, file, { contentType });
       if (uploadError) throw uploadError;
 
       const { data: pub } = supabase.storage.from("media").getPublicUrl(path);

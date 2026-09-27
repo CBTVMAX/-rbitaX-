@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
+import { sniffFile } from "@/lib/upload-guard";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -126,9 +127,15 @@ export function chatFilePath(conversationId: string, userId: string, ext: string
 }
 
 export async function uploadChatFile(path: string, blob: Blob, contentType: string) {
+  // Defense in depth: confirm the real bytes. Media types are forced to what they truly are;
+  // documents (pdf, office/zip containers, text) keep their already-constrained type. Unknown /
+  // executable content (a fake image that is really HTML, SVG or a script) is refused.
+  const found = await sniffFile(blob, path.split("/").pop());
+  if (!found) throw new Error("Este arquivo não é permitido ou está corrompido.");
+  const finalType = found.kind === "document" ? uploadMime(contentType) : found.mime;
   const { error } = await createClient()
     .storage.from(CHAT_BUCKET)
-    .upload(path, blob, { contentType, cacheControl: "31536000", upsert: false });
+    .upload(path, blob, { contentType: finalType, cacheControl: "31536000", upsert: false });
   if (error) throw error;
 }
 
