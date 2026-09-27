@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { disablePush } from "@/lib/push-client";
+import { endPresenceForSignOut } from "@/components/presence-heartbeat";
 import { saveCover } from "@/lib/cover-upload";
 import { CoverCropDialog } from "@/components/cover-crop-dialog";
 import {
@@ -106,6 +107,7 @@ export function ProfileMoreMenu({
   async function signOut() {
     const supabase = createClient();
     await disablePush(supabase);
+    await endPresenceForSignOut();
     await supabase.auth.signOut();
     window.location.href = "/";
   }

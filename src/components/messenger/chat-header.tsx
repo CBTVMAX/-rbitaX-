@@ -19,7 +19,8 @@ import {
   Video,
   X,
 } from "lucide-react";
-import { PRESENCE, presenceOf } from "@/lib/presence";
+import { usePresenceText } from "@/components/presence-picker";
+import { useOnlineCount } from "@/lib/presence-live";
 import { formatTime, messagePreview, toDate } from "@/lib/messenger/format";
 import { conversationTitle, isMuted, MESSAGE_COLUMNS, toMessage, type ChatMessage, type Conversation, type Member } from "@/lib/messenger/types";
 import { useMessenger } from "./context";
@@ -136,8 +137,8 @@ export function ChatHeader({
   const { toast, me } = useMessenger();
   const [menu, setMenu] = useState(false);
   const other = c.otherUser;
-  const presence = PRESENCE[presenceOf(other?.presence)];
-  const onlineInGroup = members.filter((m) => m.id !== me.id && presenceOf(m.presence) === "online").length;
+  const presence = usePresenceText(c.isGroup ? null : other?.id, other?.presence);
+  const onlineInGroup = useOnlineCount(c.isGroup ? members.filter((m) => m.id !== me.id).map((m) => m.id) : []);
   const muted = isMuted(c);
   const soon = (what: string) => () => toast(`Chamadas de ${what} chegam em breve ao ÓrbitaX.`);
 
@@ -197,9 +198,9 @@ export function ChatHeader({
                   <>
                     <span className="truncate">@{other?.username}</span>
                     <span className="text-white/25">·</span>
-                    <span className={clsx("flex shrink-0 items-center gap-1", presence.text)}>
-                      <span className={clsx("h-1.5 w-1.5 rounded-full", presence.dot)} />
-                      {presence.label}
+                    <span className={clsx("flex min-w-0 items-center gap-1", presence.color)}>
+                      <span className={clsx("h-1.5 w-1.5 shrink-0 rounded-full", presence.dot)} />
+                      <span className="truncate">{presence.text}</span>
                     </span>
                   </>
                 )}

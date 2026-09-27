@@ -16,7 +16,7 @@ import { presenceOf } from "@/lib/presence";
 import { relationshipLabel } from "@/lib/profile-options";
 import { frameBackdropStyle, frameSrc, getFrame, type AvatarFrame } from "@/lib/avatar-frames";
 import { hasCustomAccent, profileAccentStyle, profileColorHex, profileColorLabel } from "@/lib/profile-colors";
-import { PresenceDot, PresenceStatus } from "@/components/presence-picker";
+import { OnlineDot, PresenceDot, PresenceStatus } from "@/components/presence-picker";
 import {
   Cake,
   Camera,
@@ -129,9 +129,7 @@ function ProfileAvatar({
           <div className="h-full w-full rounded-full border-4 border-space-bg">{photo}</div>
         </div>
       )}
-      {online && (
-        <span className="absolute right-[9%] top-[58%] z-10 h-3.5 w-3.5 rounded-full border-2 border-space-bg bg-emerald-400" />
-      )}
+      <OnlineDot userId={userId} initial={online ? "online" : "offline"} className="absolute right-[9%] top-[58%] z-10 h-3.5 w-3.5 rounded-full border-2 border-space-bg bg-emerald-400" />
       {isMe && (
         <ProfileImageUpload
           userId={userId}
@@ -676,7 +674,7 @@ export function ProfileView({
                 <Silhouette className="h-[78%] w-[78%] text-orbit-blue/55" />
               )}
             </span>
-            <PresenceDot value={f.presence} className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 border-2 border-space-bg" />
+            <PresenceDot value={f.presence} userId={f.id} className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 border-2 border-space-bg" />
           </span>
           <span className="mt-2.5 flex max-w-full items-center gap-1">
             <span className="truncate text-sm font-medium text-white">{f.name}</span>

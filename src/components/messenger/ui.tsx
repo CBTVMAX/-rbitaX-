@@ -14,6 +14,7 @@ export function ChatAvatar({
   url,
   size = 44,
   presence,
+  userId,
   frame,
   group = false,
   ringClass = "border-space-bg",
@@ -22,6 +23,8 @@ export function ChatAvatar({
   url: string | null | undefined;
   size?: number;
   presence?: string | null;
+  /** When given, the dot follows the person's live status. */
+  userId?: string | null;
   frame?: string | null;
   group?: boolean;
   ringClass?: string;
@@ -63,6 +66,7 @@ export function ChatAvatar({
       {presence !== undefined && !group && (
         <PresenceDot
           value={presence}
+          userId={userId}
           className={clsx(
             "absolute bottom-0 right-0 z-[1] border-2",
             size >= 64 ? "h-4 w-4" : size >= 40 ? "h-3.5 w-3.5" : "h-3 w-3",
@@ -98,6 +102,7 @@ export function ConversationAvatar({ c, size = 48, ringClass }: { c: Conversatio
       url={c.otherUser?.avatarUrl}
       size={size}
       presence={c.otherUser?.presence ?? "offline"}
+      userId={c.otherUser?.id}
       frame={c.otherUser?.avatarFrame}
       ringClass={ringClass}
     />

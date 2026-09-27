@@ -40,7 +40,7 @@ function PersonRow({ u, onChat }: { u: Result; onChat: (u: ChatUser) => void }) 
   return (
     <div className="flex items-center gap-3 rounded-2xl px-2 py-2 transition hover:bg-white/[0.04]">
       <Link href={`/perfil/${u.username}`} className="flex min-w-0 flex-1 items-center gap-3">
-        <ChatAvatar name={u.name} url={u.avatarUrl} size={44} presence={u.presence ?? "offline"} frame={u.avatarFrame} ringClass="border-space-surface" />
+        <ChatAvatar name={u.name} url={u.avatarUrl} size={44} presence={u.presence ?? "offline"} userId={u.id} frame={u.avatarFrame} ringClass="border-space-surface" />
         <span className="min-w-0">
           <span className="block truncate text-sm font-medium text-white">{u.name}</span>
           <span className="block truncate text-xs text-white/45">@{u.username}</span>

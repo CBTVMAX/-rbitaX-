@@ -74,6 +74,8 @@ type PostPollVoteRow = { postId: string; userId: string; optionIndex: number; cr
 type CommunityDiscussionRow = { id: string; communityId: string; authorId: string; title: string; body: string; imageUrl: string | null; isPinned: boolean; isClosed: boolean; status: string; replyCount: number; createdAt: string; updatedAt: string; lastActivityAt: string };
 type CommunityDiscussionReplyRow = { id: string; discussionId: string; userId: string; content: string; status: string; createdAt: string };
 type CommunityJoinRequestRow = { communityId: string; userId: string; message: string; status: string; createdAt: string; decidedAt: string | null; decidedById: string | null };
+type UserSessionRow = { id: string; userId: string; sessionId: string; deviceId: string; deviceType: string; authSessionId: string | null; lastHeartbeatAt: string; lastActivityAt: string; visibilityState: string; isActive: boolean; createdAt: string; updatedAt: string };
+type UserPresenceRow = { userId: string; status: string; lastSeenAt: string | null; updatedAt: string };
 type CommunityMemberEventRow = { id: number; communityId: string; userId: string | null; kind: string; createdAt: string };
 type CommunityBanRow = { communityId: string; userId: string; reason: string; bannedById: string | null; createdAt: string };
 type UserStickerPackRow = { userId: string; packId: string; acquiredAt: string; installed: boolean; source: string; updatedAt: string };
@@ -116,7 +118,7 @@ type TrackRow = { artist: string; audioUrl: string; coverUrl: string | null; cre
 type TrackInsert = { artist: string; audioUrl: string; coverUrl?: string | null; createdAt?: string; duration?: number | null; id: string; title: string; userId: string };
 type TrackUpdate = Partial<TrackInsert>;
 
-type UserRow = { accountStatus: string; avatarUrl: string | null; bio: string | null; coverUrl: string | null; createdAt: string; discoverable: boolean; email: string | null; emailVerifiedAt: string | null; googleId: string | null; id: string; isPrivate: boolean; isVerified: boolean; lastSeenAt: string | null; name: string; orbitId: string | null; pinnedPostId: string | null; presence: string; profileColor: string; avatarFrame: string | null; passwordHash: string | null; phone: string | null; phoneVerifiedAt: string | null; privacyAcceptedAt: string | null; privacyAcceptedVersion: string | null; role: string; termsAcceptedAt: string | null; termsAcceptedVersion: string | null; updatedAt: string; username: string; whoCanComment: string; whoCanMention: string; whoCanMessage: string; whoCanSeeMoments: string };
+type UserRow = { accountStatus: string; avatarUrl: string | null; bio: string | null; coverUrl: string | null; createdAt: string; discoverable: boolean; email: string | null; emailVerifiedAt: string | null; googleId: string | null; id: string; isPrivate: boolean; isVerified: boolean; lastSeenAt: string | null; name: string; orbitId: string | null; pinnedPostId: string | null; presence: string; showPresence: boolean; profileColor: string; avatarFrame: string | null; passwordHash: string | null; phone: string | null; phoneVerifiedAt: string | null; privacyAcceptedAt: string | null; privacyAcceptedVersion: string | null; role: string; termsAcceptedAt: string | null; termsAcceptedVersion: string | null; updatedAt: string; username: string; whoCanComment: string; whoCanMention: string; whoCanMessage: string; whoCanSeeMoments: string };
 type UserInsert = { accountStatus?: string; avatarUrl?: string | null; bio?: string | null; coverUrl?: string | null; createdAt?: string; discoverable?: boolean; email?: string | null; emailVerifiedAt?: string | null; googleId?: string | null; id: string; isPrivate?: boolean; isVerified?: boolean; lastSeenAt?: string | null; name: string; orbitId?: string | null; pinnedPostId?: string | null; presence?: string; profileColor?: string; avatarFrame?: string | null; passwordHash?: string | null; phone?: string | null; phoneVerifiedAt?: string | null; privacyAcceptedAt?: string | null; privacyAcceptedVersion?: string | null; role?: string; termsAcceptedAt?: string | null; termsAcceptedVersion?: string | null; updatedAt?: string; username: string; whoCanComment?: string; whoCanMention?: string; whoCanMessage?: string; whoCanSeeMoments?: string };
 type UserUpdate = Partial<UserInsert>;
 
@@ -206,6 +208,8 @@ export type Database = {
       CommunityMemberEvent: { Row: CommunityMemberEventRow; Insert: never; Update: never; Relationships: [
         { foreignKeyName: "CommunityMemberEvent_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
       ] };
+      UserSession: ReadOnly<UserSessionRow>;
+      UserPresence: ReadOnly<UserPresenceRow>;
       CoinWallet: ReadOnly<CoinWalletRow>;
       CoinTransaction: ReadOnly<CoinTransactionRow>;
       StoreProduct: ReadOnly<StoreProductRow>;
@@ -265,6 +269,10 @@ export type Database = {
         Returns: void;
       };
       get_or_create_dm: { Args: { other_user_id: string }; Returns: string };
+      presence_heartbeat: { Args: { p_session: string; p_device: string; p_device_type: string; p_visibility: string; p_last_activity: string | null }; Returns: Json };
+      presence_end_session: { Args: { p_session: string }; Returns: string };
+      presence_sign_out: { Args: { p_session?: string | null }; Returns: string };
+      presence_set_visibility: { Args: { p_show: boolean }; Returns: string };
       my_badge_counts: { Args: Record<string, never>; Returns: { messages: number; friendRequests: number; notifications: number }[] };
       mark_conversation_read: { Args: { conversation_id: string }; Returns: undefined };
       mark_friend_requests_seen: { Args: Record<string, never>; Returns: undefined };

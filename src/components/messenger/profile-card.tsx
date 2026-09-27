@@ -7,7 +7,7 @@ import { Loader2, UserRound } from "lucide-react";
 import { FriendButton } from "@/components/friend-button";
 import { FollowButton } from "@/components/follow-button";
 import { parseFriendState, type FriendState } from "@/lib/friends";
-import { PRESENCE, presenceOf } from "@/lib/presence";
+import { usePresenceText } from "@/components/presence-picker";
 import type { Attachment, ChatUser } from "@/lib/messenger/types";
 import { useMessenger } from "./context";
 import { SharedContent } from "./conversation-info";
@@ -57,7 +57,7 @@ export function ProfileCard({
     };
   }, [open, user.id, me.id, supabase]);
 
-  const presence = PRESENCE[presenceOf(user.presence)];
+  const presence = usePresenceText(user.id, user.presence);
 
   return (
     <Modal open={open} onClose={onClose} size="sm">
@@ -77,8 +77,8 @@ export function ProfileCard({
             {user.isVerified && <VerifiedBadge className="h-5 w-5" />}
           </h2>
           <p className="text-sm text-white/50">@{user.username}</p>
-          <p className={clsx("mt-1 flex items-center gap-1.5 text-xs font-medium", presence.text)}>
-            <span className={clsx("h-2 w-2 rounded-full", presence.dot)} /> {presence.label}
+          <p className={clsx("mt-1 flex items-center gap-1.5 text-xs font-medium", presence.color)}>
+            <span className={clsx("h-2 w-2 rounded-full", presence.dot)} /> {presence.text}
           </p>
           {details === null ? (
             <Loader2 className="mt-4 h-5 w-5 animate-spin text-white/40" />

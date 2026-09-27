@@ -8,6 +8,7 @@ import { useCoinBalance } from "@/components/store/coin-balance";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
 import { disablePush } from "@/lib/push-client";
+import { endPresenceForSignOut } from "@/components/presence-heartbeat";
 import { OrbitWordmarkThemed } from "@/components/orbit-logo";
 import { PresenceDot, PresenceList } from "@/components/presence-picker";
 import { CountBadge, useLiveCounts, type LiveCounts } from "@/components/live-activity";
@@ -84,6 +85,7 @@ function isActive(pathname: string, href: string) {
 async function signOut() {
   const supabase = createClient();
   await disablePush(supabase); // this device stops receiving this account's notifications
+  await endPresenceForSignOut(); // this login goes offline now, other devices keep their own status
   await supabase.auth.signOut();
   window.location.href = "/";
 }
@@ -123,12 +125,14 @@ export function AppTopBar({
   name,
   avatarUrl,
   presence,
+  showPresence = true,
 }: {
   userId: string;
   username: string;
   name: string;
   avatarUrl: string | null;
   presence: string;
+  showPresence?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -172,13 +176,13 @@ export function AppTopBar({
         >
           <span className="relative">
             <UserAvatar name={name} avatarUrl={avatarUrl} />
-            <PresenceDot value={presence} className="absolute -bottom-0.5 -right-0.5 h-3 w-3 border-2 border-space-bg" />
+            <PresenceDot value={presence} userId={userId} className="absolute -bottom-0.5 -right-0.5 h-3 w-3 border-2 border-space-bg" />
           </span>
           <ChevronDown className="h-4 w-4" />
         </button>
         {open && (
           <div className="absolute right-0 top-12 w-56 overflow-hidden rounded-xl border border-white/10 bg-space-surface shadow-2xl">
-            <PresenceList userId={userId} initial={presence} />
+            <PresenceList userId={userId} initial={presence} showPresence={showPresence} />
             <div className="my-1 border-t border-white/10" />
             <Link href={`/perfil/${username}`} className="flex items-center gap-2 px-4 py-2.5 text-sm text-white/80 hover:bg-white/5">
               <UserRound className="h-4 w-4" /> Meu perfil
@@ -299,7 +303,7 @@ function CoinsCard() {
   );
 }
 
-export function MobileHeader({ userId, username, presence }: { userId: string; username: string; presence: string }) {
+export function MobileHeader({ userId, username, presence, showPresence = true }: { userId: string; username: string; presence: string; showPresence?: boolean }) {
   const [open, setOpen] = useState(false);
   const { counts } = useLiveCounts();
 
@@ -328,7 +332,7 @@ export function MobileHeader({ userId, username, presence }: { userId: string; u
               (counts.friendRequests > 0 ? (
                 <CountBadge count={counts.friendRequests} className="absolute -right-2.5 -top-2 h-4 min-w-4 px-1 text-[10px]" />
               ) : (
-                <PresenceDot value={presence} className="absolute -right-1 -top-1 h-2.5 w-2.5 border-2 border-space-bg" />
+                <PresenceDot value={presence} userId={userId} className="absolute -right-1 -top-1 h-2.5 w-2.5 border-2 border-space-bg" />
               ))}
           </button>
         </div>
@@ -337,7 +341,7 @@ export function MobileHeader({ userId, username, presence }: { userId: string; u
       {open && (
         <nav className="max-h-[75vh] space-y-0.5 overflow-y-auto border-t border-white/10 px-3 py-3">
           <div className="-mx-3 mb-2 border-b border-white/10 pb-2">
-            <PresenceList userId={userId} initial={presence} />
+            <PresenceList userId={userId} initial={presence} showPresence={showPresence} />
           </div>
           {sidebarItems(username).map(({ href, label, icon: Icon, badge }) =>
             href ? (

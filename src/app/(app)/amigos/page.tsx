@@ -70,7 +70,7 @@ export default async function AmigosPage() {
     <Link href={`/perfil/${p.username}`} className="flex min-w-[10rem] flex-1 items-center gap-3">
       <span className="relative shrink-0">
         <Avatar name={p.name} url={p.avatarUrl} size={44} />
-        <PresenceDot value={p.presence} className="absolute bottom-0 right-0 h-3 w-3 border-2 border-space-surface" />
+        <PresenceDot value={p.presence} userId={p.id} className="absolute bottom-0 right-0 h-3 w-3 border-2 border-space-surface" />
       </span>
       <span className="min-w-0">
         <span className="block truncate text-sm font-medium text-white">{p.name}</span>

@@ -1,120 +1,106 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { Check, ChevronDown } from "lucide-react";
+import { Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { PRESENCE, presenceOf, type Presence } from "@/lib/presence";
+import { PRESENCE, lastSeenLabel, presenceOf } from "@/lib/presence";
+import { useUserPresence } from "@/lib/presence-live";
 
-const ORDER: Presence[] = ["online", "away", "busy", "offline"];
-
-function usePresence(userId: string, initial: string | null | undefined) {
-  const router = useRouter();
-  const [presence, setPresence] = useState<Presence>(presenceOf(initial));
-
-  useEffect(() => {
-    setPresence(presenceOf(initial));
-  }, [initial]);
-
-  async function choose(next: Presence) {
-    if (next === presence) return;
-    const previous = presence;
-    setPresence(next);
-    const supabase = createClient();
-    const { error } = await supabase.from("User").update({ presence: next }).eq("id", userId);
-    if (error) {
-      setPresence(previous);
-      return;
-    }
-    router.refresh();
-  }
-
-  return { presence, choose };
+/**
+ * Status indicators. The value always comes from the server-computed presence (live through
+ * Realtime); `value` is only the server-rendered starting point. Nobody picks "Online" by hand.
+ */
+export function PresenceDot({ value, userId, className }: { value: string | null | undefined; userId?: string | null; className?: string }) {
+  const live = useUserPresence(userId, value);
+  const status = userId ? live.status : presenceOf(value);
+  return <span className={clsx("rounded-full", PRESENCE[status].dot, className)} title={PRESENCE[status].label} />;
 }
 
-export function PresenceDot({ value, className }: { value: string | null | undefined; className?: string }) {
-  return <span className={clsx("rounded-full", PRESENCE[presenceOf(value)].dot, className)} />;
-}
-
-/** Status label that opens a dropdown to change it (or read-only for other people's profiles). */
+/** "🟢 Online" / "🟡 Ausente" / "⚫ Offline" label (profile header, Messenger header). */
 export function PresenceStatus({
   userId,
   initial,
-  editable,
   className,
 }: {
   userId: string;
   initial: string | null | undefined;
-  editable: boolean;
+  /** Kept for existing callers; the status is no longer chosen by hand. */
+  editable?: boolean;
   className?: string;
 }) {
-  const { presence, choose } = usePresence(userId, initial);
-  const [open, setOpen] = useState(false);
-  const current = PRESENCE[presence];
-
-  const label = (
-    <>
+  const { status } = useUserPresence(userId, initial);
+  const current = PRESENCE[status];
+  return (
+    <p className={clsx("flex items-center gap-2 text-sm", className)}>
       <span className={clsx("h-2.5 w-2.5 rounded-full", current.dot)} />
       <span className={current.text}>{current.label}</span>
-    </>
-  );
-
-  if (!editable) return <p className={clsx("flex items-center gap-2 text-sm", className)}>{label}</p>;
-
-  return (
-    <div className={clsx("relative inline-block", className)}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-label="Alterar status"
-        aria-expanded={open}
-        className="flex items-center gap-2 rounded-lg text-sm transition hover:opacity-80"
-      >
-        {label}
-        <ChevronDown className="h-3.5 w-3.5 text-white/40" />
-      </button>
-      {open && (
-        <div className="absolute left-0 top-7 z-30 w-52 overflow-hidden rounded-xl border border-white/10 bg-space-surface py-1 shadow-2xl">
-          <PresenceOptions
-            presence={presence}
-            onChoose={(p) => {
-              setOpen(false);
-              choose(p);
-            }}
-          />
-        </div>
-      )}
-    </div>
+    </p>
   );
 }
 
-function PresenceOptions({ presence, onChoose }: { presence: Presence; onChoose: (p: Presence) => void }) {
-  return (
-    <>
-      {ORDER.map((key) => (
-        <button
-          key={key}
-          type="button"
-          onClick={() => onChoose(key)}
-          className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-white/80 hover:bg-white/5"
-        >
-          <span className={clsx("h-2.5 w-2.5 rounded-full", PRESENCE[key].dot)} />
-          <span className="flex-1">{key === "offline" ? "Definir como offline" : PRESENCE[key].label}</span>
-          {presence === key && <Check className="h-4 w-4 text-orbit-cyan" />}
-        </button>
-      ))}
-    </>
-  );
+/** Online / Ausente, or "Visto por último hoje às 00:42" when offline and the person shares it. */
+export function usePresenceText(userId: string | null | undefined, initial?: string | null, initialLastSeen?: string | null) {
+  const live = useUserPresence(userId, initial, initialLastSeen);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const current = PRESENCE[live.status];
+  // Times are shown in the viewer's timezone, so they are only rendered in the browser.
+  const text = live.status === "offline" && mounted ? lastSeenLabel(live.lastSeenAt) ?? current.label : current.label;
+  return { status: live.status, text, dot: current.dot, color: current.text };
 }
 
-/** Always-visible list of the four statuses, for menus (mobile menu, account menu). */
-export function PresenceList({ userId, initial }: { userId: string; initial: string | null | undefined }) {
-  const { presence, choose } = usePresence(userId, initial);
+/**
+ * Menu section (account menu, mobile menu): the member's real status and the privacy choice
+ * "Aparecer offline", which hides the status and "visto por último" from everyone.
+ */
+export function PresenceList({ userId, initial, showPresence = true }: { userId: string; initial: string | null | undefined; showPresence?: boolean }) {
+  const { status } = useUserPresence(userId, initial);
+  const [visible, setVisible] = useState(showPresence);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => setVisible(showPresence), [showPresence]);
+
+  async function choose(next: boolean) {
+    if (next === visible || busy) return;
+    setBusy(true);
+    setVisible(next);
+    const { error } = await createClient().rpc("presence_set_visibility", { p_show: next });
+    if (error) setVisible(!next);
+    setBusy(false);
+  }
+
+  const options: { value: boolean; label: string; dot: string }[] = [
+    { value: true, label: "Mostrar meu status", dot: PRESENCE[status].dot },
+    { value: false, label: "Aparecer offline", dot: PRESENCE.offline.dot },
+  ];
+
   return (
     <div>
-      <p className="px-4 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-white/40">Status</p>
-      <PresenceOptions presence={presence} onChoose={choose} />
+      <p className="flex items-center gap-2 px-4 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-white/40">
+        Status
+        <span className={clsx("ml-auto flex items-center gap-1.5 normal-case tracking-normal", PRESENCE[status].text)}>
+          <span className={clsx("h-2 w-2 rounded-full", PRESENCE[status].dot)} /> {PRESENCE[status].label}
+        </span>
+      </p>
+      {options.map((o) => (
+        <button
+          key={o.label}
+          type="button"
+          onClick={() => choose(o.value)}
+          disabled={busy}
+          className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-white/80 hover:bg-white/5"
+        >
+          <span className={clsx("h-2.5 w-2.5 rounded-full", o.dot)} />
+          <span className="flex-1">{o.label}</span>
+          {visible === o.value && <Check className="h-4 w-4 text-orbit-cyan" />}
+        </button>
+      ))}
     </div>
   );
+}
+
+/** The profile photo's green dot: shown only while the person is really online. */
+export function OnlineDot({ userId, initial, className }: { userId: string; initial: string | null | undefined; className?: string }) {
+  const { status } = useUserPresence(userId, initial);
+  return status === "online" ? <span className={className} /> : null;
 }

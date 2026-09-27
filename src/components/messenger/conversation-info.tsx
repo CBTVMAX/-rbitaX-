@@ -30,7 +30,7 @@ import {
   Video,
   X,
 } from "lucide-react";
-import { PRESENCE, presenceOf } from "@/lib/presence";
+import { usePresenceText } from "@/components/presence-picker";
 import { useSignedUrl } from "@/lib/messenger/media";
 import { formatBytes, formatTime, messagePreview, toDate, URL_PATTERN } from "@/lib/messenger/format";
 import { conversationTitle, isMuted, toMessage, type Attachment, type ChatMessage, type Conversation, type Member } from "@/lib/messenger/types";
@@ -467,7 +467,7 @@ function MemberRow({ m, c, onChanged }: { m: Member; c: Conversation; onChanged:
   return (
     <div className="relative flex items-center gap-3 py-1.5">
       <Link href={`/perfil/${m.username}`} className="flex min-w-0 flex-1 items-center gap-3">
-        <ChatAvatar name={m.name} url={m.avatarUrl} size={38} presence={m.presence ?? "offline"} frame={m.avatarFrame} ringClass="border-space-surface" />
+        <ChatAvatar name={m.name} url={m.avatarUrl} size={38} presence={m.presence ?? "offline"} userId={m.id} frame={m.avatarFrame} ringClass="border-space-surface" />
         <span className="min-w-0">
           <span className="block truncate text-sm font-medium text-white">
             {isMe ? "Você" : m.name}
@@ -550,7 +550,7 @@ export function ConversationInfo({
   const other = c.otherUser;
   const admin = c.role === "owner" || c.role === "admin";
   const canTtl = !c.isGroup || admin;
-  const presence = PRESENCE[presenceOf(other?.presence)];
+  const presence = usePresenceText(other?.id, other?.presence);
 
   async function setting(patch: Record<string, unknown>, local: Partial<Conversation>, ok?: string) {
     patchConversation(c.id, local);
@@ -662,8 +662,8 @@ export function ConversationInfo({
           ) : (
             <>
               <p className="text-sm text-white/50">@{other?.username}</p>
-              <p className={clsx("mt-1 flex items-center gap-1.5 text-xs font-medium", presence.text)}>
-                <span className={clsx("h-2 w-2 rounded-full", presence.dot)} /> {presence.label}
+              <p className={clsx("mt-1 flex items-center gap-1.5 text-xs font-medium", presence.color)}>
+                <span className={clsx("h-2 w-2 rounded-full", presence.dot)} /> {presence.text}
               </p>
             </>
           )}

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { ServiceWorkerRegister } from "@/components/pwa";
+import { PresenceHeartbeat } from "@/components/presence-heartbeat";
 import { Inter, Space_Grotesk, Caveat } from "next/font/google";
 import "./globals.css";
 
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-space-bg font-sans antialiased">
         {children}
         <ServiceWorkerRegister />
+        <PresenceHeartbeat />
       </body>
     </html>
   );
