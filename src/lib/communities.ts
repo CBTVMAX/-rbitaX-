@@ -35,10 +35,12 @@ export type Community = {
   notifyPrefs: NotifyPrefs;
   memberCount: number;
   createdAt: string;
+  ownerId: string | null;
+  status: "active" | "disabled";
 };
 
 export const COMMUNITY_COLUMNS =
-  "id, name, slug, username, description, category, avatarUrl, coverUrl, isPrivate, isOfficial, accentColor, rules, links, permissions, moderation, notifyPrefs, memberCount, createdAt";
+  "id, name, slug, username, description, category, avatarUrl, coverUrl, isPrivate, isOfficial, accentColor, rules, links, permissions, moderation, notifyPrefs, memberCount, createdAt, ownerId, status";
 
 export type Viewer = { id: string; name: string; username: string; avatarUrl: string | null } | null;
 
@@ -137,6 +139,61 @@ export const ROLE_RANK: Record<Role, number> = { owner: 4, admin: 3, moderator: 
 export const rank = (r: Role | null | undefined) => (r ? ROLE_RANK[r] : 0);
 /** Publishes as the community: announcements, articles, events, stories, pins. */
 export const isEditorOrAdmin = (r: Role | null | undefined) => rank(r) >= 3 || r === "editor";
+
+// ── Cargos personalizados (Equipe e cargos) ─────────────────────────────────
+/** Todas as permissões que um cargo/override pode conceder, agrupadas para a UI. */
+export const COMMUNITY_PERMISSIONS: { group: string; items: { key: string; label: string }[] }[] = [
+  {
+    group: "Conteúdo",
+    items: [
+      { key: "post", label: "Criar publicações" },
+      { key: "publish_as_community", label: "Publicar como comunidade" },
+      { key: "discussion", label: "Criar discussões" },
+      { key: "poll", label: "Criar enquetes" },
+      { key: "event", label: "Criar eventos" },
+      { key: "announcement", label: "Criar avisos" },
+      { key: "photo", label: "Adicionar fotos" },
+      { key: "video", label: "Adicionar vídeos" },
+      { key: "story", label: "Publicar histórias" },
+      { key: "comment", label: "Comentar" },
+    ],
+  },
+  {
+    group: "Membros",
+    items: [
+      { key: "manage_members", label: "Gerenciar membros" },
+      { key: "approve_members", label: "Aprovar membros" },
+      { key: "remove_members", label: "Remover membros" },
+      { key: "ban_members", label: "Bloquear membros" },
+      { key: "invite", label: "Convidar membros" },
+    ],
+  },
+  {
+    group: "Moderação",
+    items: [
+      { key: "moderate", label: "Moderar comentários" },
+      { key: "delete_content", label: "Excluir conteúdo" },
+    ],
+  },
+  {
+    group: "Comunidade",
+    items: [
+      { key: "edit_community", label: "Editar comunidade" },
+      { key: "manage_shortcuts", label: "Gerenciar atalhos" },
+      { key: "manage_events", label: "Gerenciar eventos" },
+      { key: "manage_media", label: "Gerenciar mídias" },
+      { key: "manage_roles", label: "Gerenciar cargos" },
+      { key: "view_stats", label: "Ver estatísticas" },
+    ],
+  },
+];
+export const PERMISSION_KEYS = COMMUNITY_PERMISSIONS.flatMap((g) => g.items.map((i) => i.key));
+export const PERM_LABEL: Record<string, string> = Object.fromEntries(COMMUNITY_PERMISSIONS.flatMap((g) => g.items.map((i) => [i.key, i.label])));
+export const ROLE_ICON_KEYS = ["star", "crown", "shield", "hammer", "key", "flag", "rocket", "heart", "zap", "gem"] as const;
+export const ROLE_COLORS = ["#ec4899", "#8b5cf6", "#6366f1", "#3b82f6", "#22d3ee", "#10b981", "#f59e0b", "#ef4444", "#f43f5e", "#a3a3a3"];
+
+export type CommunityCustomRole = { id: string; name: string; description: string | null; color: string; icon: string; rank: number; permissions: Record<string, boolean>; sortOrder: number };
+export type CommunityRoleBadge = { id: string; name: string; color: string; icon: string; rank: number };
 
 export const PERMISSION_LABEL: Record<PermissionKey, string> = {
   post: "Publicar",

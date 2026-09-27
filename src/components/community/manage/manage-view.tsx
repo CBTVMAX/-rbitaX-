@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { ArrowLeft, BarChart3, Bell, CalendarDays, ChevronRight, FileStack, KeyRound, Lock, Palette, ScrollText, Settings2, ShieldAlert, Users } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BarChart3, Bell, CalendarDays, ChevronRight, FileStack, KeyRound, Lock, Palette, ScrollText, Settings2, ShieldAlert, UserCog, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useStoreToast } from "@/components/store/store-view";
 import { accentOf, rank, type Community, type Role, type Viewer } from "@/lib/communities";
@@ -20,8 +20,10 @@ import { NotificationsSection } from "./notifications";
 import { StatsSection } from "./stats";
 import { EventsSection } from "./events";
 import { LogSection } from "./log";
+import { RolesSection } from "./roles";
+import { DangerSection } from "./danger";
 
-type Section = "geral" | "personalizacao" | "privacidade" | "conteudo" | "eventos" | "membros" | "permissoes" | "moderacao" | "notificacoes" | "estatisticas" | "registro";
+type Section = "geral" | "personalizacao" | "privacidade" | "conteudo" | "eventos" | "membros" | "equipe" | "permissoes" | "moderacao" | "notificacoes" | "estatisticas" | "registro" | "perigo";
 
 const SECTIONS: { id: Section; label: string; desc: string; icon: React.ComponentType<{ className?: string }>; min: number }[] = [
   { id: "geral", label: "Editar informações", desc: "Nome, @, categoria, descrição, regras e links", icon: Settings2, min: 3 },
@@ -30,11 +32,13 @@ const SECTIONS: { id: Section; label: string; desc: string; icon: React.Componen
   { id: "conteudo", label: "Conteúdo", desc: "Fixados, publicações e discussões", icon: FileStack, min: 2 },
   { id: "eventos", label: "Eventos", desc: "Criar, editar, cancelar e excluir", icon: CalendarDays, min: 3 },
   { id: "membros", label: "Membros", desc: "Cargos, pedidos, bloqueados e removidos", icon: Users, min: 2 },
+  { id: "equipe", label: "Equipe e cargos", desc: "Cargos personalizados, atribuições e permissões", icon: UserCog, min: 3 },
   { id: "permissoes", label: "Permissões", desc: "Quem pode publicar, comentar, enviar mídia…", icon: KeyRound, min: 3 },
   { id: "moderacao", label: "Moderação", desc: "Filtros, aprovações e denúncias", icon: ShieldAlert, min: 2 },
   { id: "notificacoes", label: "Notificações", desc: "Avisos para membros e anúncios", icon: Bell, min: 2 },
   { id: "estatisticas", label: "Estatísticas", desc: "Membros, alcance e engajamento", icon: BarChart3, min: 3 },
   { id: "registro", label: "Registro de ações", desc: "Quem fez o quê na administração", icon: ScrollText, min: 3 },
+  { id: "perigo", label: "Zona de perigo", desc: "Transferir, desativar ou excluir a comunidade", icon: AlertTriangle, min: 4 },
 ];
 
 export function ManageView(props: {
@@ -102,6 +106,12 @@ export function ManageView(props: {
       break;
     case "membros":
       content = <MembersSection badges={badges} initialTab={props.initialMembersTab} onBadge={(requests) => setBadges((b) => ({ ...b, requests }))} />;
+      break;
+    case "equipe":
+      content = <RolesSection />;
+      break;
+    case "perigo":
+      content = <DangerSection />;
       break;
     case "permissoes":
       content = <PermissionsSection onSaved={(permissions) => setCommunity((c) => ({ ...c, permissions }))} />;
