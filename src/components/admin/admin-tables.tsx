@@ -10,13 +10,16 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
+  Gift,
   Loader2,
   Lock,
   RefreshCw,
   Search,
   ShieldCheck,
+  Sticker,
   Trash2,
   Users2,
+  X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -96,6 +99,91 @@ function UserAvatar({ name, url }: { name: string; url: string | null }) {
   );
 }
 
+// ============================================================ Liberar adesivo para um usuário
+function GrantPackModal({ user, onClose }: { user: { id: string; name: string }; onClose: () => void }) {
+  const supabase = useMemo(() => createClient(), []);
+  const [packs, setPacks] = useState<any[] | null>(null);
+  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [flash, setFlash] = useState<{ text: string; error?: boolean } | null>(null);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase.rpc("admin_packs_for", { p_user: user.id });
+    setPacks((data as any[]) ?? []);
+  }, [supabase, user.id]);
+  useEffect(() => { load(); }, [load]);
+
+  async function toggle(pack: any) {
+    const granting = pack.ownedSource !== "grant" && pack.ownedSource !== "purchase";
+    setBusy(pack.id);
+    const { error } = await supabase.rpc(granting ? "admin_grant_pack" : "admin_revoke_pack", { p_user: user.id, p_pack: pack.id });
+    setBusy(null);
+    if (error) {
+      if (/nao_e_liberacao/.test(error.message)) return setFlash({ text: "Esse pacote foi comprado pelo usuário — não dá para remover.", error: true });
+      return setFlash({ text: adminError(error.message), error: true });
+    }
+    setFlash({ text: granting ? `“${pack.name}” liberado.` : `“${pack.name}” removido.` });
+    load();
+  }
+
+  const shown = (packs ?? []).filter((p) => !q.trim() || p.name.toLowerCase().includes(q.trim().toLowerCase()));
+  return (
+    <div className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />
+      <div className="animate-sheet-up relative flex max-h-[85vh] w-full flex-col rounded-t-3xl border border-white/10 bg-space-surface sm:max-w-lg sm:rounded-3xl">
+        <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-orbit-gradient text-snow"><Gift className="h-5 w-5" /></span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-white">Liberar adesivo</p>
+            <p className="truncate text-xs text-white/50">para {user.name}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-full p-1.5 text-white/60 hover:bg-white/5"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="space-y-2 px-4 pt-3">
+          {flash && <Flash flash={flash} />}
+          <label className="flex items-center gap-2 rounded-full border border-white/10 bg-space-card/70 px-3.5 py-2.5 focus-within:border-orbit-purple/50">
+            <Search className="h-4 w-4 shrink-0 text-white/40" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar pacote" className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/40" />
+          </label>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          {packs === null ? (
+            <div className="flex justify-center py-10"><Loader2 className="h-5 w-5 animate-spin text-white/40" /></div>
+          ) : (
+            <ul className="space-y-1">
+              {shown.map((p) => {
+                const owned = p.ownedSource === "grant" || p.ownedSource === "purchase";
+                const purchased = p.ownedSource === "purchase";
+                return (
+                  <li key={p.id} className="flex items-center gap-3 rounded-xl px-2 py-2 hover:bg-white/[0.03]">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-space-bg text-white/50"><Sticker className="h-4 w-4" /></span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-white">{p.name}</p>
+                      <p className="text-xs text-white/45">{p.tier === "free" ? "Grátis" : "Premium"}{purchased ? " · comprado" : p.ownedSource === "grant" ? " · liberado" : ""}</p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={busy === p.id || purchased}
+                      onClick={() => toggle(p)}
+                      className={clsx(
+                        "flex h-9 min-w-[92px] items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition disabled:opacity-50",
+                        owned ? "border border-white/15 text-white/70 hover:bg-white/5" : "bg-orbit-gradient text-snow"
+                      )}
+                    >
+                      {busy === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : purchased ? "Comprado" : owned ? "Remover" : <><Gift className="h-3.5 w-3.5" /> Liberar</>}
+                    </button>
+                  </li>
+                );
+              })}
+              {shown.length === 0 && <li className="py-8 text-center text-sm text-white/40">Nenhum pacote encontrado.</li>}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ============================================================ Usuários
 export function AdminUsers() {
   const supabase = useMemo(() => createClient(), []);
@@ -106,6 +194,7 @@ export function AdminUsers() {
   const [rows, setRows] = useState<any[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [flash, setFlash] = useState<{ text: string; error?: boolean } | null>(null);
+  const [grantFor, setGrantFor] = useState<{ id: string; name: string } | null>(null);
 
   const load = useCallback(async () => {
     const { data } = await supabase.rpc("admin_users", { p_search: dq || null, p_status: status === "all" ? null : status, p_limit: 50, p_offset: 0 });
@@ -148,6 +237,9 @@ export function AdminUsers() {
                   <p className="truncate text-xs text-white/45">@{u.username} · {u.posts} posts · desde {date(u.createdAt)}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-0.5">
+                  <button type="button" onClick={() => setGrantFor({ id: u.id, name: u.name })} title="Liberar adesivo" className={clsx(iconBtn, "text-orbit-pink hover:bg-white/5")}>
+                    <Gift className="h-4 w-4" />
+                  </button>
                   <button type="button" disabled={!!busy} onClick={() => act(u.id, u.isVerified ? "unverify" : "verify")} title={u.isVerified ? "Remover verificação" : "Verificar"} className={clsx(iconBtn, "text-orbit-cyan hover:bg-white/5")}>
                     {busy === u.id + (u.isVerified ? "unverify" : "verify") ? <Loader2 className="h-4 w-4 animate-spin" /> : <BadgeCheck className="h-4 w-4" />}
                   </button>
@@ -170,6 +262,7 @@ export function AdminUsers() {
           </div>
         </>
       )}
+      {grantFor && <GrantPackModal user={grantFor} onClose={() => setGrantFor(null)} />}
     </div>
   );
 }

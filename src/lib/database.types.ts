@@ -504,6 +504,12 @@ export type Database = {
         Returns: { id: string; targetType: string; targetId: string; reason: string; details: string | null; status: string; createdAt: string; reporterName: string | null; reporterUsername: string | null; targetLabel: string | null; total: number }[];
       };
       admin_resolve_report: { Args: { p_report: string; p_status: string }; Returns: undefined };
+      admin_grant_pack: { Args: { p_user: string; p_pack: string }; Returns: undefined };
+      admin_revoke_pack: { Args: { p_user: string; p_pack: string }; Returns: undefined };
+      admin_packs_for: {
+        Args: { p_user: string };
+        Returns: { id: string; name: string; tier: string; published: boolean; ownedSource: string | null }[];
+      };
       my_coin_balance: { Args: Record<string, never>; Returns: number };
       acquire_product: { Args: { p_product_id: string }; Returns: Json };
       toggle_inventory_favorite: { Args: { p_product_id: string }; Returns: boolean };
