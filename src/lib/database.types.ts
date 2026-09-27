@@ -273,6 +273,8 @@ export type Database = {
       presence_end_session: { Args: { p_session: string }; Returns: string };
       presence_sign_out: { Args: { p_session?: string | null }; Returns: string };
       presence_set_visibility: { Args: { p_show: boolean }; Returns: string };
+      presence_my_mode: { Args: Record<string, never>; Returns: Json };
+      presence_set_mode: { Args: { p_mode: string }; Returns: Json };
       my_badge_counts: { Args: Record<string, never>; Returns: { messages: number; friendRequests: number; notifications: number }[] };
       mark_conversation_read: { Args: { conversation_id: string }; Returns: undefined };
       mark_friend_requests_seen: { Args: Record<string, never>; Returns: undefined };

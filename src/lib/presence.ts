@@ -2,12 +2,14 @@
  * Presence is computed by the database from each open tab's heartbeat
  * (see /api/presence/heartbeat and the presence_* functions):
  *   online  — a tab is visible and was used in the last 5 minutes
- *   away    — a tab is open but hidden, unfocused or idle
+ *   away    — a tab is open but hidden, unfocused or idle (or the member chose "Ausente")
+ *   busy    — the member chose "Ocupado" and has a live session
  *   offline — no heartbeat for ~90 seconds (closed, logged out, no internet, device off)
  */
 export const PRESENCE = {
   online: { label: "Online", dot: "bg-emerald-400", text: "text-emerald-400" },
   away: { label: "Ausente", dot: "bg-amber-400", text: "text-amber-400" },
+  busy: { label: "Ocupado", dot: "bg-red-500", text: "text-red-400" },
   offline: { label: "Offline", dot: "bg-white/30", text: "text-white/50" },
 } as const;
 
@@ -15,7 +17,7 @@ export type Presence = keyof typeof PRESENCE;
 
 /** Anything unknown (old manual values, missing data) is Offline — never assume someone is online. */
 export function presenceOf(value: string | null | undefined): Presence {
-  return value === "online" || value === "away" ? value : "offline";
+  return value === "online" || value === "away" || value === "busy" ? value : "offline";
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");

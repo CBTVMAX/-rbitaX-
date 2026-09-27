@@ -88,10 +88,10 @@ export function PresenceHeartbeat() {
         if (res.status === 401) return stop(); // logged out or login expired
         if (res.status === 409) newSession(); // this tab's id belongs to another account (account switch)
         if (res.ok) {
-          const data = (await res.json()) as { status?: string };
+          const data = (await res.json()) as { status?: string; public?: string };
           if (data.status && userId) {
-            lastStatus = data.status;
-            setSelfPresence(userId, data.status);
+            lastStatus = data.status; // real activity state (drives "back from idle")
+            setSelfPresence(userId, data.public ?? data.status); // what everyone else sees
           }
         }
       } catch {

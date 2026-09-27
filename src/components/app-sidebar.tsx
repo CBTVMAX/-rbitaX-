@@ -125,14 +125,12 @@ export function AppTopBar({
   name,
   avatarUrl,
   presence,
-  showPresence = true,
 }: {
   userId: string;
   username: string;
   name: string;
   avatarUrl: string | null;
   presence: string;
-  showPresence?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -182,7 +180,7 @@ export function AppTopBar({
         </button>
         {open && (
           <div className="absolute right-0 top-12 w-56 overflow-hidden rounded-xl border border-white/10 bg-space-surface shadow-2xl">
-            <PresenceList userId={userId} initial={presence} showPresence={showPresence} />
+            <PresenceList userId={userId} initial={presence} />
             <div className="my-1 border-t border-white/10" />
             <Link href={`/perfil/${username}`} className="flex items-center gap-2 px-4 py-2.5 text-sm text-white/80 hover:bg-white/5">
               <UserRound className="h-4 w-4" /> Meu perfil
@@ -303,7 +301,7 @@ function CoinsCard() {
   );
 }
 
-export function MobileHeader({ userId, username, presence, showPresence = true }: { userId: string; username: string; presence: string; showPresence?: boolean }) {
+export function MobileHeader({ userId, username, presence }: { userId: string; username: string; presence: string }) {
   const [open, setOpen] = useState(false);
   const { counts } = useLiveCounts();
 
@@ -341,7 +339,7 @@ export function MobileHeader({ userId, username, presence, showPresence = true }
       {open && (
         <nav className="max-h-[75vh] space-y-0.5 overflow-y-auto border-t border-white/10 px-3 py-3">
           <div className="-mx-3 mb-2 border-b border-white/10 pb-2">
-            <PresenceList userId={userId} initial={presence} showPresence={showPresence} />
+            <PresenceList userId={userId} initial={presence} />
           </div>
           {sidebarItems(username).map(({ href, label, icon: Icon, badge }) =>
             href ? (
