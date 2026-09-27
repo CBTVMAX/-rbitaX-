@@ -177,6 +177,8 @@ export type ProfileViewProps = {
   feed: FeedPost[];
   pinnedPostId: string | null;
   communities: ProfileCommunity[];
+  /** Cargos personalizados por comunidade (crachás), keyed pelo id da comunidade. */
+  roleBadges?: Record<string, { name: string; color: string; icon: string }[]>;
   friends: ProfileFriend[];
   friendState?: FriendState;
   friendRequests?: ProfileFriend[];
@@ -221,6 +223,7 @@ export function ProfileView({
   feed,
   pinnedPostId,
   communities,
+  roleBadges = {},
   friends,
   friendState = "none",
   friendRequests = [],
@@ -628,11 +631,25 @@ export function ProfileView({
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-white">{c.name}</p>
-              <p className={`flex items-center gap-1 text-xs ${role.className}`}>
-                <RoleIcon className="h-3.5 w-3.5" /> {role.label}
-              </p>
+              {roleBadges[c.id]?.length ? (
+                <span className="mt-1 flex flex-wrap gap-1">
+                  {roleBadges[c.id].map((b, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                      style={{ color: b.color, borderColor: `${b.color}55`, background: `${b.color}1a` }}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: b.color }} /> {b.name}
+                    </span>
+                  ))}
+                </span>
+              ) : (
+                <p className={`flex items-center gap-1 text-xs ${role.className}`}>
+                  <RoleIcon className="h-3.5 w-3.5" /> {role.label}
+                </p>
+              )}
             </div>
-            <ChevronRight className="h-4 w-4 text-white/40" />
+            <ChevronRight className="h-4 w-4 shrink-0 self-center text-white/40" />
           </Link>
         );
       })}

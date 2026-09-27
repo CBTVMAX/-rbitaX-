@@ -163,6 +163,13 @@ export default async function ProfilePage(props: { params: Promise<{ username: s
   const { data: detailRows } = await supabase.rpc("public_profile_details", { target_user_id: user.id });
   const info: ProfileInfo | null = Array.isArray(detailRows) && detailRows[0] ? detailRows[0] : null;
 
+  // Cargos e funções: crachás personalizados por comunidade (§18/§41). Só o que o observador pode ver.
+  const { data: badgeRows } = await supabase.rpc("community_member_badges", { p_user: user.id });
+  const roleBadges: Record<string, { name: string; color: string; icon: string }[]> = {};
+  for (const b of (Array.isArray(badgeRows) ? badgeRows : []) as { id: string; badges?: { name: string; color: string; icon: string }[] }[]) {
+    if (b?.id && Array.isArray(b.badges) && b.badges.length) roleBadges[b.id] = b.badges;
+  }
+
   return (
     <ProfileView
       user={user}
@@ -179,6 +186,7 @@ export default async function ProfilePage(props: { params: Promise<{ username: s
       feed={feed}
       pinnedPostId={pinnedPostId}
       communities={communities}
+      roleBadges={roleBadges}
       friends={friendRows ?? []}
       friendState={parseFriendState(friendStateRaw as string | null)}
       friendRequests={friendRequests}
