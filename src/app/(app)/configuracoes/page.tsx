@@ -9,11 +9,14 @@ import {
   FileText,
   Lock,
   Palette,
+  ShieldAlert,
   ShieldCheck,
+  Sticker,
   SunMoon,
   UserRound,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/current-user";
+import { createClient } from "@/lib/supabase/server";
 import { APP_THEME_COOKIE, parseAppTheme } from "@/lib/app-theme";
 import { profileColorLabel } from "@/lib/profile-colors";
 
@@ -70,6 +73,7 @@ export default async function SettingsPage() {
   const current = await getCurrentUser();
   if (!current) redirect("/entrar");
   const theme = parseAppTheme((await cookies()).get(APP_THEME_COOKIE)?.value);
+  const { data: isAdmin } = await (await createClient()).rpc("is_admin");
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-3 py-4 md:px-4 md:py-6">
@@ -105,6 +109,16 @@ export default async function SettingsPage() {
         title="Aplicativo"
         items={[{ href: "/app", icon: Download, label: "Baixar o app ÓrbitaX", hint: "Android (APK), iPhone e computador" }]}
       />
+
+      {isAdmin === true && (
+        <Group
+          title="Administração"
+          items={[
+            { href: "/admin/seguranca", icon: ShieldAlert, label: "Segurança da plataforma", hint: "Eventos, sessões, 2FA e integridade das Coins" },
+            { href: "/admin/adesivos", icon: Sticker, label: "Adesivos", hint: "Packs, uploads, moderação e estatísticas" },
+          ]}
+        />
+      )}
 
       <Group
         title="Suporte"

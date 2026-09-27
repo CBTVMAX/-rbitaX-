@@ -283,7 +283,7 @@ export type Database = {
       User: { Row: UserRow; Insert: UserInsert; Update: UserUpdate; Relationships: [] };
       Waitlist: { Row: WaitlistRow; Insert: WaitlistInsert; Update: WaitlistUpdate; Relationships: [] };
       SecurityEvent: {
-        Row: { id: number; userId: string | null; kind: string; severity: string; ip: string | null; userAgent: string | null; details: Json; createdAt: string };
+        Row: { id: number; userId: string | null; kind: string; severity: string; ip: string | null; userAgent: string | null; details: Json; createdAt: string; actorId: string | null; resourceType: string | null; resourceId: string | null; result: string; ipHash: string | null; uaHash: string | null };
         Insert: never;
         Update: never;
         Relationships: [];
@@ -477,6 +477,11 @@ export type Database = {
       admin_sticker_stats: {
         Args: Record<string, never>;
         Returns: { packId: string; sales: number; revenue: number; installs: number; favorites: number; stickerFavorites: number; sends: number; senders: number }[];
+      };
+      admin_security_overview: { Args: { p_hours?: number }; Returns: Json };
+      admin_coins_reconcile: {
+        Args: Record<string, never>;
+        Returns: { userId: string; balance: number; ledgerSum: number; lastBalanceAfter: number; ok: boolean }[];
       };
       my_coin_balance: { Args: Record<string, never>; Returns: number };
       acquire_product: { Args: { p_product_id: string }; Returns: Json };

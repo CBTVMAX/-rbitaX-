@@ -29,6 +29,13 @@ function slugify(s: string, max = 40) {
   );
 }
 
+/** Admin writes need two-step verification on this login; the database enforces it, this only explains it. */
+function adminError(error: { message?: string }, fallback: string) {
+  if (/admin_mfa_required/.test(error.message ?? "")) return "Ações de administrador exigem verificação em duas etapas. Ative em Configurações › Segurança.";
+  if (/forbidden|not_allowed/.test(error.message ?? "")) return "Sem permissão de administrador.";
+  return fallback;
+}
+
 /** Animated? GIF with more than one frame, WebP with an ANIM chunk, or APNG (acTL). */
 async function isAnimated(file: File) {
   const buf = new Uint8Array(await file.arrayBuffer());
@@ -167,7 +174,7 @@ export function AdminStickersView({ packs: initialPacks, stats, categories }: { 
       },
     });
     setSaving(false);
-    if (error) return toast(/forbidden/.test(error.message) ? "Sem permissão de administrador." : "Não foi possível salvar o pack.", true);
+    if (error) return toast(adminError(error, "Não foi possível salvar o pack."), true);
     invalidateCatalog();
     toast(selected === "new" ? "Pack criado. Agora envie os adesivos." : "Pack salvo.");
     const { data } = await supabase.from("StickerPack").select("*").eq("id", id).single();
@@ -184,6 +191,9 @@ export function AdminStickersView({ packs: initialPacks, stats, categories }: { 
     if (!files?.length || !selected || selected === "new") return;
     const pack = packs.find((p) => p.id === selected);
     if (!pack) return;
+    // Storage refuses admin uploads from a login without two-step verification; say why up front.
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal?.currentLevel !== "aal2") return toast(adminError({ message: "admin_mfa_required" }, ""), true);
     const list = [...files].slice(0, 60);
     setUploads(list.map((f) => ({ name: f.name, state: "wait" })));
     const taken = new Set((stickers ?? []).map((s) => s.slug));
@@ -239,7 +249,7 @@ export function AdminStickersView({ packs: initialPacks, stats, categories }: { 
     const { error } = await supabase.rpc("admin_save_sticker", {
       p: { packId: s.packId, slug: s.slug, label: s.label, keywords: s.keywords, size: s.size, hasText: s.hasText, rating: s.rating, active: true, ...patch },
     });
-    if (error) return toast("Não foi possível salvar o adesivo.", true);
+    if (error) return toast(adminError(error, "Não foi possível salvar o adesivo."), true);
     setStickers((list) => (list ?? []).map((x) => (x.id === s.id ? { ...x, ...patch } : x)));
     invalidateCatalog();
   }
@@ -247,7 +257,7 @@ export function AdminStickersView({ packs: initialPacks, stats, categories }: { 
   async function removeSticker(s: Sticker) {
     if (!window.confirm(`Remover “${s.label}”? Se já foi enviado em conversas, ele é arquivado (continua visível nas mensagens antigas).`)) return;
     const { data, error } = await supabase.rpc("admin_delete_sticker", { p_sticker: s.id });
-    if (error) return toast("Não foi possível remover.", true);
+    if (error) return toast(adminError(error, "Não foi possível remover."), true);
     setStickers((list) => (list ?? []).filter((x) => x.id !== s.id));
     invalidateCatalog();
     toast(data === "archived" ? "Adesivo arquivado." : "Adesivo removido.");
@@ -257,7 +267,7 @@ export function AdminStickersView({ packs: initialPacks, stats, categories }: { 
     if (!selected || selected === "new") return;
     if (!window.confirm("Excluir este pack? Packs já comprados ou usados são apenas despublicados, para não tirar nada de quem pagou.")) return;
     const { data, error } = await supabase.rpc("admin_delete_pack", { p_pack: selected });
-    if (error) return toast("Não foi possível excluir.", true);
+    if (error) return toast(adminError(error, "Não foi possível excluir."), true);
     invalidateCatalog();
     if (data === "deleted") {
       setPacks((l) => l.filter((p) => p.id !== selected));
