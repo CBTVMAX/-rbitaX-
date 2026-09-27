@@ -137,6 +137,7 @@ export function CommunityView(props: {
   nextEvent: { event: CommunityEvent; rsvp: string | null } | null;
   staffBadges: { pending: number; requests: number; reports: number };
   canAsCommunity: boolean;
+  customTabs: { id: string; name: string }[];
 }) {
   const { community, viewer, membership, canSee } = props;
   const router = useRouter();
@@ -528,6 +529,7 @@ function Hub(p: HubProps) {
                 initialItems={p.posts}
                 albums={p.albums}
                 counts={p.counts}
+                customTabs={p.customTabs}
                 refreshKey={p.refreshKey}
                 focusId={p.focus?.id}
                 onCompose={flow.start}

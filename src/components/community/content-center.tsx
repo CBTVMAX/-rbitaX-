@@ -350,6 +350,7 @@ export function ContentCenter({
   initialItems = null,
   albums: initialAlbums = [],
   counts = {},
+  customTabs = [],
   refreshKey = 0,
   focusId,
   syncUrl = true,
@@ -361,6 +362,8 @@ export function ContentCenter({
   initialItems?: CommunityPost[] | null;
   albums?: Album[];
   counts?: ContentCounts;
+  /** Abas personalizadas do mural (§2), definidas pelo proprietário. */
+  customTabs?: { id: string; name: string }[];
   refreshKey?: number;
   focusId?: string;
   syncUrl?: boolean;
@@ -368,7 +371,8 @@ export function ContentCenter({
   header?: React.ReactNode;
 }) {
   const { supabase, community, viewer, role, toast } = useCommunity();
-  const [tab, setTab] = useState<ContentTab>(initialTab);
+  const [tab, setTab] = useState<string>(initialTab);
+  const isCustom = tab.startsWith("c:");
   const [albums, setAlbums] = useState(initialAlbums);
   const [album, setAlbum] = useState<string | null>(null);
   const [photoView, setPhotoView] = useState<number | null>(null);
@@ -399,8 +403,13 @@ export function ContentCenter({
     (f: PostFilter) => (before?: string) => loadCommunityPosts(supabase, community.id, me, { ...f, before, limit: 15 }),
     [supabase, community.id, me]
   );
+  const activeFilter: PostFilter = isCustom
+    ? { tabId: tab.slice(2), excludeKinds: ["clip"] }
+    : tab === "fotos" && album
+      ? { ...FILTERS.fotos, albumId: album }
+      : FILTERS[tab as ContentTab];
   const feed = usePaged(
-    load(tab === "fotos" && album ? { ...FILTERS.fotos, albumId: album } : FILTERS[tab]),
+    load(activeFilter),
     tab === "tudo" && refreshKey === 0 ? initialItems : null,
     [tab, album, refreshKey]
   );
@@ -428,7 +437,7 @@ export function ContentCenter({
   );
 
   let content: React.ReactNode;
-  if (tab === "tudo" || tab === "posts")
+  if (tab === "tudo" || tab === "posts" || isCustom)
     content = (
       <Feed
         {...feed}
@@ -625,6 +634,25 @@ export function ContentCenter({
               >
                 <Icon className="h-4 w-4" /> {t.label}
                 {count > 0 && <span className={clsx("text-[11px] tabular-nums", tab === t.id ? "text-snow/80" : "text-white/35")}>{compactNumber(count)}</span>}
+              </button>
+            );
+          })}
+          {customTabs.length > 0 && <span className="mx-1 my-2 w-px shrink-0 self-stretch bg-white/10" aria-hidden />}
+          {customTabs.map((t) => {
+            const id = `c:${t.id}`;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={tab === id}
+                onClick={() => (setTab(id), setAlbum(null))}
+                className={clsx(
+                  "flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-xl px-3.5 text-[13px] font-semibold transition",
+                  tab === id ? "bg-orbit-gradient text-snow shadow-[0_0_16px_rgb(var(--app-accent,139_92_246)/0.35)]" : "text-white/60 hover:text-white"
+                )}
+              >
+                {t.name}
               </button>
             );
           })}

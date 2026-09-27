@@ -17,11 +17,15 @@ export type PostFilter = {
   before?: string;
   limit?: number;
   ids?: string[];
+  /** Só posts associados a esta aba do mural (CommunityTabPost). */
+  tabId?: string;
 };
 
 /** Posts of a community (RLS decides what this person may see) plus likes, comments, shares and poll results. */
 export async function loadCommunityPosts(supabase: Client, communityId: string, viewerId: string | null, f: PostFilter = {}): Promise<CommunityPost[]> {
-  let q = supabase.from("Post").select(POST_COLUMNS).eq("communityId", communityId);
+  const sel = f.tabId ? `${POST_COLUMNS}, _tab:CommunityTabPost!CommunityTabPost_postId_fkey!inner(tabId)` : POST_COLUMNS;
+  let q = supabase.from("Post").select(sel).eq("communityId", communityId);
+  if (f.tabId) q = q.eq("_tab.tabId", f.tabId);
   if (f.ids) q = q.in("id", f.ids);
   if (f.kinds) q = q.in("kind", f.kinds);
   if (f.excludeKinds) for (const k of f.excludeKinds) q = q.neq("kind", k);

@@ -40,6 +40,7 @@ export default async function CommunityPage(
   let discussions: Discussion[] = [];
   let albums: Album[] = [];
   let members: MemberPreview[] = [];
+  let customTabs: { id: string; name: string }[] = [];
   let nextEvent: { event: CommunityEvent; rsvp: string | null } | null = null;
   let counts = { fotos: 0, videos: 0, clipes: 0, musica: 0, gifs: 0, arquivos: 0, discussions: 0, announcements: 0, events: 0 };
 
@@ -91,6 +92,8 @@ export default async function CommunityPage(
     discussions = (d.data ?? []) as unknown as Discussion[];
     albums = (a.data ?? []) as Album[];
     members = ((m.data ?? []) as unknown as MemberPreview[]).filter((x) => x.user);
+    const { data: tabRows } = await supabase.from("CommunityTab").select("id, name").eq("communityId", community.id).order("sortOrder");
+    customTabs = (tabRows ?? []) as { id: string; name: string }[];
     const upcoming = ((ev.data ?? []) as CommunityEvent[]).filter((e) => (e.endsAt ? new Date(e.endsAt).getTime() : new Date(e.startsAt).getTime() + 6 * 3600_000) > Date.now());
     counts = {
       fotos: cPhotos.count ?? 0,
@@ -139,6 +142,7 @@ export default async function CommunityPage(
         nextEvent={nextEvent}
         staffBadges={staffBadges}
         canAsCommunity={canAsCommunity}
+        customTabs={customTabs}
       />
     </CommunityShell>
   );

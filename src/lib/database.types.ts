@@ -25,6 +25,8 @@ type CommentUpdate = Partial<CommentInsert>;
 type CommunityRow = { avatarUrl: string | null; category: string | null; coverUrl: string | null; createdAt: string; description: string | null; id: string; isPrivate: boolean; name: string; slug: string; username: string; isOfficial: boolean; accentColor: string | null; rules: string | null; links: Json; permissions: Json; moderation: Json; notifyPrefs: Json; memberCount: number; createdById: string | null; updatedAt: string; ownerId: string | null; status: string; tags: Json };
 type CommunityRoleRow = { id: string; communityId: string; name: string; description: string | null; color: string; icon: string; rank: number; permissions: Json; sortOrder: number; createdAt: string };
 type CommunityMemberRoleRow = { id: string; communityId: string; userId: string; roleId: string; assignedById: string | null; createdAt: string };
+type CommunityTabRow = { id: string; communityId: string; name: string; hashtags: Json; sortOrder: number; createdAt: string };
+type CommunityTabPostRow = { tabId: string; postId: string; communityId: string; auto: boolean; createdAt: string };
 type CommunityInsert = { avatarUrl?: string | null; category?: string | null; coverUrl?: string | null; createdAt?: string; description?: string | null; id: string; isPrivate?: boolean; name: string; slug: string };
 type CommunityUpdate = Partial<CommunityInsert>;
 
@@ -165,6 +167,13 @@ export type Database = {
       CommunityMemberRole: { Row: CommunityMemberRoleRow; Insert: never; Update: never; Relationships: [
         { foreignKeyName: "CommunityMemberRole_roleId_fkey"; columns: ["roleId"]; isOneToOne: false; referencedRelation: "CommunityRole"; referencedColumns: ["id"] },
         { foreignKeyName: "CommunityMemberRole_communityId_fkey"; columns: ["communityId"]; isOneToOne: false; referencedRelation: "Community"; referencedColumns: ["id"] }
+      ] };
+      CommunityTab: { Row: CommunityTabRow; Insert: never; Update: never; Relationships: [
+        { foreignKeyName: "CommunityTab_communityId_fkey"; columns: ["communityId"]; isOneToOne: false; referencedRelation: "Community"; referencedColumns: ["id"] }
+      ] };
+      CommunityTabPost: { Row: CommunityTabPostRow; Insert: never; Update: never; Relationships: [
+        { foreignKeyName: "CommunityTabPost_tabId_fkey"; columns: ["tabId"]; isOneToOne: false; referencedRelation: "CommunityTab"; referencedColumns: ["id"] },
+        { foreignKeyName: "CommunityTabPost_postId_fkey"; columns: ["postId"]; isOneToOne: false; referencedRelation: "Post"; referencedColumns: ["id"] }
       ] };
       CommunityMember: { Row: CommunityMemberRow; Insert: CommunityMemberInsert; Update: CommunityMemberUpdate; Relationships: [
         { foreignKeyName: "CommunityMember_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
@@ -470,6 +479,10 @@ export type Database = {
       community_transfer_owner: { Args: { p_community: string; p_user: string }; Returns: undefined };
       community_set_status: { Args: { p_community: string; p_status: string }; Returns: undefined };
       community_delete: { Args: { p_community: string; p_confirm: string }; Returns: undefined };
+      community_tab_save: { Args: { p_community: string; p: Json }; Returns: string };
+      community_tab_delete: { Args: { p_tab: string }; Returns: undefined };
+      community_tab_reorder: { Args: { p_community: string; p_ids: string[] }; Returns: undefined };
+      community_tab_assign: { Args: { p_post: string; p_tab: string; p_on: boolean }; Returns: undefined };
       community_edit_discussion: { Args: { p_discussion: string; p_title: string; p_body: string; p_category: string }; Returns: undefined };
       community_discussion_like: { Args: { p_discussion: string }; Returns: Json };
       community_repost: { Args: { p_post: string; p_comment?: string }; Returns: string };
