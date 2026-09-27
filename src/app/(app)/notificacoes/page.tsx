@@ -6,6 +6,7 @@ import { timeAgo } from "@/lib/format";
 import Link from "next/link";
 import { FriendRequestActions } from "@/components/friend-button";
 import { FollowRequestActions } from "@/components/follow-button";
+import { NavBack } from "@/components/nav-back";
 import { AtSign, Bell, CalendarDays, CircleDot, Heart, Megaphone, MessageCircle, MessagesSquare, Repeat2, Reply, ShieldAlert, ShieldCheck, UserCheck, UserPlus, Users, VolumeX } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +62,10 @@ export default async function NotificacoesPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      <h1 className="mb-6 font-display text-2xl font-bold text-white">Notificações</h1>
+      <div className="mb-6 flex items-center gap-3">
+        <NavBack fallback="/feed" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 text-white/80 transition hover:bg-white/5 hover:text-white md:hidden" />
+        <h1 className="font-display text-2xl font-bold text-white">Notificações</h1>
+      </div>
 
       {(notifications ?? []).length === 0 && (
         <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40">

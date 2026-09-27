@@ -187,7 +187,10 @@ export function LiveActivityProvider({
   }, [supabase, userId, load, refresh, pushToast, person, router]);
 
   // Reading notifications/messages elsewhere in the app changes the counts.
+  // Abrir /notificacoes marca tudo como lido no servidor: zera o contador na hora
+  // (o refresh reconcilia depois), para o sino não ficar preso num número antigo.
   useEffect(() => {
+    if (pathname === "/notificacoes") setCounts((c) => (c.notifications ? { ...c, notifications: 0 } : c));
     refresh();
   }, [pathname, refresh]);
 
