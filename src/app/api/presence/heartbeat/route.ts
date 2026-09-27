@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     return json({ error: "invalid_json" }, 400);
   }
 
-  const supabase = createClient();
+  const supabase = await createClient();
   // getUser() checks the token with Supabase Auth, so an expired or revoked login is refused here.
   const {
     data: { user },

@@ -12,7 +12,7 @@ export default async function MeusItensPage() {
   const current = await getCurrentUser();
   if (!current) redirect("/entrar");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const [inventory, gifts, transactions, balance] = await Promise.all([
     supabase
       .from("UserInventory")

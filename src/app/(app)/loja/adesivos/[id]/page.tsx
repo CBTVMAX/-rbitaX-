@@ -7,17 +7,19 @@ import { PACK_COLUMNS, STICKER_COLUMNS, type Pack, type Sticker } from "@/lib/st
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const { data } = await createClient().from("StickerPack").select("name").eq("id", params.id).maybeSingle();
+export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const params = await props.params;
+  const { data } = await (await createClient()).from("StickerPack").select("name").eq("id", params.id).maybeSingle();
   return { title: data ? `${data.name} · Adesivos · Órbita X` : "Adesivos · Órbita X" };
 }
 
-export default async function StickerPackPage({ params }: { params: { id: string } }) {
+export default async function StickerPackPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const current = await getCurrentUser();
   if (!current) redirect("/entrar");
   if (!/^[a-z0-9-]{1,32}$/.test(params.id)) notFound();
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const [pack, stickers, product, library, favorite, balance, categories] = await Promise.all([
     supabase.from("StickerPack").select(PACK_COLUMNS).eq("id", params.id).eq("active", true).maybeSingle(),
     supabase.from("Sticker").select(STICKER_COLUMNS).eq("packId", params.id).eq("active", true).order("sortOrder"),

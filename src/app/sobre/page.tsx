@@ -31,7 +31,7 @@ const PILLARS: { icon: LucideIcon; title: string; text: string; color: string }[
 ];
 
 export default async function SobrePage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

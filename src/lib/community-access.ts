@@ -13,7 +13,7 @@ export async function loadCommunityAccess(slug: string) {
   const community = await findCommunity(slug);
   if (!community) return null;
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const me = current?.authId ?? null;
   const [mine, request, ban, siteAdmin, mute, favorite] = await Promise.all([
     me ? supabase.from("CommunityMember").select("role, notify").eq("communityId", community.id).eq("userId", me).maybeSingle() : Promise.resolve({ data: null }),

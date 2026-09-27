@@ -395,7 +395,7 @@ const TOC_ITEMS: TocItem[] = SECTIONS.map((section) => ({
 }));
 
 export default async function PrivacidadePage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

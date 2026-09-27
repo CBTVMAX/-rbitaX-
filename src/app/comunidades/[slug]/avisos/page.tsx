@@ -9,12 +9,14 @@ import { loadCommunityPosts } from "@/lib/community-data";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const c = await findCommunity(params.slug);
   return { title: c ? `Avisos · ${c.name}` : "Avisos · Órbita X" };
 }
 
-export default async function AnnouncementsPage({ params }: { params: { slug: string } }) {
+export default async function AnnouncementsPage(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const access = await loadCommunityAccess(params.slug);
   if (!access) notFound();
   const { current, community, supabase, me, membership, canSee, viewer } = access;

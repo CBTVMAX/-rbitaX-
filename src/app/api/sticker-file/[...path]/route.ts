@@ -12,11 +12,12 @@ const SAFE = /^[a-z0-9-]{1,32}\/[a-z0-9-]{1,48}\.(webp|png|gif)$/;
 const ROOT = path.join(process.cwd(), "private-stickers");
 const TYPES: Record<string, string> = { webp: "image/webp", png: "image/png", gif: "image/gif" };
 
-export async function GET(_req: NextRequest, { params }: { params: { path: string[] } }) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ path: string[] }> }) {
+  const params = await props.params;
   const file = (params.path ?? []).join("/");
   if (!SAFE.test(file)) return new NextResponse(null, { status: 404 });
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: sticker } = await supabase.from("Sticker").select("id, storage").eq("file", file).maybeSingle();
   if (!sticker || (sticker.storage !== "app-premium" && sticker.storage !== "premium")) {
     return new NextResponse(null, { status: 404 });

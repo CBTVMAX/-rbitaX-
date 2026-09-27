@@ -30,13 +30,14 @@ type CommunityRow = {
   memberCount: number;
 };
 
-export default async function ComunidadesPage({
-  searchParams,
-}: {
-  searchParams: { q?: string; categoria?: string; view?: string };
-}) {
+export default async function ComunidadesPage(
+  props: {
+    searchParams: Promise<{ q?: string; categoria?: string; view?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const current = await getCurrentUser();
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const q = (searchParams.q ?? "").trim();
   const categoria = searchParams.categoria ?? "";

@@ -6,8 +6,8 @@ import { AppearancePicker } from "@/components/appearance-picker";
 
 export const dynamic = "force-dynamic";
 
-export default function AppearancePage() {
-  const theme = parseAppTheme(cookies().get(APP_THEME_COOKIE)?.value);
+export default async function AppearancePage() {
+  const theme = parseAppTheme((await cookies()).get(APP_THEME_COOKIE)?.value);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-3 py-4 md:px-4 md:py-6">

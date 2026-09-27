@@ -15,23 +15,25 @@ async function load(slug: string, id: string) {
   if (!ID.test(id)) return null;
   const community = await findCommunity(slug);
   if (!community) return null;
-  const { data } = await createClient().from("CommunityDiscussion").select(DISCUSSION_COLUMNS).eq("id", id).eq("communityId", community.id).maybeSingle();
+  const { data } = await (await createClient()).from("CommunityDiscussion").select(DISCUSSION_COLUMNS).eq("id", id).eq("communityId", community.id).maybeSingle();
   return data ? { community, discussion: data as unknown as Discussion } : null;
 }
 
-export async function generateMetadata({ params }: { params: { slug: string; id: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ slug: string; id: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const r = await load(params.slug, params.id);
   if (!r) return { title: "Discussão · Órbita X" };
   return { title: `${r.discussion.title} · ${r.community.name}`, description: r.community.isPrivate ? undefined : r.discussion.body.slice(0, 160) };
 }
 
-export default async function DiscussionPage({ params }: { params: { slug: string; id: string } }) {
+export default async function DiscussionPage(props: { params: Promise<{ slug: string; id: string }> }) {
+  const params = await props.params;
   const current = await getCurrentUser();
   const r = await load(params.slug, params.id);
   // RLS only returns the topic to people allowed to see it (private community → members).
   if (!r) notFound();
   const { community, discussion } = r;
-  const supabase = createClient();
+  const supabase = await createClient();
   const me = current?.authId ?? null;
 
   const [mine, replies, liked, mute] = await Promise.all([

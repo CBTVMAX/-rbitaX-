@@ -22,8 +22,8 @@ export async function CommunityShell({ current, children }: { current: Current; 
     );
   }
   const { profile } = current;
-  const theme = parseAppTheme(cookies().get(APP_THEME_COOKIE)?.value);
-  const { data: badgeRows } = await createClient().rpc("my_badge_counts");
+  const theme = parseAppTheme((await cookies()).get(APP_THEME_COOKIE)?.value);
+  const { data: badgeRows } = await (await createClient()).rpc("my_badge_counts");
   const initialCounts = Array.isArray(badgeRows) && badgeRows[0] ? badgeRows[0] : undefined;
   const accent = appAccentVars(profile.profileColor);
 

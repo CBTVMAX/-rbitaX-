@@ -13,7 +13,7 @@ export default async function CustomizeProfilePage() {
   const user = current.profile;
 
   // Premium frames: the ones this member owns and the ones on sale in the Órbita X Store.
-  const supabase = createClient();
+  const supabase = await createClient();
   const [{ data: onSale }, { data: owned }] = await Promise.all([
     supabase.from("StoreProduct").select("refId, priceCoins").eq("kind", "frame"),
     supabase.from("UserInventory").select("product:StoreProduct(kind, refId)"),

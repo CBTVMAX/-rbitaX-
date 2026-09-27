@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Adesivos · Administração · Órbita X", robots: { index: false } };
 
 export default async function AdminStickersPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: admin } = await supabase.rpc("is_admin");
   // Only administrators; everyone else sees the regular 404 (the database checks again on every write).
   if (admin !== true) notFound();

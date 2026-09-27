@@ -9,19 +9,24 @@ import type { Role } from "@/lib/communities";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const c = await findCommunity(params.slug);
   return { title: c ? `Gerenciar ${c.name} · Órbita X` : "Gerenciar comunidade · Órbita X", robots: { index: false } };
 }
 
 /** Staff area. The page only decides what to show — every change goes through a community_* RPC that re-checks the role. */
-export default async function ManageCommunityPage({ params, searchParams }: { params: { slug: string }; searchParams: { secao?: string; papel?: string } }) {
+export default async function ManageCommunityPage(
+  props: { params: Promise<{ slug: string }>; searchParams: Promise<{ secao?: string; papel?: string }> }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const current = await getCurrentUser();
   if (!current) redirect(`/entrar?next=/comunidades/${encodeURIComponent(params.slug)}/gerenciar`);
   const community = await findCommunity(params.slug);
   if (!community) notFound();
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: mine } = await supabase.from("CommunityMember").select("role, notify").eq("communityId", community.id).eq("userId", current.authId).maybeSingle();
   const role = (mine?.role as Role) ?? null;
   // Editors publish (avisos, eventos, histórias) from the community pages; Gerenciar is for moderators and above.

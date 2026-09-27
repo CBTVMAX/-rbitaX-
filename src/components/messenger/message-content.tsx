@@ -29,7 +29,7 @@ import { ChatAvatar } from "./ui";
 /** Only one audio plays at a time across the whole Messenger. */
 const PLAY_EVENT = "orbitax:audio-play";
 
-function useExclusiveAudio(audio: React.RefObject<HTMLAudioElement>, id: string) {
+function useExclusiveAudio(audio: React.RefObject<HTMLAudioElement | null>, id: string) {
   useEffect(() => {
     const onOther = (e: Event) => {
       if ((e as CustomEvent<string>).detail !== id) audio.current?.pause();

@@ -11,7 +11,7 @@ export default async function FeedPage() {
   const current = await getCurrentUser();
   if (!current) redirect("/entrar");
 
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data: posts } = await supabase
     .from("Post")

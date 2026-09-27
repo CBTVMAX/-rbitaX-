@@ -10,7 +10,7 @@ export default async function VideosPage() {
   const current = await getCurrentUser();
   if (!current) redirect("/entrar");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: posts } = await supabase
     .from("Post")
     .select(

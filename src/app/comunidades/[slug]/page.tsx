@@ -10,7 +10,8 @@ import { loadCommunityPosts } from "@/lib/community-data";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const c = await findCommunity(params.slug);
   if (!c) return { title: "Comunidade · Órbita X" };
   return {
@@ -19,7 +20,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default async function CommunityPage({ params, searchParams }: { params: { slug: string }; searchParams: { aba?: string; post?: string } }) {
+export default async function CommunityPage(
+  props: { params: Promise<{ slug: string }>; searchParams: Promise<{ aba?: string; post?: string }> }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   // Old tab links now have their own pages.
   if (searchParams.aba === "discussoes") redirect(`/comunidades/${params.slug}/discussoes`);
   if (searchParams.aba === "membros") redirect(`/comunidades/${params.slug}/membros`);

@@ -40,7 +40,7 @@ export default async function NotificacoesPage() {
   const current = await getCurrentUser();
   if (!current) redirect("/entrar");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: notifications } = await supabase
     .from("Notification")
     .select("id, type, title, message, isRead, createdAt, actorId, href")

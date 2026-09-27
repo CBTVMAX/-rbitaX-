@@ -15,7 +15,7 @@ const MOBILE_PILL: { icon: LucideIcon; label: string; color: string }[] = [
 ];
 
 export default async function LandingPage() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

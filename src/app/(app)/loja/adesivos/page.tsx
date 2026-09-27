@@ -8,11 +8,12 @@ import { PACK_COLUMNS, type Pack } from "@/lib/stickers/catalog";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Adesivos · Órbita X Store" };
 
-export default async function AdesivosPage({ searchParams }: { searchParams: { categoria?: string; q?: string } }) {
+export default async function AdesivosPage(props: { searchParams: Promise<{ categoria?: string; q?: string }> }) {
+  const searchParams = await props.searchParams;
   const current = await getCurrentUser();
   if (!current) redirect("/entrar");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const [packs, products, categories, library, favorites, balance, admin] = await Promise.all([
     supabase.from("StickerPack").select(PACK_COLUMNS).eq("active", true).eq("published", true).order("sortOrder"),
     supabase.from("StoreProduct").select("refId, image").eq("kind", "sticker_pack"),

@@ -12,14 +12,16 @@ import { loadCommunityAccess } from "@/lib/community-access";
 export const dynamic = "force-dynamic";
 const ID = /^[0-9a-f-]{36}$/;
 
-export async function generateMetadata({ params }: { params: { slug: string; id: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ slug: string; id: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const c = await findCommunity(params.slug);
   if (!c || !ID.test(params.id)) return { title: "Evento · Órbita X" };
-  const { data } = await createClient().from("CommunityEvent").select("title, description").eq("id", params.id).eq("communityId", c.id).maybeSingle();
+  const { data } = await (await createClient()).from("CommunityEvent").select("title, description").eq("id", params.id).eq("communityId", c.id).maybeSingle();
   return { title: data ? `${data.title} · ${c.name}` : `Evento · ${c.name}`, description: c.isPrivate ? undefined : data?.description?.slice(0, 160) };
 }
 
-export default async function EventPage({ params }: { params: { slug: string; id: string } }) {
+export default async function EventPage(props: { params: Promise<{ slug: string; id: string }> }) {
+  const params = await props.params;
   if (!ID.test(params.id)) notFound();
   const access = await loadCommunityAccess(params.slug);
   if (!access) notFound();

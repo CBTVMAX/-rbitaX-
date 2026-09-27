@@ -83,12 +83,13 @@ const HERO_ILLUSTRATION: Partial<Record<Tab, string>> = {
   musica: "/explore-hero.webp",
 };
 
-export default async function ExplorarPage({
-  searchParams,
-}: {
-  searchParams: { q?: string; tab?: string };
-}) {
-  const supabase = createClient();
+export default async function ExplorarPage(
+  props: {
+    searchParams: Promise<{ q?: string; tab?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

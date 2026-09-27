@@ -8,11 +8,12 @@ import { PRODUCT_COLUMNS, STORE_CATEGORIES, type InventoryItem, type StoreCatego
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Órbita X Store" };
 
-export default async function LojaPage({ searchParams }: { searchParams: { categoria?: string; produto?: string } }) {
+export default async function LojaPage(props: { searchParams: Promise<{ categoria?: string; produto?: string }> }) {
+  const searchParams = await props.searchParams;
   const current = await getCurrentUser();
   if (!current) redirect("/entrar");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const [products, inventory, balance, packs] = await Promise.all([
     supabase.from("StoreProduct").select(PRODUCT_COLUMNS).order("sortOrder"),
     supabase.from("UserInventory").select("productId, source, isFavorite, acquiredAt"),

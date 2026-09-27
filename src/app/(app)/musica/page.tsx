@@ -9,7 +9,7 @@ export default async function MusicaPage() {
   const current = await getCurrentUser();
   if (!current) redirect("/entrar");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: tracks } = await supabase
     .from("Track")
     .select("id, title, artist, audioUrl, coverUrl, userId, owner:User(name, username, avatarUrl)")

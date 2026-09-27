@@ -12,7 +12,7 @@ export default async function AccountSettingsPage() {
   const current = await getCurrentUser();
   if (!current) redirect("/entrar");
 
-  const supabase = createClient();
+  const supabase = await createClient();
   // The owner's private details (birth date, gender…) come from a function that only
   // returns the signed-in account; they are not readable through the table.
   const { data: rows } = await supabase.rpc("my_account_details");

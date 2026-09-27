@@ -5,11 +5,12 @@ import { DesktopMessenger } from "@/components/messenger/desktop-messenger";
 
 export const dynamic = "force-dynamic";
 
-export default async function MensagensPage({ searchParams }: { searchParams: { com?: string; c?: string } }) {
+export default async function MensagensPage(props: { searchParams: Promise<{ com?: string; c?: string }> }) {
+  const searchParams = await props.searchParams;
   const current = await getCurrentUser();
   if (!current) redirect("/entrar");
 
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // "Mensagem" on a friend's profile: open (or create) the conversation with them.
   // get_or_create_dm only works between friends; otherwise the page explains why.

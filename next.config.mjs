@@ -34,11 +34,9 @@ const SECURITY_HEADERS = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
-  experimental: {
-    // Premium sticker files are served by /api/sticker-file after an ownership check, never as static files.
-    outputFileTracingIncludes: {
-      "/api/sticker-file/[...path]": ["./private-stickers/**/*"],
-    },
+  // Premium sticker files are served by /api/sticker-file after an ownership check, never as static files.
+  outputFileTracingIncludes: {
+    "/api/sticker-file/[...path]": ["./private-stickers/**/*"],
   },
   async headers() {
     return [
@@ -59,10 +57,11 @@ const nextConfig = {
       { source: "/.well-known/assetlinks.json", destination: "/api/assetlinks" },
     ];
   },
+  // The app never uses next/image. The optimizer stays off and accepts no remote hosts, so /_next/image
+  // cannot be used to make the server fetch and decode arbitrary files (SSRF / decoder vulnerabilities).
   images: {
-    remotePatterns: [
-      { protocol: 'https', hostname: '*.supabase.co' },
-    ],
+    unoptimized: true,
+    remotePatterns: [],
   },
 };
 

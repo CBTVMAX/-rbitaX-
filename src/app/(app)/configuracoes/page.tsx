@@ -69,7 +69,7 @@ function Group({ title, items }: { title: string; items: Item[] }) {
 export default async function SettingsPage() {
   const current = await getCurrentUser();
   if (!current) redirect("/entrar");
-  const theme = parseAppTheme(cookies().get(APP_THEME_COOKIE)?.value);
+  const theme = parseAppTheme((await cookies()).get(APP_THEME_COOKIE)?.value);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-3 py-4 md:px-4 md:py-6">

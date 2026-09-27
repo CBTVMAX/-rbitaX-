@@ -9,12 +9,17 @@ import { DISCUSSION_CATEGORIES, DISCUSSION_COLUMNS, type Discussion, type Discus
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata(props: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const params = await props.params;
   const c = await findCommunity(params.slug);
   return { title: c ? `Discussões · ${c.name}` : "Discussões · Órbita X" };
 }
 
-export default async function DiscussionsPage({ params, searchParams }: { params: { slug: string }; searchParams: { categoria?: string } }) {
+export default async function DiscussionsPage(
+  props: { params: Promise<{ slug: string }>; searchParams: Promise<{ categoria?: string }> }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const access = await loadCommunityAccess(params.slug);
   if (!access) notFound();
   const { current, community, supabase, membership, canSee, viewer } = access;

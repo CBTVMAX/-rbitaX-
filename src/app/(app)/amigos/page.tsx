@@ -38,7 +38,7 @@ export default async function AmigosPage() {
   const current = await getCurrentUser();
   if (!current) redirect("/entrar");
   const me = current.authId;
-  const supabase = createClient();
+  const supabase = await createClient();
 
   // Seen: the Amigos counter clears (pending requests stay listed until answered).
   await supabase.rpc("mark_friend_requests_seen");
