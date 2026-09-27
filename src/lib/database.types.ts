@@ -486,6 +486,7 @@ export type Database = {
       community_register_download: { Args: { p_post: string; p_media?: string | null }; Returns: undefined };
       community_download_stats: { Args: { p_post: string }; Returns: Json };
       community_download_audit: { Args: { p_community: string; p_limit?: number; p_offset?: number }; Returns: Json };
+      community_activity: { Args: { p_community: string; p_days?: number }; Returns: Json };
       community_edit_discussion: { Args: { p_discussion: string; p_title: string; p_body: string; p_category: string }; Returns: undefined };
       community_discussion_like: { Args: { p_discussion: string }; Returns: Json };
       community_repost: { Args: { p_post: string; p_comment?: string }; Returns: string };

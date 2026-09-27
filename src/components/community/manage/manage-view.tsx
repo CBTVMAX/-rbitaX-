@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { AlertTriangle, ArrowLeft, BarChart3, Bell, CalendarDays, ChevronRight, Download, FileStack, KeyRound, LayoutGrid, Lock, Palette, ScrollText, Settings2, ShieldAlert, UserCog, Users } from "lucide-react";
+import { Activity, AlertTriangle, ArrowLeft, BarChart3, Bell, CalendarDays, ChevronRight, Download, FileStack, KeyRound, LayoutGrid, Lock, Palette, ScrollText, Settings2, ShieldAlert, UserCog, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useStoreToast } from "@/components/store/store-view";
 import { accentOf, rank, type Community, type Role, type Viewer } from "@/lib/communities";
@@ -24,8 +24,9 @@ import { RolesSection } from "./roles";
 import { DangerSection } from "./danger";
 import { TabsSection } from "./tabs";
 import { DownloadsSection } from "./downloads";
+import { ActivitySection } from "./activity";
 
-type Section = "geral" | "personalizacao" | "privacidade" | "conteudo" | "abas" | "eventos" | "membros" | "equipe" | "permissoes" | "moderacao" | "notificacoes" | "estatisticas" | "downloads" | "registro" | "perigo";
+type Section = "geral" | "personalizacao" | "privacidade" | "conteudo" | "abas" | "eventos" | "membros" | "equipe" | "permissoes" | "moderacao" | "notificacoes" | "atividade" | "estatisticas" | "downloads" | "registro" | "perigo";
 
 const SECTIONS: { id: Section; label: string; desc: string; icon: React.ComponentType<{ className?: string }>; min: number }[] = [
   { id: "geral", label: "Editar informações", desc: "Nome, @, categoria, descrição, regras e links", icon: Settings2, min: 3 },
@@ -39,6 +40,7 @@ const SECTIONS: { id: Section; label: string; desc: string; icon: React.Componen
   { id: "permissoes", label: "Permissões", desc: "Quem pode publicar, comentar, enviar mídia…", icon: KeyRound, min: 3 },
   { id: "moderacao", label: "Moderação", desc: "Filtros, aprovações e denúncias", icon: ShieldAlert, min: 2 },
   { id: "notificacoes", label: "Notificações", desc: "Avisos para membros e anúncios", icon: Bell, min: 2 },
+  { id: "atividade", label: "Atividade", desc: "Membros ativos, novos, engajamento e top conteúdos", icon: Activity, min: 3 },
   { id: "estatisticas", label: "Estatísticas", desc: "Membros, alcance e engajamento", icon: BarChart3, min: 3 },
   { id: "downloads", label: "Downloads", desc: "Rastreio e auditoria privada de downloads", icon: Download, min: 3 },
   { id: "registro", label: "Registro de ações", desc: "Quem fez o quê na administração", icon: ScrollText, min: 3 },
@@ -128,6 +130,9 @@ export function ManageView(props: {
       break;
     case "notificacoes":
       content = <NotificationsSection notify={props.notify} onAnnounce={() => setComposer("announcement")} />;
+      break;
+    case "atividade":
+      content = <ActivitySection />;
       break;
     case "estatisticas":
       content = <StatsSection />;
