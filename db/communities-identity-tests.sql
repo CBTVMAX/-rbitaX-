@@ -66,3 +66,35 @@ begin
 
   raise exception 'RELATORIO %', rep;   -- reverte todo o teste
 end $$;
+
+-- ============================================================================
+-- O PROPRIETÁRIO PODE EXCLUIR A COMUNIDADE (obrigatório) — e a cascata limpa tudo.
+-- Verifica também que membro comum não exclui e que a exclusão remove o conteúdo.
+-- ============================================================================
+do $$
+declare
+  U2 text := 'aebf7afb-5878-496d-b7f9-7c507e441b66'; -- dono
+  U1 text := 'edf1889f-feba-4ffb-a502-95400ef3b059'; -- membro
+  cid text := 'zzz-del-test'; rep text := E'\n'; filhos int; existe int;
+begin
+  insert into "Community"(id,name,slug,username,"isPrivate","memberCount","createdById","ownerId",status)
+    values (cid,'Clube Para Excluir','zzz-del','zzzdel',false,2,U2,U2,'active');
+  insert into "CommunityMember"(id,"userId","communityId",role) values (cid||'-o',U2,cid,'owner');
+  insert into "CommunityMember"(id,"userId","communityId",role) values (cid||'-m',U1,cid,'member');
+  insert into "CommunityRole"(id,"communityId",name) values (cid||'-r',cid,'Vice');
+  insert into "Post"(id,"authorId",content,visibility,"updatedAt",kind,"communityId","authorType")
+    values (cid||'-p',U2,'oi','community',now(),'text',cid,'community');
+
+  perform set_config('request.jwt.claims', json_build_object('sub',U1,'role','authenticated')::text, true);
+  begin perform community_delete(cid,'Clube Para Excluir'); rep := rep || '1 membro exclui => FALHA'||E'\n';
+  exception when others then rep := rep || '1 membro exclui => bloqueado (owner_only)'||E'\n'; end;
+
+  perform set_config('request.jwt.claims', json_build_object('sub',U2,'role','authenticated')::text, true);
+  perform community_delete(cid,'Clube Para Excluir');   -- dono exclui com o nome exato
+  select count(*) into existe from "Community" where id=cid;
+  select (select count(*) from "CommunityMember" where "communityId"=cid)
+       + (select count(*) from "Post" where "communityId"=cid)
+       + (select count(*) from "CommunityRole" where "communityId"=cid) into filhos;
+  rep := rep || '2 dono exclui => comunidade='||existe||' (esperado 0), conteudo restante='||filhos||' (esperado 0)'||E'\n';
+  raise exception 'RELATORIO %', rep;
+end $$;
