@@ -5,7 +5,8 @@ import { Avatar } from "@/components/post-card";
 import { timeAgo } from "@/lib/format";
 import Link from "next/link";
 import { FriendRequestActions } from "@/components/friend-button";
-import { AtSign, Bell, CalendarDays, CircleDot, Heart, Megaphone, MessageCircle, MessagesSquare, Repeat2, Reply, ShieldCheck, UserCheck, UserPlus, Users, VolumeX } from "lucide-react";
+import { FollowRequestActions } from "@/components/follow-button";
+import { AtSign, Bell, CalendarDays, CircleDot, Heart, Megaphone, MessageCircle, MessagesSquare, Repeat2, Reply, ShieldAlert, ShieldCheck, UserCheck, UserPlus, Users, VolumeX } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,8 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   like: Heart,
   comment: MessageCircle,
   follow: UserPlus,
+  follow_request: UserPlus,
+  security: ShieldAlert,
   friend_request: UserPlus,
   friend_accept: UserCheck,
   community_post: Users,
@@ -97,6 +100,7 @@ export default async function NotificacoesPage() {
                 </div>
               </Link>
               {n.type === "friend_request" && n.actorId && <FriendRequestActions requesterId={n.actorId} />}
+              {n.type === "follow_request" && n.actorId && <FollowRequestActions followerId={n.actorId} />}
               {!n.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-orbit-pink" />}
             </div>
           );

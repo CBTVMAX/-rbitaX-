@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Download, Loader2, X } from "lucide-react";
+import { clsx } from "clsx";
 import { downloadUrl, useSignedUrl } from "@/lib/messenger/media";
+import { useMediaGuard } from "@/lib/use-media-guard";
 import type { Attachment } from "@/lib/messenger/types";
 
 function Slide({ a, local }: { a: Attachment; local?: string }) {
@@ -17,7 +19,7 @@ function Slide({ a, local }: { a: Attachment; local?: string }) {
     );
   }
   return a.kind === "video" ? (
-    <video key={src} src={src} controls autoPlay playsInline className="max-h-full max-w-full rounded-lg shadow-2xl" />
+    <video key={src} src={src} controls autoPlay playsInline controlsList="nodownload noremoteplayback" disablePictureInPicture className="max-h-full max-w-full rounded-lg shadow-2xl" />
   ) : (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={src} alt="" className="max-h-full max-w-full select-none rounded-lg object-contain shadow-2xl" draggable={false} />
@@ -30,13 +32,17 @@ export function MediaViewer({
   index,
   caption,
   onClose,
+  protect = false,
 }: {
   items: Attachment[];
   locals?: string[];
   index: number;
   caption?: string;
   onClose: () => void;
+  /** Group and community chats: no download button, no "save as", blurred in the background. */
+  protect?: boolean;
 }) {
+  const guard = useMediaGuard(protect);
   const [i, setI] = useState(index);
   const [touchX, setTouchX] = useState<number | null>(null);
   const a = items[i];
@@ -65,7 +71,8 @@ export function MediaViewer({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex flex-col bg-black/95 backdrop-blur"
+      className={clsx("fixed inset-0 z-[80] flex flex-col bg-black/95 backdrop-blur", guard.className)}
+      onContextMenu={guard.onContextMenu}
       onTouchStart={(e) => setTouchX(e.touches[0].clientX)}
       onTouchEnd={(e) => {
         if (touchX === null) return;
@@ -80,9 +87,11 @@ export function MediaViewer({
           <X className="h-6 w-6" />
         </button>
         <span className="flex-1 text-sm text-snow/70">{items.length > 1 ? `${i + 1} de ${items.length}` : ""}</span>
-        <button type="button" onClick={download} aria-label="Baixar" className="rounded-full p-2 hover:bg-white/10">
-          <Download className="h-5 w-5" />
-        </button>
+        {!protect && (
+          <button type="button" onClick={download} aria-label="Baixar" className="rounded-full p-2 hover:bg-white/10">
+            <Download className="h-5 w-5" />
+          </button>
+        )}
       </div>
       <div className="relative flex min-h-0 flex-1 items-center justify-center px-2 pb-4 md:px-16" onClick={(e) => e.target === e.currentTarget && onClose()}>
         <Slide key={a.path} a={a} local={locals?.[i]} />

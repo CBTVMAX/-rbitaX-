@@ -26,6 +26,16 @@ const json = (body: unknown, status = 200) => NextResponse.json(body, { status, 
  * The user always comes from the validated login, never from the request body.
  */
 export async function POST(req: NextRequest) {
+  // Only pages of Órbita X itself may send presence signals (defense in depth on top of SameSite cookies).
+  const origin = req.headers.get("origin");
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host");
+  let originHost: string | null = null;
+  try {
+    originHost = origin ? new URL(origin).host : null;
+  } catch {
+    originHost = "invalid";
+  }
+  if (originHost && host && originHost !== host) return json({ error: "forbidden_origin" }, 403);
   const raw = await req.text();
   if (raw.length > 2048) return json({ error: "payload_too_large" }, 413);
   let body: Body;

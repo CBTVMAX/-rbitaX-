@@ -204,3 +204,21 @@ html[data-app-theme] body {
     filter: drop-shadow(0 1px 1.5px rgb(59 130 246 / 0.3));
   }
 }
+
+/* Chats de grupo e comunidade: mídia sem "salvar como", arrastar ou imprimir, e borrada em segundo plano. */
+.chat-guard img,
+.chat-guard video {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+.chat-guard-concealed img,
+.chat-guard-concealed video {
+  filter: blur(28px);
+}
+@media print {
+  .chat-guard img,
+  .chat-guard video {
+    visibility: hidden !important;
+  }
+}

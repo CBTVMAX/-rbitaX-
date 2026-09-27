@@ -1,11 +1,13 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AuthShell } from "@/components/auth-shell";
-import { ArrowRight, ChevronRight, Eye, EyeOff, Lock, Mail, Phone, ShieldCheck } from "lucide-react";
+import { ArrowRight, ChevronRight, Eye, EyeOff, KeyRound, Lock, Mail, Phone, ShieldCheck } from "lucide-react";
+import { safeRedirect } from "@/lib/safe-redirect";
+import { authErrorMessage, pendingMfaFactor } from "@/lib/mfa";
 import { clsx } from "clsx";
 
 function GoogleIcon({ className }: { className?: string }) {
@@ -46,6 +48,54 @@ function EntrarForm() {
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [phoneError, setPhoneError] = useState<string | null>(null);
 
+  // Two-step verification (only for accounts that turned it on).
+  const [mfaFactor, setMfaFactor] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaBusy, setMfaBusy] = useState(false);
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const destination = safeRedirect(params.get("redirect"));
+
+  useEffect(() => {
+    if (params.get("mfa") !== "1") return;
+    pendingMfaFactor(supabase).then((factor) => {
+      if (factor) setMfaFactor(factor);
+      else window.location.replace(destination);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function finishSignIn() {
+    const factor = await pendingMfaFactor(supabase);
+    if (factor) {
+      setMfaFactor(factor);
+      return;
+    }
+    window.location.href = destination;
+  }
+
+  async function handleVerifyMfa(e: React.FormEvent) {
+    e.preventDefault();
+    if (!mfaFactor) return;
+    setMfaError(null);
+    setMfaBusy(true);
+    const { error: mfaErr } = await supabase.auth.mfa.challengeAndVerify({ factorId: mfaFactor, code: mfaCode.replace(/\D/g, "") });
+    setMfaBusy(false);
+    if (mfaErr) {
+      setMfaError(authErrorMessage(mfaErr, "Código inválido ou expirado. Confira o app autenticador."));
+      setMfaCode("");
+      return;
+    }
+    window.location.href = destination;
+  }
+
+  async function cancelMfa() {
+    await supabase.auth.signOut({ scope: "local" });
+    setMfaFactor(null);
+    setMfaCode("");
+    setMfaError(null);
+    setPassword("");
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -54,11 +104,11 @@ function EntrarForm() {
     setLoading(false);
 
     if (signInError) {
-      setError("E-mail ou senha inválidos.");
+      setError(authErrorMessage(signInError, "E-mail ou senha inválidos."));
       return;
     }
 
-    window.location.href = params.get("redirect") || "/feed";
+    await finishSignIn();
   }
 
   async function handleGoogle() {
@@ -82,7 +132,7 @@ function EntrarForm() {
     setPhoneLoading(false);
 
     if (otpError) {
-      setPhoneError(otpError.message);
+      setPhoneError(authErrorMessage(otpError, "Não foi possível enviar o código agora. Confira o número."));
       return;
     }
     setOtpSent(true);
@@ -100,11 +150,11 @@ function EntrarForm() {
     setPhoneLoading(false);
 
     if (verifyError) {
-      setPhoneError(verifyError.message);
+      setPhoneError(authErrorMessage(verifyError, "Código inválido ou expirado."));
       return;
     }
 
-    window.location.href = params.get("redirect") || "/feed";
+    await finishSignIn();
   }
 
   async function handleForgotPassword() {
@@ -116,7 +166,54 @@ function EntrarForm() {
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/callback`,
     });
-    setResetStatus(resetError ? "Não foi possível enviar o e-mail agora." : "Enviamos um link de redefinição para o seu e-mail.");
+    // Same answer whether or not the e-mail has an account, so the form cannot be used to discover accounts.
+    setResetStatus(
+      resetError
+        ? authErrorMessage(resetError, "Não foi possível enviar o e-mail agora. Tente de novo em instantes.")
+        : "Se existir uma conta com esse e-mail, enviamos um link para criar uma nova senha."
+    );
+  }
+
+  if (mfaFactor) {
+    return (
+      <AuthShell title="Entrar" activeTab="entrar" heading={<>Verificação em <span className="orbit-text-gradient">duas etapas</span></>} subtitle="Digite o código de 6 dígitos do seu app autenticador.">
+        <form onSubmit={handleVerifyMfa} className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs text-white/50">Código do autenticador</label>
+            <div className="relative">
+              <KeyRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+              <input
+                required
+                autoFocus
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9 ]{6,7}"
+                maxLength={7}
+                value={mfaCode}
+                onChange={(e) => setMfaCode(e.target.value)}
+                placeholder="000000"
+                className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm tracking-[0.3em] text-white outline-none focus:border-orbit-purple"
+              />
+            </div>
+          </div>
+          {mfaError && <p className="text-xs text-red-400">{mfaError}</p>}
+          <button
+            type="submit"
+            disabled={mfaBusy}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-orbit-gradient py-2.5 text-sm font-semibold text-white shadow-glow transition hover:opacity-90 disabled:opacity-50"
+          >
+            {mfaBusy ? "Verificando..." : (
+              <>
+                Confirmar <ArrowRight className="h-4 w-4" />
+              </>
+            )}
+          </button>
+          <button type="button" onClick={cancelMfa} className="w-full text-center text-xs text-white/40 hover:text-white/70">
+            Entrar com outra conta
+          </button>
+        </form>
+      </AuthShell>
+    );
   }
 
   return (

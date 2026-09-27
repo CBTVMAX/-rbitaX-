@@ -46,6 +46,7 @@ import { ConversationInfo } from "./conversation-info";
 import { ContactDialog, ForwardDialog, LocationDialog, PollDialog } from "./dialogs";
 import { GiftDialog, LinkDialog, SaveToSavedDialog } from "./extra-dialogs";
 import { MediaViewer } from "./media-viewer";
+import { useMediaGuard } from "@/lib/use-media-guard";
 import { ProfileCard } from "./profile-card";
 import { GhostButton, Modal } from "./ui";
 
@@ -108,6 +109,8 @@ export function ChatView({
   const [forwardFor, setForwardFor] = useState<ChatMessage | null>(null);
   const [dialog, setDialog] = useState<null | "poll" | "location" | "contact" | "link" | "gift" | "save">(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  // Group and community chats protect shared photos and videos (see useMediaGuard).
+  const guard = useMediaGuard(!!c.isGroup && !c.isSaved);
   const [viewer, setViewer] = useState<{ items: Attachment[]; locals?: string[]; index: number; caption?: string } | null>(null);
   const outgoing = useRef(new Map<string, Outgoing>());
   const unreadAtOpen = useRef(c.unread);
@@ -869,6 +872,7 @@ export function ChatView({
           onDelete={() => setConfirmLeave(true)}
         />
 
+        <div className={clsx("contents", guard.className)} onContextMenu={guard.onContextMenu}>
         <MessageList
           conversationKey={c.id}
           messages={messages}
@@ -907,6 +911,7 @@ export function ChatView({
           }
           handlers={handlers}
         />
+        </div>
 
         {c.sendStatus === "ok" ? (
           <MessageComposer conversationId={c.id} replyTo={replyTo} replyName={replyName} onCancelReply={() => setReplyTo(null)} api={api} inSaved={c.isSaved} />
@@ -1015,7 +1020,7 @@ export function ChatView({
             : `O histórico será apagado só para você. ${c.otherUser?.name.split(" ")[0] ?? "A outra pessoa"} continua com as mensagens.`}
         </p>
       </Modal>
-      {viewer && <MediaViewer {...viewer} onClose={() => setViewer(null)} />}
+      {viewer && <MediaViewer {...viewer} protect={guard.active} onClose={() => setViewer(null)} />}
     </div>
   );
 }

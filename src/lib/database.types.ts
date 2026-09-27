@@ -282,9 +282,22 @@ export type Database = {
       ] };
       User: { Row: UserRow; Insert: UserInsert; Update: UserUpdate; Relationships: [] };
       Waitlist: { Row: WaitlistRow; Insert: WaitlistInsert; Update: WaitlistUpdate; Relationships: [] };
+      SecurityEvent: {
+        Row: { id: number; userId: string | null; kind: string; severity: string; ip: string | null; userAgent: string | null; details: Json; createdAt: string };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
     };
     Views: { [_ in never]: never };
     Functions: {
+      my_sessions: {
+        Args: Record<string, never>;
+        Returns: { id: string; device: string; ip: string | null; createdAt: string; lastActiveAt: string; current: boolean; mfaVerified: boolean }[];
+      };
+      revoke_session: { Args: { p_session: string }; Returns: boolean };
+      respond_follow_request: { Args: { p_follower: string; p_accept: boolean }; Returns: string };
+      platform_role: { Args: Record<string, never>; Returns: string };
       compute_zodiac: { Args: { birth: string }; Returns: string };
       username_available: { Args: { check_username: string }; Returns: boolean };
       generate_orbit_id: { Args: Record<string, never>; Returns: string };
