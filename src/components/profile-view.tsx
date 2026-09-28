@@ -16,6 +16,7 @@ import { presenceOf } from "@/lib/presence";
 import { relationshipLabel } from "@/lib/profile-options";
 import { CoinIcon, formatCoins } from "@/components/coins";
 import { MyRpgsCard } from "@/components/my-rpgs-card";
+import { ProfileStatus } from "@/components/profile-status";
 import type { LevelInfo } from "@/lib/level";
 import { frameBackdropStyle, frameSrc, getFrame, type AvatarFrame } from "@/lib/avatar-frames";
 import { hasCustomAccent, profileAccentStyle, profileColorHex, profileColorLabel } from "@/lib/profile-colors";
@@ -539,7 +540,7 @@ export function ProfileView({
   const soonButton =
     "mt-3 w-full cursor-default rounded-xl border border-white/15 bg-space-bg/40 py-2 text-xs font-medium text-white/60";
 
-  const aside = (
+  const statusAside = (
     <>
       <SideCard title="Nível">
         <div className="flex items-center gap-3">
@@ -617,7 +618,11 @@ export function ProfileView({
             </Link>
           </SideCard>
         ))}
+    </>
+  );
 
+  const restAside = (
+    <>
       {isMe && <MyRpgsCard username={user.username} />}
 
       {isMe && (
@@ -648,14 +653,24 @@ export function ProfileView({
       )}
       {isMe && (
         <SideCard title="Moldura do avatar">
-          <div title="Em breve" className="flex cursor-default items-center gap-3 rounded-xl border border-white/10 bg-space-bg/40 p-3">
-            <span className="h-11 w-11 shrink-0 rounded-full border-2 border-orbit-blue/70 shadow-[0_0_14px_rgba(43,108,255,0.45)]" />
+          <Link
+            href="/configuracoes/personalizar"
+            className="flex items-center gap-3 rounded-xl border border-white/10 bg-space-bg/40 p-3 transition hover:border-orbit-purple/50"
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center">
+              {frame ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={frameSrc(frame.id)} alt="" className="h-full w-full object-contain" />
+              ) : (
+                <span className="h-11 w-11 rounded-full border-2 border-orbit-blue/70 shadow-[0_0_14px_rgba(43,108,255,0.45)]" />
+              )}
+            </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-white">Nenhuma moldura</p>
-              <p className="text-xs text-white/50">Adicione uma moldura ao seu avatar</p>
+              <p className="text-sm font-medium text-white">{frame ? frame.name : "Nenhuma moldura"}</p>
+              <p className="text-xs text-white/50">{frame ? "Toque para trocar a moldura" : "Escolha uma moldura para o seu avatar"}</p>
             </div>
             <ChevronRight className="h-4 w-4 text-white/40" />
-          </div>
+          </Link>
         </SideCard>
       )}
       <SideCard title="Conquistas">
@@ -700,6 +715,14 @@ export function ProfileView({
           {aboutList}
         </SideCard>
       )}
+    </>
+  );
+
+  // Coluna direita (tablet/desktop): status + demais módulos.
+  const aside = (
+    <>
+      {statusAside}
+      {restAside}
     </>
   );
 
@@ -917,6 +940,17 @@ export function ProfileView({
           </div>
         </section>
 
+        {/* Nível + Diamantes + Premium no topo do mobile (como a referência). */}
+        <div className="md:hidden">
+          <ProfileStatus
+            level={level}
+            coins={coins ?? null}
+            isPremium={!!user.isPremium}
+            isMe={isMe}
+            stats={{ posts: stats.posts, followers: stats.followers, friends: stats.friends, communities: stats.communities }}
+          />
+        </div>
+
         {friendRequestsCard}
         {onboarding}
 
@@ -948,8 +982,8 @@ export function ProfileView({
           }}
         />
 
-        {/* Módulos laterais empilhados só no celular (no tablet/desktop ficam na coluna à direita). */}
-        <div className="space-y-3 md:hidden">{aside}</div>
+        {/* Módulos secundários empilhados só no celular (status já aparece no topo). */}
+        <div className="space-y-3 md:hidden">{restAside}</div>
       </div>
 
       <ProfileRightRail />
