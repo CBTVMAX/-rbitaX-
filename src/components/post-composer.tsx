@@ -52,16 +52,21 @@ function MentionSuggestions({ items, onPick }: { items: MentionItem[]; onPick: (
   );
 }
 
-/** Miniaturas das fotos/vídeos escolhidos, numeradas na ordem em que serão publicadas. */
-function MediaThumbs({ files, onRemove }: { files: { url: string; video: boolean }[]; onRemove: (i: number) => void }) {
+/** Miniaturas das fotos/vídeos/áudios escolhidos, numeradas na ordem em que serão publicadas. */
+function MediaThumbs({ files, onRemove }: { files: { url: string; kind: "image" | "video" | "audio" }[]; onRemove: (i: number) => void }) {
   if (files.length === 0) return null;
   return (
     <div className="mt-3 flex flex-wrap gap-2">
       {files.map((f, i) => (
         <div key={f.url} className="relative h-20 w-20 overflow-hidden rounded-xl border border-white/10 bg-white/[0.05]">
-          {f.video ? (
+          {f.kind === "video" ? (
             // eslint-disable-next-line jsx-a11y/media-has-caption
             <video src={f.url} muted className="h-full w-full object-cover" />
+          ) : f.kind === "audio" ? (
+            <span className="flex h-full w-full flex-col items-center justify-center gap-1 text-chat">
+              <Music2 className="h-6 w-6" />
+              <span className="px-1 text-[9px] text-white/50">Música</span>
+            </span>
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={f.url} alt="" className="h-full w-full object-cover" />
@@ -95,10 +100,11 @@ export function PostComposer({
   const supabase = createClient();
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const audioRef = useRef<HTMLInputElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   const [content, setContent] = useState("");
-  const [files, setFiles] = useState<{ file: File; url: string; video: boolean }[]>([]);
+  const [files, setFiles] = useState<{ file: File; url: string; kind: "image" | "video" | "audio" }[]>([]);
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mentions, setMentions] = useState<MentionItem[]>([]);
@@ -153,10 +159,10 @@ export function PostComposer({
   function pickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const chosen = Array.from(e.target.files ?? []);
     if (!chosen.length) return;
-    setFiles((prev) =>
-      [...prev, ...chosen.map((file) => ({ file, url: URL.createObjectURL(file), video: file.type.startsWith("video") }))].slice(0, MAX_FILES)
-    );
-    if (fileRef.current) fileRef.current.value = "";
+    const kindOf = (f: File): "image" | "video" | "audio" =>
+      f.type.startsWith("video") ? "video" : f.type.startsWith("audio") ? "audio" : "image";
+    setFiles((prev) => [...prev, ...chosen.map((file) => ({ file, url: URL.createObjectURL(file), kind: kindOf(file) }))].slice(0, MAX_FILES));
+    e.target.value = "";
   }
 
   function removeAt(i: number) {
@@ -186,11 +192,12 @@ export function PostComposer({
       // Confirma o tipo real de cada arquivo antes de criar qualquer coisa (um "png" falso não passa).
       const verified: string[] = [];
       for (const f of files) {
-        const mime = await verifyUpload(f.file, ["image", "video"]);
+        const mime = await verifyUpload(f.file, ["image", "video", "audio"]);
         verified.push(mime);
       }
       const hasImage = verified.some((m) => m.startsWith("image"));
-      const kind = files.length === 0 ? "text" : hasImage ? "image" : "video";
+      const hasVideo = verified.some((m) => m.startsWith("video"));
+      const kind = files.length === 0 ? "text" : hasImage ? "image" : hasVideo ? "video" : "music";
 
       const { error: postError } = await supabase.from("Post").insert({
         id: postId,
@@ -205,8 +212,9 @@ export function PostComposer({
       for (let i = 0; i < files.length; i++) {
         const { file } = files[i];
         const mime = verified[i];
-        const isVideo = mime.startsWith("video");
-        const ext = file.name.split(".").pop() || (isVideo ? "mp4" : "jpg");
+        const mediaType = mime.startsWith("video") ? "video" : mime.startsWith("audio") ? "audio" : "image";
+        const fallbackExt = mediaType === "video" ? "mp4" : mediaType === "audio" ? "mp3" : "jpg";
+        const ext = file.name.split(".").pop() || fallbackExt;
         const path = `${userId}/posts/${postId}-${i}.${ext}`;
         const { error: uploadError } = await supabase.storage.from("media").upload(path, file, { upsert: true, contentType: mime });
         if (uploadError) throw uploadError;
@@ -214,7 +222,7 @@ export function PostComposer({
         const { error: mediaError } = await supabase.from("Media").insert({
           id: crypto.randomUUID(),
           postId,
-          type: isVideo ? "video" : "image",
+          type: mediaType,
           url: pub.publicUrl,
           mimeType: mime,
           position: i,
@@ -280,15 +288,16 @@ export function PostComposer({
         <div className="mt-3 flex items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-0.5 md:pl-14">
             <input ref={fileRef} type="file" accept="image/*,video/*" multiple hidden onChange={pickFile} />
+            <input ref={audioRef} type="file" accept="audio/*" multiple hidden onChange={pickFile} />
             <button type="button" onClick={() => fileRef.current?.click()} className={action}>
               <ImageIcon className="h-4 w-4" /> Foto
             </button>
             <button type="button" onClick={() => fileRef.current?.click()} className={action}>
               <Video className="h-4 w-4" /> Vídeo
             </button>
-            <span title="Em breve" className={soon}>
+            <button type="button" onClick={() => audioRef.current?.click()} className={action}>
               <Music2 className="h-4 w-4" /> Música
-            </span>
+            </button>
             <span title="Em breve" className={`${soon} hidden md:flex`}>
               <ListChecks className="h-4 w-4" /> Enquete
             </span>
@@ -353,6 +362,7 @@ export function PostComposer({
       <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-3">
         <div className="flex gap-2">
           <input ref={fileRef} type="file" accept="image/*,video/*" multiple hidden onChange={pickFile} />
+          <input ref={audioRef} type="file" accept="audio/*" multiple hidden onChange={pickFile} />
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
@@ -366,6 +376,13 @@ export function PostComposer({
             className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-white/60 transition hover:bg-white/5 hover:text-white"
           >
             <Video className="h-4 w-4" /> Vídeo
+          </button>
+          <button
+            type="button"
+            onClick={() => audioRef.current?.click()}
+            className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-white/60 transition hover:bg-white/5 hover:text-white"
+          >
+            <Music2 className="h-4 w-4" /> Música
           </button>
         </div>
         <button

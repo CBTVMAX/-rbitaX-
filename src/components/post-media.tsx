@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Music2, X } from "lucide-react";
 
 export type PostMediaItem = { id: string; type: string; url: string };
 
@@ -14,13 +14,37 @@ export type PostMediaItem = { id: string; type: string; url: string };
  */
 export function PostMedia({ media }: { media: PostMediaItem[] }) {
   const [viewer, setViewer] = useState<number | null>(null);
-  const n = media.length;
-  if (n === 0) return null;
+  if (media.length === 0) return null;
+
+  const audio = media.filter((m) => m.type === "audio");
+  const visual = media.filter((m) => m.type !== "audio");
 
   return (
-    <div className="mb-3">
-      {n === 1 ? <Single item={media[0]} onOpen={() => setViewer(0)} /> : <Carousel items={media} onOpen={setViewer} />}
-      {viewer !== null && <Lightbox items={media} index={viewer} setIndex={setViewer} onClose={() => setViewer(null)} />}
+    <div className="mb-3 space-y-2">
+      {visual.length === 1 ? (
+        <Single item={visual[0]} onOpen={() => setViewer(0)} />
+      ) : visual.length > 1 ? (
+        <Carousel items={visual} onOpen={setViewer} />
+      ) : null}
+
+      {audio.map((m) => (
+        <AudioPlayer key={m.id} item={m} />
+      ))}
+
+      {viewer !== null && visual.length > 0 && <Lightbox items={visual} index={viewer} setIndex={setViewer} onClose={() => setViewer(null)} />}
+    </div>
+  );
+}
+
+/** Player de música numa publicação. */
+function AudioPlayer({ item }: { item: PostMediaItem }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-chat/15 text-chat">
+        <Music2 className="h-5 w-5" />
+      </span>
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <audio src={item.url} controls preload="none" className="min-w-0 flex-1" />
     </div>
   );
 }
