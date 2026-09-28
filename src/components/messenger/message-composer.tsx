@@ -1,13 +1,27 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { Ban, Dices, Keyboard, Lock, Mic, Plus, Send, Smile, Trash2, UserMinus, X } from "lucide-react";
+import { Ban, Dices, Keyboard, Lock, Mic, Plus, Send, Smile, Trash2, UserMinus, Users, X } from "lucide-react";
 import { formatDuration, messagePreview } from "@/lib/messenger/format";
-import type { Attachment, ChatMessage, SendStatus, StickerInfo } from "@/lib/messenger/types";
+import type { Attachment, ChatMessage, Member, SendStatus, StickerInfo } from "@/lib/messenger/types";
 import { AttachmentMenu, type AttachmentChoice } from "./attachment-menu";
 import { StickerPanel, type PanelTab } from "./sticker-panel";
+import { ChatAvatar } from "./ui";
+
+/** Opção da lista que aparece ao digitar @ num grupo. */
+type MentionOption = { handle: string; name: string; username: string | null; avatarUrl?: string | null; avatarFrame?: string | null; all?: boolean };
+
+/** Detecta uma menção sendo digitada logo antes do cursor: "@" + trecho, no começo ou após espaço. */
+function detectMention(value: string, caret: number): { query: string; start: number } | null {
+  const upto = value.slice(0, caret);
+  const m = upto.match(/(?:^|\s)@([a-zA-Z0-9_.]*)$/);
+  if (!m) return null;
+  return { query: m[1], start: caret - m[1].length - 1 };
+}
+
+const ALL_ALIASES = ["todos", "todas", "all", "geral", "everyone"];
 
 export type ComposerApi = {
   text: (text: string) => void;
@@ -89,6 +103,8 @@ export function MessageComposer({
   api,
   inSaved = false,
   isGroup = false,
+  mentionMembers,
+  meId,
 }: {
   conversationId: string;
   replyTo: ChatMessage | null;
@@ -97,8 +113,12 @@ export function MessageComposer({
   api: ComposerApi;
   inSaved?: boolean;
   isGroup?: boolean;
+  mentionMembers?: Member[];
+  meId?: string;
 }) {
   const [text, setText] = useState(() => drafts.get(conversationId) ?? "");
+  const [mention, setMention] = useState<{ query: string; start: number } | null>(null);
+  const [mentionIdx, setMentionIdx] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [panel, setPanel] = useState<null | PanelTab>(null);
   const [diceOpen, setDiceOpen] = useState(false);
@@ -117,6 +137,7 @@ export function MessageComposer({
     setText(drafts.get(conversationId) ?? "");
     setPending([]);
     setPanel(null);
+    setMention(null);
   }, [conversationId]);
 
   useEffect(() => {
@@ -162,6 +183,47 @@ export function MessageComposer({
 
   const canSend = text.trim().length > 0 || pending.length > 0;
 
+  // Lista que aparece ao digitar @ num grupo: "Todos" + membros que casam com o trecho.
+  const mentionOptions = useMemo<MentionOption[]>(() => {
+    if (!isGroup || !mention) return [];
+    const q = mention.query.toLowerCase();
+    const out: MentionOption[] = [];
+    if (q === "" || ALL_ALIASES.some((a) => a.startsWith(q))) {
+      out.push({ handle: "todos", name: "Todos do grupo", username: null, all: true });
+    }
+    for (const m of mentionMembers ?? []) {
+      if (m.id === meId) continue;
+      if (m.username.toLowerCase().includes(q) || m.name.toLowerCase().includes(q)) {
+        out.push({ handle: m.username, name: m.name, username: m.username, avatarUrl: m.avatarUrl, avatarFrame: m.avatarFrame });
+      }
+      if (out.length >= 8) break;
+    }
+    return out.slice(0, 8);
+  }, [isGroup, mention, mentionMembers, meId]);
+
+  useEffect(() => setMentionIdx(0), [mention?.query, mention?.start]);
+
+  function syncMention(el: HTMLTextAreaElement) {
+    setMention(isGroup ? detectMention(el.value, el.selectionStart ?? el.value.length) : null);
+  }
+
+  function pickMention(opt: MentionOption) {
+    const el = input.current;
+    if (!el || !mention) return;
+    const caret = el.selectionStart ?? text.length;
+    const before = text.slice(0, mention.start);
+    const after = text.slice(caret);
+    const insert = `@${opt.handle} `;
+    const next = before + insert + after;
+    setText(next);
+    setMention(null);
+    const pos = before.length + insert.length;
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(pos, pos);
+    });
+  }
+
   function submit() {
     if (pending.length) {
       api.media(
@@ -205,6 +267,29 @@ export function MessageComposer({
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // Navegação na lista de menção (@) tem prioridade sobre enviar.
+    if (mentionOptions.length) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionIdx((i) => (i + 1) % mentionOptions.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionIdx((i) => (i - 1 + mentionOptions.length) % mentionOptions.length);
+        return;
+      }
+      if ((e.key === "Enter" || e.key === "Tab") && !e.shiftKey && !e.nativeEvent.isComposing) {
+        e.preventDefault();
+        pickMention(mentionOptions[mentionIdx] ?? mentionOptions[0]);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setMention(null);
+        return;
+      }
+    }
     const touch = window.matchMedia("(pointer: coarse)").matches;
     if (e.key === "Enter" && !e.shiftKey && !touch && !e.nativeEvent.isComposing) {
       e.preventDefault();
@@ -402,6 +487,41 @@ export function MessageComposer({
 
       {diceOpen && <DiceSheet onPick={rollFromSheet} onClose={() => setDiceOpen(false)} />}
 
+      {mentionOptions.length > 0 && (
+        <div className="animate-sheet-up absolute bottom-full left-2 right-2 mb-2 md:left-auto md:right-4 md:w-[340px]">
+          <div className="overflow-hidden rounded-2xl border border-white/10 bg-space-surface/95 py-1 shadow-2xl backdrop-blur-xl">
+            <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/40">Marcar no grupo</p>
+            <div className="max-h-64 overflow-y-auto orbit-scrollbar">
+              {mentionOptions.map((opt, i) => (
+                <button
+                  key={opt.all ? "@all" : opt.handle}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => pickMention(opt)}
+                  onMouseEnter={() => setMentionIdx(i)}
+                  className={clsx(
+                    "flex w-full items-center gap-3 px-3 py-2 text-left transition",
+                    i === mentionIdx ? "bg-chat/15" : "hover:bg-white/5"
+                  )}
+                >
+                  {opt.all ? (
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-chat/20 text-chat">
+                      <Users className="h-[18px] w-[18px]" />
+                    </span>
+                  ) : (
+                    <ChatAvatar name={opt.name} url={opt.avatarUrl} size={36} frame={opt.avatarFrame} />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-white">{opt.name}</span>
+                    <span className="block truncate text-xs text-white/50">{opt.all ? "Notifica todos os membros" : `@${opt.username}`}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mx-auto flex max-w-3xl items-end gap-1.5 md:gap-2">
         {recording ? (
           <>
@@ -444,8 +564,14 @@ export function MessageComposer({
               <textarea
                 ref={input}
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={(e) => {
+                  setText(e.target.value);
+                  syncMention(e.target);
+                }}
                 onKeyDown={onKeyDown}
+                onKeyUp={(e) => syncMention(e.currentTarget)}
+                onClick={(e) => syncMention(e.currentTarget)}
+                onBlur={() => setTimeout(() => setMention(null), 120)}
                 onPaste={onPaste}
                 rows={1}
                 maxLength={4000}

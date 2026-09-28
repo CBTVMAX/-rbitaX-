@@ -920,7 +920,7 @@ export function ChatView({
         </div>
 
         {c.sendStatus === "ok" ? (
-          <MessageComposer conversationId={c.id} replyTo={replyTo} replyName={replyName} onCancelReply={() => setReplyTo(null)} api={api} inSaved={c.isSaved} isGroup={!!c.isGroup} />
+          <MessageComposer conversationId={c.id} replyTo={replyTo} replyName={replyName} onCancelReply={() => setReplyTo(null)} api={api} inSaved={c.isSaved} isGroup={!!c.isGroup} mentionMembers={c.isGroup ? members : undefined} meId={me.id} />
         ) : (
           <ComposerLocked status={c.sendStatus} username={c.otherUser?.username} name={c.otherUser?.name} />
         )}

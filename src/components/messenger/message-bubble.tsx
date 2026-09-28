@@ -30,12 +30,34 @@ export function nameColor(id: string) {
   return NAME_COLORS[h % NAME_COLORS.length];
 }
 
+const MENTION_TOKEN = /@[a-zA-Z0-9_.]{2,30}/g;
+const MENTION_ALL = new Set(["todos", "todas", "all", "geral", "everyone"]);
+
+/** Destaca @menções e @todos dentro de um trecho de texto puro (fora de URLs). */
+function withMentions(str: string, kb: string): React.ReactNode[] {
+  const out: React.ReactNode[] = [];
+  let last = 0;
+  for (const m of str.matchAll(MENTION_TOKEN)) {
+    const i = m.index ?? 0;
+    if (i > last) out.push(str.slice(last, i));
+    const isAll = MENTION_ALL.has(m[0].slice(1).toLowerCase());
+    out.push(
+      <span key={`${kb}-${i}`} className={clsx("font-semibold", isAll ? "rounded bg-chat/25 px-1 text-chat" : "text-chat")}>
+        {m[0]}
+      </span>
+    );
+    last = i + m[0].length;
+  }
+  if (last < str.length) out.push(str.slice(last));
+  return out;
+}
+
 function RichText({ text }: { text: string }) {
   const parts: React.ReactNode[] = [];
   let last = 0;
   for (const match of text.matchAll(URL_PATTERN)) {
     const i = match.index ?? 0;
-    if (i > last) parts.push(text.slice(last, i));
+    if (i > last) parts.push(...withMentions(text.slice(last, i), `u${i}`));
     parts.push(
       <a key={i} href={match[0]} target="_blank" rel="noopener noreferrer nofollow" className="break-all underline decoration-current/40 underline-offset-2 hover:decoration-current">
         {match[0]}
@@ -43,7 +65,7 @@ function RichText({ text }: { text: string }) {
     );
     last = i + match[0].length;
   }
-  if (last < text.length) parts.push(text.slice(last));
+  if (last < text.length) parts.push(...withMentions(text.slice(last), "end"));
   return <>{parts}</>;
 }
 
