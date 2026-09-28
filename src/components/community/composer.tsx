@@ -14,9 +14,11 @@ import {
   fileSize,
   isEditorOrAdmin,
   rank,
+  subjectHashtag,
   TAG_LABEL,
   uploadCommunityFile,
   type Album,
+  type CommunitySubject,
   type DiscussionCategory,
   type PostTag,
   type UploadKind,
@@ -220,6 +222,27 @@ export function Composer({
     setProgress("");
     setIdOpen(false);
   }, [kind, defaultAlbum, defaultTag]);
+
+  // Assuntos (ator/personagem) cadastrados: viram chips que inserem a hashtag no texto.
+  const [subjects, setSubjects] = useState<CommunitySubject[]>([]);
+  useEffect(() => {
+    if (!kind) return;
+    let alive = true;
+    supabase.rpc("community_hashtags", { p_community: community.id }).then(({ data }) => {
+      if (alive) setSubjects((data ?? []) as CommunitySubject[]);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [kind, supabase, community.id]);
+
+  function addSubject(label: string) {
+    const h = subjectHashtag(label, community.hashtagSuffix);
+    setText((t) => {
+      if (t.split(/\s+/).includes(h)) return t; // já está no texto
+      return t && !/\s$/.test(t) ? `${t} ${h} ` : `${t}${h} `;
+    });
+  }
 
   // Restaura a última identidade escolhida nesta comunidade (só se a pessoa puder publicar como comunidade).
   useEffect(() => {
@@ -485,6 +508,32 @@ export function Composer({
             className={clsx(field, "resize-none leading-relaxed", kind === "article" && "resize-y")}
           />
           {kind === "article" && <p className="-mt-2 text-right text-[11px] text-white/35">{text.length.toLocaleString("pt-BR")}/20.000</p>}
+
+          {subjects.length > 0 && ["post", "announcement", "article", "discussion", "photo", "video", "clip", "gif"].includes(kind) && (
+            <div>
+              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/40">Marcar assunto</p>
+              <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
+                {subjects.map((s) => {
+                  const h = subjectHashtag(s.label, community.hashtagSuffix);
+                  const active = text.split(/\s+/).includes(h);
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => addSubject(s.label)}
+                      aria-pressed={active}
+                      className={clsx(
+                        "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition",
+                        active ? "bg-orbit-gradient text-snow" : "border border-white/10 text-orbit-cyan hover:bg-orbit-purple/10"
+                      )}
+                    >
+                      {h}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {kind === "poll" && (
             <div className="space-y-2">

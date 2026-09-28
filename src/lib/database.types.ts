@@ -22,7 +22,7 @@ type CommentRow = { content: string; createdAt: string; id: string; postId: stri
 type CommentInsert = { content: string; createdAt?: string; id: string; postId: string; updatedAt: string; userId: string; parentId?: string | null };
 type CommentUpdate = Partial<CommentInsert>;
 
-type CommunityRow = { avatarUrl: string | null; category: string | null; coverUrl: string | null; createdAt: string; description: string | null; id: string; isPrivate: boolean; name: string; slug: string; username: string; isOfficial: boolean; accentColor: string | null; rules: string | null; links: Json; permissions: Json; moderation: Json; notifyPrefs: Json; memberCount: number; createdById: string | null; updatedAt: string; ownerId: string | null; status: string; tags: Json; welcome: Json; rulesList: Json };
+type CommunityRow = { avatarUrl: string | null; category: string | null; coverUrl: string | null; createdAt: string; description: string | null; id: string; isPrivate: boolean; name: string; slug: string; username: string; isOfficial: boolean; accentColor: string | null; rules: string | null; links: Json; permissions: Json; moderation: Json; notifyPrefs: Json; memberCount: number; createdById: string | null; updatedAt: string; ownerId: string | null; status: string; tags: Json; welcome: Json; rulesList: Json; hashtagSuffix: string | null };
 type CommunityRoleRow = { id: string; communityId: string; name: string; description: string | null; color: string; icon: string; rank: number; permissions: Json; sortOrder: number; createdAt: string };
 type CommunityMemberRoleRow = { id: string; communityId: string; userId: string; roleId: string; assignedById: string | null; createdAt: string };
 type CommunityTabRow = { id: string; communityId: string; name: string; hashtags: Json; sortOrder: number; createdAt: string };
@@ -483,6 +483,13 @@ export type Database = {
       community_tab_delete: { Args: { p_tab: string }; Returns: undefined };
       community_tab_reorder: { Args: { p_community: string; p_ids: string[] }; Returns: undefined };
       community_tab_assign: { Args: { p_post: string; p_tab: string; p_on: boolean }; Returns: undefined };
+      community_set_suffix: { Args: { p_community: string; p_suffix: string }; Returns: undefined };
+      community_hashtag_save: { Args: { p_community: string; p: Json }; Returns: string };
+      community_hashtag_delete: { Args: { p_hashtag: string }; Returns: undefined };
+      community_hashtag_reorder: { Args: { p_community: string; p_ids: string[] }; Returns: undefined };
+      community_hashtags: { Args: { p_community: string }; Returns: { id: string; label: string; slug: string; tag: string; sortOrder: number; count: number }[] };
+      community_hashtag_posts: { Args: { p_community: string; p_slug: string; p_limit?: number; p_offset?: number }; Returns: { id: string; kind: string; content: string; createdAt: string; authorId: string; authorType: string }[] };
+      search_community_topics: { Args: { p_query: string; p_limit?: number }; Returns: { communityId: string; communityName: string; communitySlug: string; communityAvatar: string | null; suffix: string; id: string; label: string; tag: string; count: number }[] };
       community_register_download: { Args: { p_post: string; p_media?: string | null }; Returns: undefined };
       community_download_stats: { Args: { p_post: string }; Returns: Json };
       community_download_audit: { Args: { p_community: string; p_limit?: number; p_offset?: number }; Returns: Json };

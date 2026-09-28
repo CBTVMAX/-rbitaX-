@@ -11,6 +11,7 @@ import {
   FileText,
   Film,
   Globe,
+  Hash,
   Images,
   Info,
   Link2,
@@ -63,10 +64,11 @@ function Highlights({ slug, counts }: { slug: string; counts: { announcements: n
     { href: `${base}/conteudo?aba=musica`, label: "Música", icon: Music2, count: counts.musica, tone: "from-orbit-pink to-orbit-purple" },
     { href: `${base}/conteudo?aba=arquivos`, label: "Arquivos", icon: FileText, count: counts.arquivos, tone: "from-slate-300 to-orbit-blue" },
     { href: `${base}/momentos`, label: "Momentos", icon: Sparkles, tone: "from-orbit-cyan via-orbit-purple to-orbit-pink" },
+    { href: `${base}/assuntos`, label: "Assuntos", icon: Hash, tone: "from-orbit-blue to-orbit-cyan" },
   ];
   return (
     <nav aria-label="Destaques da comunidade" className="-mx-4 md:mx-0">
-      <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:px-0 lg:grid lg:grid-cols-8 lg:gap-2">
+      <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:px-0 lg:grid lg:grid-cols-9 lg:gap-2">
         {items.map((it) => {
           const Icon = it.icon;
           return (
