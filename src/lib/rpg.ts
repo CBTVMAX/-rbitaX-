@@ -91,10 +91,40 @@ const ALLOWED_ATTRS: Record<string, Set<string>> = {
   "*": new Set(["class"]),
 };
 
-function safeUrl(value: string): string | null {
-  const v = value.trim();
-  if (/^\s*javascript:/i.test(v) || /^\s*data:(?!image\/)/i.test(v) || /^\s*vbscript:/i.test(v)) return null;
-  return v;
+const CONTROL_CHARS = new RegExp("[\\u0000-\\u001F\\u007F-\\u009F\\u2028\\u2029]", "g");
+
+/**
+ * Só permite URLs http(s) ou relativas. Faz parsing real do protocolo (não confia em
+ * regex): remove caracteres de controle/espaços que o navegador ignora dentro do esquema
+ * (evitando "java\tscript:"), e valida o protocolo com URL(). Entidades HTML já foram
+ * decodificadas pelo DOMParser ao ler attr.value.
+ */
+export function safeUrl(value: string): string | null {
+  // Navegadores removem TAB/LF/CR e controles ao interpretar o esquema — removê-los evita bypass
+  // do tipo "java\tscript:". Espaços comuns não fazem parte de um esquema válido.
+  const stripped = value.replace(CONTROL_CHARS, "").replace(/[\t\n\r]/g, "").trim();
+  if (!stripped) return null;
+
+  const scheme = stripped.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):/);
+  if (scheme) {
+    const proto = scheme[1].toLowerCase();
+    if (proto !== "http" && proto !== "https") return null;
+    try {
+      const u = new URL(stripped);
+      if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+      return u.href;
+    } catch {
+      return null;
+    }
+  }
+  // Sem esquema = URL relativa (âncora, caminho, protocolo-relativo). Segura; só limpa controles.
+  return value.replace(CONTROL_CHARS, "").trim() || null;
+}
+
+/** Só mantém classes isoladas com prefixo rpg-*; bloqueia classes do Tailwind do app. */
+export function safeClass(value: string): string | null {
+  const tokens = value.split(/\s+/).filter((t) => /^rpg-[a-zA-Z0-9_-]+$/.test(t));
+  return tokens.length ? tokens.join(" ") : null;
 }
 
 export function sanitizeRpgHtml(html: string): string {
@@ -125,6 +155,12 @@ export function sanitizeRpgHtml(html: string): string {
           const clean = safeUrl(attr.value);
           if (clean === null) child.removeAttribute(attr.name);
           else child.setAttribute(attr.name, clean);
+        } else if (name === "class") {
+          const clean = safeClass(attr.value);
+          if (clean === null) child.removeAttribute(attr.name);
+          else child.setAttribute(attr.name, clean);
+        } else if (name === "style") {
+          child.removeAttribute(attr.name);
         }
       }
       if (tag === "a") {

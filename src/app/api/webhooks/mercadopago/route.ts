@@ -4,78 +4,89 @@ import { mpGetPayment, mpVerifySignature, webhookSecretConfigured } from "@/lib/
 
 export const dynamic = "force-dynamic";
 
+const MAX_BODY_BYTES = 64 * 1024; // 64 KB — notificações do MP são pequenas.
+const isProd = process.env.NODE_ENV === "production";
+
 /**
- * Webhook do Mercado Pago para compra de Diamantes.
+ * Webhook do Mercado Pago (compra de Diamantes).
  *
- * Segurança:
- *  - valida a assinatura (x-signature) quando o segredo está configurado;
- *  - registra cada entrega em WebhookEvent (índice único por x-request-id) → anti-replay;
- *  - NUNCA confia no corpo da notificação: busca o pagamento real na API do MP;
- *  - credita via diamond_credit_order (idempotente, valor conferido, uma única vez).
+ * Ordem obrigatória (nada é gravado no banco antes de validar):
+ *  1. receber  2. limitar tamanho do corpo  3. ler headers  4. validar assinatura
+ *  5. exigir x-request-id  6. registrar (anti-replay via índice único)  7. buscar o
+ *  pagamento real no MP  8. só então creditar (idempotente). Corpo da notificação nunca
+ *  é confiado como fonte de verdade.
  */
 export async function POST(req: NextRequest) {
+  // 5.b Sem segredo em produção → recusa (nunca "sem segredo = aceita").
+  if (isProd && !webhookSecretConfigured()) {
+    console.error("mp_webhook: MERCADOPAGO_WEBHOOK_SECRET ausente em produção");
+    return NextResponse.json({ error: "webhook_not_configured" }, { status: 503 });
+  }
   const svc = createServiceClient();
   if (!svc) {
-    // Sem service role configurada não há como creditar com segurança. Aceita para o MP não repetir infinitamente.
-    console.error("mp_webhook: service role not configured");
-    return NextResponse.json({ received: true, configured: false }, { status: 200 });
+    console.error("mp_webhook: service role ausente");
+    return NextResponse.json({ error: "not_configured" }, { status: 503 });
   }
 
+  // 2. Limite de tamanho do corpo (Content-Length + leitura limitada).
+  const declaredLen = Number(req.headers.get("content-length") ?? "0");
+  if (declaredLen > MAX_BODY_BYTES) return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
+  const raw = await req.text();
+  if (raw.length > MAX_BODY_BYTES) return NextResponse.json({ error: "payload_too_large" }, { status: 413 });
+
+  // 3. Headers necessários.
   const xSignature = req.headers.get("x-signature");
   const xRequestId = req.headers.get("x-request-id");
-
   const url = new URL(req.url);
+
   let payload: Record<string, unknown> = {};
   try {
-    payload = (await req.json()) as Record<string, unknown>;
+    payload = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
   } catch {
-    payload = {};
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 
-  // O MP manda type/topic e data.id (no corpo ou na query).
   const type = String(payload.type ?? payload.topic ?? url.searchParams.get("type") ?? url.searchParams.get("topic") ?? "");
   const dataObj = (payload.data as { id?: string | number } | undefined) ?? undefined;
   const dataId = String(dataObj?.id ?? url.searchParams.get("data.id") ?? url.searchParams.get("id") ?? "");
 
+  // 4. Validar assinatura ANTES de qualquer gravação.
   const signatureOk = mpVerifySignature({ xSignature, xRequestId, dataId });
-  // Com segredo configurado, assinatura inválida é rejeitada.
   if (webhookSecretConfigured() && !signatureOk) {
-    await svc.from("WebhookEvent").insert({
-      provider: "mercadopago", eventType: type, resourceId: dataId, requestId: xRequestId,
-      signatureOk: false, status: "ignored", payload: payload as never, note: "invalid_signature",
-    } as never);
+    // Requisição inválida: NÃO grava payload arbitrário no banco.
     return NextResponse.json({ error: "invalid_signature" }, { status: 401 });
   }
 
-  // Anti-replay: cada x-request-id é processado uma única vez.
+  // 5. x-request-id é obrigatório para a proteção anti-replay.
+  if (!xRequestId) return NextResponse.json({ error: "missing_request_id" }, { status: 400 });
+
+  // 6. Registrar a entrega (índice único por requestId) → anti-replay. Só depois de validada.
   const { error: dupeErr } = await svc.from("WebhookEvent").insert({
     provider: "mercadopago", eventType: type, resourceId: dataId, requestId: xRequestId,
     signatureOk, status: "received", payload: payload as never,
   } as never);
   if (dupeErr) {
-    // Violação de unicidade → entrega repetida; já tratada.
     return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
   }
 
-  // Só tratamos notificações de pagamento.
   if (type !== "payment" || !dataId) {
     await markProcessed(svc, xRequestId, "ignored", "not_a_payment");
     return NextResponse.json({ received: true }, { status: 200 });
   }
 
+  // 7. Buscar o pagamento real no MP (não confiar no corpo).
   const payment = await mpGetPayment(dataId);
   if (!payment) {
     await markProcessed(svc, xRequestId, "error", "payment_fetch_failed");
-    // 200 para não entrar em loop; o MP reenvia e tentamos de novo com novo request-id.
     return NextResponse.json({ received: true }, { status: 200 });
   }
-
   const orderId = payment.external_reference ?? "";
   if (!orderId) {
     await markProcessed(svc, xRequestId, "ignored", "no_external_reference");
     return NextResponse.json({ received: true }, { status: 200 });
   }
 
+  // 8. Creditar (idempotente) só depois de tudo validado.
   try {
     if (payment.status === "approved") {
       await svc.rpc("diamond_credit_order", {

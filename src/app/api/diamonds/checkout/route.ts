@@ -4,9 +4,25 @@ import { mpConfigured, mpCreatePreference } from "@/lib/mercadopago";
 
 export const dynamic = "force-dynamic";
 
-function baseUrl(req: NextRequest) {
-  const env = process.env.NEXT_PUBLIC_SITE_URL;
-  if (env) return env.replace(/\/$/, "");
+const isProd = process.env.NODE_ENV === "production";
+
+/**
+ * URL base das URLs financeiras (notification_url, back_urls). NUNCA usa o header Host.
+ * Em produção exige NEXT_PUBLIC_SITE_URL (ou SITE_URL) e HTTPS; sem isso, falha explicitamente.
+ * Em desenvolvimento aceita a origem local.
+ */
+function baseUrl(req: NextRequest): string | null {
+  const env = (process.env.NEXT_PUBLIC_SITE_URL ?? process.env.SITE_URL ?? "").trim();
+  if (env) {
+    try {
+      const u = new URL(env);
+      if (isProd && u.protocol !== "https:") return null;
+      return `${u.protocol}//${u.host}`;
+    } catch {
+      return null;
+    }
+  }
+  if (isProd) return null; // produção não confia no Host da requisição
   return new URL(req.url).origin;
 }
 
@@ -38,6 +54,10 @@ export async function POST(req: NextRequest) {
   const o = order as { orderId: string; diamonds: number; amountBRL: number; label: string };
 
   const base = baseUrl(req);
+  if (!base) {
+    console.error("checkout: NEXT_PUBLIC_SITE_URL ausente/ inválida em produção");
+    return NextResponse.json({ error: "site_url_not_configured" }, { status: 503 });
+  }
   const pref = await mpCreatePreference({
     orderId: o.orderId,
     title: o.label || `${o.diamonds} Diamantes`,

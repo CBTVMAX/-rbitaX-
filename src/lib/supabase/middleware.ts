@@ -18,8 +18,47 @@ const PROTECTED_PREFIXES = [
 // Pages a signed-in person may open before confirming the two-step verification code.
 const MFA_FREE = ["/entrar", "/auth", "/api", "/redefinir-senha", "/termos", "/privacidade", "/sobre"];
 
+/**
+ * CSP por requisição com nonce. Em produção, script-src usa 'nonce-...' + 'strict-dynamic'
+ * (sem 'unsafe-inline'): o Next.js aplica o nonce automaticamente aos próprios scripts ao
+ * ler o header content-security-policy da requisição, e o strict-dynamic permite os chunks
+ * carregados por eles. Em desenvolvimento mantém unsafe-inline/eval para o HMR/overlay.
+ */
+function buildCsp(nonce: string, isDev: boolean): string {
+  const scriptSrc = isDev
+    ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`;
+  return [
+    "default-src 'self'",
+    scriptSrc,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https://*.supabase.co https://tile.openstreetmap.org https://lh3.googleusercontent.com",
+    "media-src 'self' data: blob: https://*.supabase.co",
+    "font-src 'self' data:",
+    `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org${isDev ? " ws: http://localhost:*" : ""}`,
+    "worker-src 'self' blob:",
+    "manifest-src 'self'",
+    "frame-src 'none'",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    ...(isDev ? [] : ["upgrade-insecure-requests"]),
+  ].join("; ");
+}
+
 export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const isDev = process.env.NODE_ENV !== "production";
+  const nonce = crypto.randomUUID().replace(/-/g, "");
+  const csp = buildCsp(nonce, isDev);
+
+  // O Next lê o nonce do header content-security-policy da REQUISIÇÃO e o aplica aos seus scripts.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  requestHeaders.set("content-security-policy", csp);
+
+  let response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set("content-security-policy", csp);
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,7 +70,8 @@ export async function updateSession(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
+          response = NextResponse.next({ request: { headers: requestHeaders } });
+          response.headers.set("content-security-policy", csp);
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           );
@@ -63,7 +103,9 @@ export async function updateSession(request: NextRequest) {
       url.search = "";
       url.searchParams.set("mfa", "1");
       url.searchParams.set("redirect", path);
-      return NextResponse.redirect(url);
+      const redirectRes = NextResponse.redirect(url);
+      redirectRes.headers.set("content-security-policy", csp);
+      return redirectRes;
     }
   }
 
@@ -71,7 +113,9 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/entrar";
     url.searchParams.set("redirect", path);
-    return NextResponse.redirect(url);
+    const redirectRes = NextResponse.redirect(url);
+    redirectRes.headers.set("content-security-policy", csp);
+    return redirectRes;
   }
 
   return response;

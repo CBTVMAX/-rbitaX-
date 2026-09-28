@@ -18,6 +18,10 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ path: st
   if (!SAFE.test(file)) return new NextResponse(null, { status: 404 });
 
   const supabase = await createClient();
+  // Exige usuário autenticado (defesa em profundidade; sticker_readable também checa no banco).
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return new NextResponse(null, { status: 403 });
+
   const { data: sticker } = await supabase.from("Sticker").select("id, storage").eq("file", file).maybeSingle();
   if (!sticker || (sticker.storage !== "app-premium" && sticker.storage !== "premium")) {
     return new NextResponse(null, { status: 404 });
@@ -26,10 +30,10 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ path: st
   if (!allowed) return new NextResponse(null, { status: 403 });
 
   if (sticker.storage === "premium") {
-    // Uploaded by an admin to the private bucket: short-lived signed link.
-    const { data } = await supabase.storage.from("sticker-premium").createSignedUrl(file, 60 * 60);
+    // Bucket privado (upload de admin): link assinado de vida curta (2 min) — reduz reuso do link.
+    const { data } = await supabase.storage.from("sticker-premium").createSignedUrl(file, 120);
     if (!data?.signedUrl) return new NextResponse(null, { status: 404 });
-    return NextResponse.redirect(data.signedUrl, { headers: { "Cache-Control": "private, max-age=3000" } });
+    return NextResponse.redirect(data.signedUrl, { headers: { "Cache-Control": "private, max-age=90" } });
   }
 
   try {
