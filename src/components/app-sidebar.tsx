@@ -11,6 +11,8 @@ import { disablePush } from "@/lib/push-client";
 import { endPresenceForSignOut } from "@/components/presence-heartbeat";
 import { OrbitWordmarkThemed } from "@/components/orbit-logo";
 import { PresenceDot, PresenceList } from "@/components/presence-picker";
+import { AccountSwitcher } from "@/components/account-switcher";
+import { getAccounts, removeAccount } from "@/lib/accounts";
 import { CountBadge, useLiveCounts, type LiveCounts } from "@/components/live-activity";
 import {
   Bell,
@@ -87,6 +89,8 @@ async function signOut() {
   const supabase = createClient();
   await disablePush(supabase); // this device stops receiving this account's notifications
   await endPresenceForSignOut(); // this login goes offline now, other devices keep their own status
+  const active = getAccounts().activeId;
+  if (active) removeAccount(active); // limpa o acesso rápido desta conta (token será revogado)
   await supabase.auth.signOut();
   window.location.href = "/";
 }
@@ -181,7 +185,9 @@ export function AppTopBar({
           <ChevronDown className="h-4 w-4" />
         </button>
         {open && (
-          <div className="absolute right-0 top-12 w-56 overflow-hidden rounded-xl border border-white/10 bg-space-surface shadow-2xl">
+          <div className="absolute right-0 top-12 max-h-[80vh] w-64 overflow-y-auto orbit-scrollbar rounded-xl border border-white/10 bg-space-surface shadow-2xl">
+            <AccountSwitcher activeId={userId} activeName={name} activeUsername={username} activeAvatarUrl={avatarUrl} />
+            <div className="my-1 border-t border-white/10" />
             <PresenceList userId={userId} initial={presence} />
             <div className="my-1 border-t border-white/10" />
             <Link href={`/perfil/${username}`} className="flex items-center gap-2 px-4 py-2.5 text-sm text-white/80 hover:bg-white/5">
@@ -309,7 +315,19 @@ function CoinsCard() {
   );
 }
 
-export function MobileHeader({ userId, username, presence }: { userId: string; username: string; presence: string }) {
+export function MobileHeader({
+  userId,
+  username,
+  name,
+  avatarUrl,
+  presence,
+}: {
+  userId: string;
+  username: string;
+  name: string;
+  avatarUrl: string | null;
+  presence: string;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { counts } = useLiveCounts();
@@ -349,6 +367,9 @@ export function MobileHeader({ userId, username, presence }: { userId: string; u
 
       {open && (
         <nav className="max-h-[75vh] space-y-0.5 overflow-y-auto border-t border-white/10 px-3 py-3">
+          <div className="-mx-3 mb-2 border-b border-white/10 pb-2">
+            <AccountSwitcher activeId={userId} activeName={name} activeUsername={username} activeAvatarUrl={avatarUrl} />
+          </div>
           <div className="-mx-3 mb-2 border-b border-white/10 pb-2">
             <PresenceList userId={userId} initial={presence} />
           </div>

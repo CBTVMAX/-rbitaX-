@@ -8,6 +8,7 @@ import { appAccentVars } from "@/lib/profile-colors";
 import { LiveActivityProvider } from "@/components/live-activity";
 import { PushPrompt } from "@/components/pwa";
 import { AppSidebar, AppTopBar, MobileHeader, MobileTabBar } from "@/components/app-sidebar";
+import { AccountSync } from "@/components/account-sync";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div data-app-theme={theme} className="min-h-screen bg-space-bg bg-stars" style={accent as React.CSSProperties | undefined}>
         <AppThemeSync theme={theme} />
         <AppAccentSync vars={accent} />
+        <AccountSync userId={current.authId} name={profile.name} username={profile.username} avatarUrl={profile.avatarUrl} />
         <AppTopBar
           userId={current.authId}
           username={profile.username}
@@ -34,7 +36,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           avatarUrl={profile.avatarUrl}
           presence={profile.presence}
         />
-        <MobileHeader userId={current.authId} username={profile.username} presence={profile.presence} />
+        <MobileHeader
+          userId={current.authId}
+          username={profile.username}
+          name={profile.name}
+          avatarUrl={profile.avatarUrl}
+          presence={profile.presence}
+        />
         <AppSidebar username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} />
         <main className="min-h-screen pb-24 md:ml-64 md:pb-0 md:pt-16">{children}</main>
         <MobileTabBar username={profile.username} />

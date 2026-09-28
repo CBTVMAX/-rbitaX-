@@ -233,6 +233,12 @@ function EntrarForm() {
         </p>
       )}
 
+      {params.get("add") === "1" && (
+        <p className="mb-4 rounded-lg border border-orbit-purple/30 bg-orbit-purple/10 px-3 py-2 text-xs text-white/80">
+          Entre com a outra conta para adicioná-la. Depois é só tocar no nome para trocar rapidamente — sua conta atual continua salva neste aparelho.
+        </p>
+      )}
+
       <button
         onClick={handleGoogle}
         type="button"

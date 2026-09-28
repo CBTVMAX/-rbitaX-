@@ -33,7 +33,7 @@ export async function CommunityShell({ current, children }: { current: Current; 
         <AppThemeSync theme={theme} />
         <AppAccentSync vars={accent} />
         <AppTopBar userId={current.authId} username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} presence={profile.presence} />
-        <MobileHeader userId={current.authId} username={profile.username} presence={profile.presence} />
+        <MobileHeader userId={current.authId} username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} presence={profile.presence} />
         <AppSidebar username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} />
         <main className="min-h-screen pb-24 md:ml-64 md:pb-0 md:pt-16">{children}</main>
         <MobileTabBar username={profile.username} />
