@@ -19,6 +19,39 @@ import {
   X,
 } from "lucide-react";
 
+type MentionItem = { type: "user" | "community"; handle: string; name: string; avatar: string | null };
+
+function MentionSuggestions({ items, onPick }: { items: MentionItem[]; onPick: (handle: string) => void }) {
+  return (
+    <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-60 overflow-y-auto rounded-xl border border-white/10 bg-space-surface shadow-2xl">
+      {items.map((it) => (
+        <button
+          key={it.type + it.handle}
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onPick(it.handle);
+          }}
+          className="flex w-full items-center gap-2.5 px-3 py-2 text-left hover:bg-white/5"
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-space-card text-xs text-white/70">
+            {it.avatar ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={it.avatar} alt="" className="h-full w-full object-cover" />
+            ) : (
+              it.name.slice(0, 1).toUpperCase()
+            )}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm text-white">{it.name}</span>
+            <span className="block truncate text-xs text-white/45">@{it.handle}{it.type === "community" ? " · comunidade" : ""}</span>
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function PostComposer({
   userId,
   name,
@@ -33,12 +66,59 @@ export function PostComposer({
   const supabase = createClient();
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
 
   const [content, setContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mentions, setMentions] = useState<MentionItem[]>([]);
+  const mentionRange = useRef<{ start: number; end: number } | null>(null);
+  const mentionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function scanMentions() {
+    const el = taRef.current;
+    if (!el) return;
+    const pos = el.selectionStart ?? content.length;
+    const m = content.slice(0, pos).match(/(?:^|\s)@([a-zA-Z0-9_.]{1,30})$/);
+    if (!m) {
+      mentionRange.current = null;
+      setMentions([]);
+      return;
+    }
+    const q = m[1];
+    mentionRange.current = { start: pos - q.length - 1, end: pos };
+    if (mentionTimer.current) clearTimeout(mentionTimer.current);
+    mentionTimer.current = setTimeout(() => searchMentions(q), 180);
+  }
+
+  async function searchMentions(q: string) {
+    const [u, c] = await Promise.all([
+      supabase.from("User").select("id, name, username, avatarUrl").or(`username.ilike.%${q}%,name.ilike.%${q}%`).limit(5),
+      supabase.from("Community").select("id, name, username, slug, avatarUrl").or(`username.ilike.%${q}%,name.ilike.%${q}%,slug.ilike.%${q}%`).limit(4),
+    ]);
+    const users: MentionItem[] = (u.data ?? []).map((x) => ({ type: "user", handle: x.username, name: x.name, avatar: x.avatarUrl }));
+    const comms: MentionItem[] = (c.data ?? []).map((x) => ({ type: "community", handle: x.username ?? x.slug, name: x.name, avatar: x.avatarUrl }));
+    setMentions([...users, ...comms].slice(0, 8));
+  }
+
+  function pickMention(handle: string) {
+    const r = mentionRange.current;
+    if (!r) return;
+    const next = content.slice(0, r.start) + "@" + handle + " " + content.slice(r.end);
+    setContent(next);
+    mentionRange.current = null;
+    setMentions([]);
+    requestAnimationFrame(() => {
+      const el = taRef.current;
+      if (el) {
+        const p = r.start + handle.length + 2;
+        el.focus();
+        el.setSelectionRange(p, p);
+      }
+    });
+  }
 
   function pickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
@@ -121,13 +201,22 @@ export function PostComposer({
               )}
             </span>
           </span>
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="O que você está pensando?"
-            rows={1}
-            className="min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-space-bg/60 px-3 py-2.5 text-xs text-white md:px-4 md:text-sm outline-none placeholder:text-white/40 focus:border-orbit-purple/60 md:py-3"
-          />
+          <div className="relative min-w-0 flex-1">
+            <textarea
+              ref={taRef}
+              value={content}
+              onChange={(e) => {
+                setContent(e.target.value);
+                requestAnimationFrame(scanMentions);
+              }}
+              onKeyUp={scanMentions}
+              onClick={scanMentions}
+              placeholder="O que você está pensando?"
+              rows={1}
+              className="w-full resize-none rounded-xl border border-white/10 bg-space-bg/60 px-3 py-2.5 text-xs text-white md:px-4 md:text-sm outline-none placeholder:text-white/40 focus:border-orbit-purple/60 md:py-3"
+            />
+            {mentions.length > 0 && <MentionSuggestions items={mentions} onPick={pickMention} />}
+          </div>
           <span
             title="Outras opções de privacidade em breve"
             className="flex shrink-0 items-center gap-1 rounded-xl border border-white/10 bg-space-bg/60 px-2.5 py-2.5 text-xs text-white/80 md:gap-1.5 md:px-3 md:py-3"
@@ -204,13 +293,22 @@ export function PostComposer({
     <form onSubmit={submit} className="mb-4 rounded-2xl border border-white/10 bg-space-card p-4">
       <div className="flex gap-3">
         <Avatar name={name} url={avatarUrl} />
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={`No que você está pensando, ${name.split(" ")[0]}?`}
-          rows={2}
-          className="w-full resize-none bg-transparent text-sm text-white outline-none placeholder:text-white/30"
-        />
+        <div className="relative w-full">
+          <textarea
+            ref={taRef}
+            value={content}
+            onChange={(e) => {
+              setContent(e.target.value);
+              requestAnimationFrame(scanMentions);
+            }}
+            onKeyUp={scanMentions}
+            onClick={scanMentions}
+            placeholder={`No que você está pensando, ${name.split(" ")[0]}?`}
+            rows={2}
+            className="w-full resize-none bg-transparent text-sm text-white outline-none placeholder:text-white/30"
+          />
+          {mentions.length > 0 && <MentionSuggestions items={mentions} onPick={pickMention} />}
+        </div>
       </div>
 
       {preview && (

@@ -35,6 +35,14 @@ export default async function ProfilePage(props: { params: Promise<{ username: s
         .maybeSingle();
       if (byOrbitId) redirect(`/perfil/${byOrbitId.username}`);
     }
+    // Uma @menção pode apontar para uma comunidade: resolve pelo @ ou pelo slug.
+    const handle = params.username.toLowerCase();
+    const { data: community } = await supabase
+      .from("Community")
+      .select("slug")
+      .or(`username.eq.${handle},slug.eq.${handle}`)
+      .maybeSingle();
+    if (community) redirect(`/comunidades/${community.slug}`);
     notFound();
   }
 

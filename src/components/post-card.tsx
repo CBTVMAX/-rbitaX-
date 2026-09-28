@@ -9,6 +9,7 @@ import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Re
 import type { SharedEmbed } from "@/lib/shared-posts";
 import { clsx } from "clsx";
 import { VerifiedBadge } from "@/components/verified-badge";
+import { RichText } from "@/lib/rich-text";
 
 export type FeedPost = {
   id: string;
@@ -158,7 +159,7 @@ export function PostCard({
         )}
       </div>
 
-      {post.content && <p className="mb-3 whitespace-pre-wrap text-sm text-white/90">{post.content}</p>}
+      {post.content && <p className="mb-3 text-sm text-white/90"><RichText text={post.content} /></p>}
 
       {post.shared !== undefined && <SharedCard shared={post.shared} />}
 
@@ -203,7 +204,7 @@ export function PostCard({
               <Avatar name={c.user.name} url={c.user.avatarUrl} size={28} />
               <div className="rounded-xl bg-white/5 px-3 py-1.5 text-xs">
                 <p className="font-medium text-white">{c.user.name}</p>
-                <p className="text-white/70">{c.content}</p>
+                <p className="text-white/70"><RichText text={c.content} /></p>
               </div>
             </div>
           ))}
@@ -256,7 +257,7 @@ function SharedCard({ shared }: { shared: SharedEmbed | null }) {
             <span className="font-normal text-white/40">· {timeAgo(shared.createdAt)}</span>
           </span>
           {shared.title && <span className="mt-1 line-clamp-1 block text-sm font-semibold text-white">{shared.title}</span>}
-          {shared.content && <span className="mt-0.5 line-clamp-3 block whitespace-pre-wrap text-sm text-white/75">{shared.content}</span>}
+          {shared.content && <span className="mt-0.5 line-clamp-3 block text-sm text-white/75"><RichText text={shared.content} /></span>}
         </span>
         {shared.image && (
           // eslint-disable-next-line @next/next/no-img-element
