@@ -7,9 +7,10 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 export type PostMediaItem = { id: string; type: string; url: string };
 
 /**
- * Mídia de uma publicação, no estilo das redes: no celular vira um carrossel deslizável
- * com contador "1/N" (como o VK); no computador, uma grade inteligente (1/2/3/4+ com "+N").
- * Tocar em qualquer foto abre o visualizador em tela cheia com setas.
+ * Mídia de uma publicação. Mostra as fotos INTEIRAS (sem cortar), pois muita gente posta
+ * arte/pôster em retrato: uma foto aparece no tamanho natural (limitada por altura); várias
+ * viram um carrossel deslizável com contador "1/N" — no celular por deslize, no computador
+ * com setas. Tocar abre o visualizador em tela cheia.
  */
 export function PostMedia({ media }: { media: PostMediaItem[] }) {
   const [viewer, setViewer] = useState<number | null>(null);
@@ -18,14 +19,7 @@ export function PostMedia({ media }: { media: PostMediaItem[] }) {
 
   return (
     <div className="mb-3">
-      {n === 1 ? (
-        <Single item={media[0]} onOpen={() => setViewer(0)} />
-      ) : (
-        <>
-          <MobileCarousel items={media} onOpen={setViewer} />
-          <DesktopGrid items={media} onOpen={setViewer} />
-        </>
-      )}
+      {n === 1 ? <Single item={media[0]} onOpen={() => setViewer(0)} /> : <Carousel items={media} onOpen={setViewer} />}
       {viewer !== null && <Lightbox items={media} index={viewer} setIndex={setViewer} onClose={() => setViewer(null)} />}
     </div>
   );
@@ -35,19 +29,19 @@ function Single({ item, onOpen }: { item: PostMediaItem; onOpen: () => void }) {
   if (item.type === "video") {
     return (
       // eslint-disable-next-line jsx-a11y/media-has-caption
-      <video src={item.url} controls className="max-h-[520px] w-full rounded-xl bg-black object-contain" />
+      <video src={item.url} controls className="max-h-[600px] w-full rounded-xl bg-black object-contain" />
     );
   }
   return (
-    <button type="button" onClick={onOpen} className="block w-full overflow-hidden rounded-xl" aria-label="Abrir foto">
+    <button type="button" onClick={onOpen} className="flex w-full justify-center overflow-hidden rounded-xl bg-black/20" aria-label="Abrir foto">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={item.url} alt="" className="max-h-[520px] w-full object-cover transition hover:opacity-95" />
+      <img src={item.url} alt="" className="mx-auto max-h-[600px] w-auto max-w-full object-contain transition hover:opacity-95" />
     </button>
   );
 }
 
-/** Celular: carrossel com scroll-snap, contador e pontos. */
-function MobileCarousel({ items, onOpen }: { items: PostMediaItem[]; onOpen: (i: number) => void }) {
+/** Carrossel: mesmo comportamento no celular (deslize) e no computador (setas). */
+function Carousel({ items, onOpen }: { items: PostMediaItem[]; onOpen: (i: number) => void }) {
   const [index, setIndex] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -58,87 +52,65 @@ function MobileCarousel({ items, onOpen }: { items: PostMediaItem[]; onOpen: (i:
     if (i !== index) setIndex(i);
   }
 
+  function go(dir: number) {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollTo({ left: (index + dir) * el.clientWidth, behavior: "smooth" });
+  }
+
   return (
-    <div className="relative md:hidden">
+    <div className="group relative overflow-hidden rounded-xl bg-black/30">
       <div
         ref={ref}
         onScroll={onScroll}
-        className="flex snap-x snap-mandatory overflow-x-auto rounded-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex h-[min(70vh,540px)] snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {items.map((m, i) => (
-          <div key={m.id} className="w-full shrink-0 snap-center">
+          <div key={m.id} className="flex h-full w-full shrink-0 snap-center items-center justify-center">
             {m.type === "video" ? (
               // eslint-disable-next-line jsx-a11y/media-has-caption
-              <video src={m.url} controls className="max-h-[70vh] w-full bg-black object-contain" />
+              <video src={m.url} controls className="max-h-full w-full bg-black object-contain" />
             ) : (
-              <button type="button" onClick={() => onOpen(i)} className="block w-full" aria-label={`Abrir foto ${i + 1}`}>
+              <button type="button" onClick={() => onOpen(i)} className="flex h-full w-full items-center justify-center" aria-label={`Abrir foto ${i + 1}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={m.url} alt="" className="max-h-[70vh] w-full object-cover" />
+                <img src={m.url} alt="" className="max-h-full w-auto max-w-full object-contain" />
               </button>
             )}
           </div>
         ))}
       </div>
+
       <span className="pointer-events-none absolute right-2.5 top-2.5 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white backdrop-blur">
         {index + 1}/{items.length}
       </span>
+
+      {/* Setas (computador) */}
+      {index > 0 && (
+        <button
+          type="button"
+          onClick={() => go(-1)}
+          aria-label="Foto anterior"
+          className="absolute left-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-black/50 p-2 text-white opacity-0 transition hover:bg-black/70 group-hover:opacity-100 md:block"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+      )}
+      {index < items.length - 1 && (
+        <button
+          type="button"
+          onClick={() => go(1)}
+          aria-label="Próxima foto"
+          className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-black/50 p-2 text-white opacity-0 transition hover:bg-black/70 group-hover:opacity-100 md:block"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      )}
+
       <div className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center gap-1.5">
         {items.map((m, i) => (
           <span key={m.id} className={clsx("h-1.5 rounded-full transition-all", i === index ? "w-4 bg-white" : "w-1.5 bg-white/50")} />
         ))}
       </div>
-    </div>
-  );
-}
-
-/** Computador: grade inteligente 1/2/3/4+ com "+N" na última. */
-function DesktopGrid({ items, onOpen }: { items: PostMediaItem[]; onOpen: (i: number) => void }) {
-  const n = items.length;
-  const show = items.slice(0, 4);
-
-  const Tile = ({ i, className }: { i: number; className?: string }) => {
-    const m = items[i];
-    const extra = n > 4 && i === 3;
-    return (
-      <button type="button" onClick={() => onOpen(i)} className={clsx("group relative block overflow-hidden bg-white/[0.05]", className)} aria-label={`Abrir foto ${i + 1}`}>
-        {m.type === "video" ? (
-          // eslint-disable-next-line jsx-a11y/media-has-caption
-          <video src={m.url} className="h-full w-full object-cover" />
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={m.url} alt="" loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]" />
-        )}
-        {extra && (
-          <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-2xl font-bold text-white backdrop-blur-[1px]">
-            +{n - 4}
-          </span>
-        )}
-      </button>
-    );
-  };
-
-  return (
-    <div className="hidden overflow-hidden rounded-xl md:block">
-      {n === 2 && (
-        <div className="grid aspect-[2/1] grid-cols-2 gap-1">
-          <Tile i={0} className="h-full w-full" />
-          <Tile i={1} className="h-full w-full" />
-        </div>
-      )}
-      {n === 3 && (
-        <div className="grid aspect-[3/2] grid-cols-[2fr_1fr] grid-rows-2 gap-1">
-          <Tile i={0} className="row-span-2 h-full w-full" />
-          <Tile i={1} className="h-full w-full" />
-          <Tile i={2} className="h-full w-full" />
-        </div>
-      )}
-      {n >= 4 && (
-        <div className="grid aspect-square grid-cols-2 grid-rows-2 gap-1">
-          {show.map((m, i) => (
-            <Tile key={m.id} i={i} className="h-full w-full" />
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -187,12 +159,7 @@ function Lightbox({ items, index, setIndex, onClose }: { items: PostMediaItem[];
       </span>
 
       {items.length > 1 && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); go(-1); }}
-          aria-label="Anterior"
-          className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 md:left-6"
-        >
+        <button type="button" onClick={(e) => { e.stopPropagation(); go(-1); }} aria-label="Anterior" className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 md:left-6">
           <ChevronLeft className="h-6 w-6" />
         </button>
       )}
@@ -208,12 +175,7 @@ function Lightbox({ items, index, setIndex, onClose }: { items: PostMediaItem[];
       </div>
 
       {items.length > 1 && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); go(1); }}
-          aria-label="Próxima"
-          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 md:right-6"
-        >
+        <button type="button" onClick={(e) => { e.stopPropagation(); go(1); }} aria-label="Próxima" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 md:right-6">
           <ChevronRight className="h-6 w-6" />
         </button>
       )}

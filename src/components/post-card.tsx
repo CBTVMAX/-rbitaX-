@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -33,6 +33,31 @@ type CommentRow = {
   createdAt: string;
   user: { name: string; username: string; avatarUrl: string | null };
 };
+
+/** Texto do post com "Ver mais": posts longos aparecem recolhidos até uma altura e expandem ao tocar. */
+function ExpandableText({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [overflow, setOverflow] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (el && !expanded) setOverflow(el.scrollHeight > el.clientHeight + 4);
+  }, [text, expanded]);
+
+  return (
+    <div className="mb-3">
+      <div ref={ref} className={clsx("whitespace-pre-wrap text-sm leading-relaxed text-white/90", !expanded && "max-h-60 overflow-hidden")}>
+        <RichText text={text} />
+      </div>
+      {(overflow || expanded) && (
+        <button type="button" onClick={() => setExpanded((v) => !v)} className="mt-0.5 text-sm font-semibold text-orbit-cyan hover:underline">
+          {expanded ? "Ver menos" : "Ver mais"}
+        </button>
+      )}
+    </div>
+  );
+}
 
 export function PostCard({
   post,
@@ -262,7 +287,7 @@ export function PostCard({
           </div>
         </div>
       ) : (
-        content && <p className="mb-3 text-sm text-white/90"><RichText text={content} /></p>
+        content && <ExpandableText text={content} />
       )}
 
       {confirmDelete && (
