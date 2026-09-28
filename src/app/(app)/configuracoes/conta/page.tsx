@@ -73,6 +73,7 @@ export default async function AccountSettingsPage() {
           showLocation: profile?.showLocation ?? true,
           showInterests: profile?.showInterests ?? true,
           showRelationship: profile?.showRelationship ?? true,
+          familyVisibility: profile?.familyVisibility ?? "all",
           hasProfileRow: !!profile,
         }}
       />

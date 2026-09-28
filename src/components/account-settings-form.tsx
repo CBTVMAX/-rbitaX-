@@ -16,6 +16,7 @@ import {
   Camera,
   CheckCircle2,
   Heart,
+  ChevronRight,
   ImagePlus,
   Link2,
   Loader2,
@@ -26,9 +27,11 @@ import {
   Shield,
   Star,
   User,
+  Users,
   X,
   XCircle,
 } from "lucide-react";
+import Link from "next/link";
 
 const MAX_INTERESTS = 12;
 const BIO_MAX = 160;
@@ -56,6 +59,7 @@ export type EditProfileInitial = {
   showLocation: boolean;
   showInterests: boolean;
   showRelationship: boolean;
+  familyVisibility: string;
   hasProfileRow: boolean;
 };
 
@@ -190,6 +194,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
   const [year, setYear] = useState(birthYear ?? "");
   const [gender, setGender] = useState(initial.gender ?? "");
   const [relationship, setRelationship] = useState(initial.relationshipStatus ?? "");
+  const [familyVisibility, setFamilyVisibility] = useState(initial.familyVisibility ?? "all");
 
   const [showAge, setShowAge] = useState(initial.showAge);
   const [showSign, setShowSign] = useState(initial.showSign);
@@ -341,6 +346,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
       showLocation,
       showInterests,
       showRelationship,
+      familyVisibility,
       updatedAt: new Date().toISOString(),
     };
 
@@ -612,6 +618,22 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
         </Field>
       </Section>
 
+      <Section title="Parentes" subtitle="Pais, irmãos, filhos e outros — vínculos reais entre perfis." icon={Users}>
+        <Link
+          href="/configuracoes/conta/parentes"
+          className="flex items-center gap-3 rounded-xl border border-white/10 bg-space-bg/60 px-4 py-3.5 transition hover:border-orbit-purple/50"
+        >
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10">
+            <Users className="h-5 w-5 text-orbit-cyan" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium text-white">Meus parentes</span>
+            <span className="block text-xs text-white/45">Adicionar, editar e confirmar vínculos familiares</span>
+          </span>
+          <ChevronRight className="h-5 w-5 text-white/40" />
+        </Link>
+      </Section>
+
       <Section title="Privacidade" subtitle="Escolha o que será exibido no seu perfil." icon={Shield}>
         <div className="space-y-4">
           <Toggle label="Mostrar minha idade no perfil" icon={Calendar} checked={showAge} onChange={setShowAge} />
@@ -619,6 +641,15 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
           <Toggle label="Mostrar minha cidade no perfil" icon={MapPin} checked={showLocation} onChange={setShowLocation} />
           <Toggle label="Mostrar meus interesses no perfil" icon={Heart} checked={showInterests} onChange={setShowInterests} />
           <Toggle label="Mostrar meu relacionamento no perfil" icon={Heart} checked={showRelationship} onChange={setShowRelationship} />
+          <Field label="Quem pode ver seus parentes?" icon={Users}>
+            <SelectWrap>
+              <select value={familyVisibility} onChange={(e) => setFamilyVisibility(e.target.value)} className={selectClass}>
+                <option value="all">Todos</option>
+                <option value="friends">Amigos</option>
+                <option value="me">Somente eu</option>
+              </select>
+            </SelectWrap>
+          </Field>
           <Toggle label="Conta privada (apenas seguidores aprovados)" icon={Lock} checked={isPrivate} onChange={setIsPrivate} />
         </div>
       </Section>

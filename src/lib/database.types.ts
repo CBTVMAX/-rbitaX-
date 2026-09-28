@@ -139,8 +139,8 @@ type PostViewRow = { createdAt: string; id: string; postId: string; userId: stri
 type PostViewInsert = { createdAt?: string; id: string; postId: string; userId: string };
 type PostViewUpdate = Partial<PostViewInsert>;
 
-type ProfileRow = { birthDate: string | null; createdAt: string; gender: string | null; id: string; interests: string | null; links: string | null; location: string | null; occupation: string | null; showAge: boolean; relationshipStatus: string | null; showInterests: boolean; showRelationship: boolean; showLocation: boolean; showSign: boolean; updatedAt: string; userId: string; website: string | null; zodiacSign: string | null };
-type ProfileInsert = { birthDate?: string | null; createdAt?: string; gender?: string | null; id: string; interests?: string | null; links?: string | null; location?: string | null; occupation?: string | null; showAge?: boolean; relationshipStatus?: string | null; showInterests?: boolean; showRelationship?: boolean; showLocation?: boolean; showSign?: boolean; updatedAt?: string; userId: string; website?: string | null; zodiacSign?: string | null };
+type ProfileRow = { birthDate: string | null; createdAt: string; gender: string | null; id: string; interests: string | null; links: string | null; location: string | null; occupation: string | null; showAge: boolean; relationshipStatus: string | null; showInterests: boolean; showRelationship: boolean; showLocation: boolean; showSign: boolean; updatedAt: string; userId: string; website: string | null; zodiacSign: string | null; familyVisibility: string };
+type ProfileInsert = { birthDate?: string | null; createdAt?: string; gender?: string | null; id: string; interests?: string | null; links?: string | null; location?: string | null; occupation?: string | null; showAge?: boolean; relationshipStatus?: string | null; showInterests?: boolean; showRelationship?: boolean; showLocation?: boolean; showSign?: boolean; updatedAt?: string; userId: string; website?: string | null; zodiacSign?: string | null; familyVisibility?: string };
 type ProfileUpdate = Partial<ProfileInsert>;
 
 type ReportRow = { createdAt: string; details: string | null; id: string; reason: string; reporterId: string; resolvedAt: string | null; resolvedById: string | null; status: string; targetId: string; targetType: string; communityId: string | null };
@@ -373,6 +373,8 @@ export type Database = {
       family_remove: { Args: { p_relative_id: string }; Returns: void };
       family_of: { Args: { p_user_id: string }; Returns: { relativeId: string; relation: string; username: string; name: string; avatarUrl: string | null; isVerified: boolean }[] };
       family_requests: { Args: Record<string, never>; Returns: { id: string; userId: string; username: string; name: string; avatarUrl: string | null; relation: string; createdAt: string }[] };
+      family_sent: { Args: Record<string, never>; Returns: { id: string; relativeId: string; username: string; name: string; avatarUrl: string | null; relation: string; createdAt: string }[] };
+      family_update_relation: { Args: { p_relative_id: string; p_relation: string }; Returns: void };
       testimonial_write: { Args: { p_profile_id: string; p_body: string }; Returns: Json };
       testimonial_moderate: { Args: { p_id: string; p_action: string }; Returns: void };
       testimonials_of: { Args: { p_profile_id: string }; Returns: { id: string; authorId: string; username: string; name: string; avatarUrl: string | null; isVerified: boolean; body: string; createdAt: string }[] };
@@ -447,6 +449,7 @@ export type Database = {
           showLocation: boolean;
           showInterests: boolean;
           showRelationship: boolean;
+          familyVisibility: string;
         }[];
       };
       send_friend_request: { Args: { target_user_id: string }; Returns: string };

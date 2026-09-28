@@ -118,7 +118,7 @@ function RequestRow({ req, onRespond }: { req: FamilyRequest; onRespond: (id: st
   );
 }
 
-function AddFamilyDialog({ onClose }: { onClose: () => void }) {
+export function AddFamilyDialog({ onClose }: { onClose: () => void }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [query, setQuery] = useState("");
