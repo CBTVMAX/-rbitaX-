@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo, initials } from "@/lib/format";
-import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Repeat2 } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Repeat2, Pencil, Trash2, Link2, Check, X, Loader2 } from "lucide-react";
 import type { SharedEmbed } from "@/lib/shared-posts";
 import { clsx } from "clsx";
 import { VerifiedBadge } from "@/components/verified-badge";
@@ -16,6 +16,7 @@ export type FeedPost = {
   id: string;
   content: string;
   createdAt: string;
+  editedAt?: string | null;
   kind: string;
   author: { id: string; name: string; username: string; avatarUrl: string | null; isVerified: boolean };
   media: { id: string; type: string; url: string }[];
@@ -48,6 +49,16 @@ export function PostCard({
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [pinBusy, setPinBusy] = useState(false);
+  const isAuthor = currentUserId === post.author.id;
+  const [content, setContent] = useState(post.content);
+  const [edited, setEdited] = useState(!!post.editedAt);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(post.content);
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [removed, setRemoved] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   async function togglePin() {
     setPinBusy(true);
@@ -58,6 +69,46 @@ export function PostCard({
     setPinBusy(false);
     setMenuOpen(false);
     if (!error) router.refresh();
+  }
+
+  async function saveEdit() {
+    const text = draft.trim();
+    if (!text && post.media.length === 0) return; // não deixa post vazio sem mídia
+    setSaving(true);
+    const { error } = await supabase
+      .from("Post")
+      .update({ content: text, editedAt: new Date().toISOString() })
+      .eq("id", post.id);
+    setSaving(false);
+    if (!error) {
+      setContent(text);
+      setEdited(true);
+      setEditing(false);
+    }
+  }
+
+  async function removePost() {
+    setDeleting(true);
+    const { error } = await supabase.from("Post").delete().eq("id", post.id);
+    setDeleting(false);
+    setConfirmDelete(false);
+    setMenuOpen(false);
+    if (!error) {
+      setRemoved(true);
+      router.refresh();
+    }
+  }
+
+  async function copyLink() {
+    setMenuOpen(false);
+    try {
+      const url = `${window.location.origin}/perfil/${post.author.username}`;
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard indisponível */
+    }
   }
   const [liked, setLiked] = useState(post.likedByMe);
   const [likeCount, setLikeCount] = useState(post.likeCount);
@@ -113,6 +164,8 @@ export function PostCard({
     }
   }
 
+  if (removed) return null;
+
   return (
     <article className="rounded-2xl border border-white/10 bg-space-card p-4 md:p-5">
       {pinned && (
@@ -131,36 +184,105 @@ export function PostCard({
           </Link>
           <p className="text-xs text-white/40">
             @{post.author.username} · {timeAgo(post.createdAt)}
+            {edited && " · editada"}
           </p>
         </div>
-        {canPin && (
-          <div className="relative ml-auto">
-            <button
-              type="button"
-              onClick={() => setMenuOpen((v) => !v)}
-              aria-label="Opções da publicação"
-              className="rounded-lg p-1.5 text-white/50 transition hover:bg-white/5 hover:text-white"
-            >
-              <MoreHorizontal className="h-5 w-5" />
-            </button>
-            {menuOpen && (
-              <div className="absolute right-0 top-9 z-10 w-52 overflow-hidden rounded-xl border border-white/10 bg-space-surface shadow-2xl">
+        <div className="relative ml-auto">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label="Opções da publicação"
+            className="rounded-lg p-1.5 text-white/50 transition hover:bg-white/5 hover:text-white"
+          >
+            <MoreHorizontal className="h-5 w-5" />
+          </button>
+          {menuOpen && (
+            <>
+              <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-10 cursor-default" onClick={() => setMenuOpen(false)} />
+              <div className="absolute right-0 top-9 z-20 w-56 overflow-hidden rounded-xl border border-white/10 bg-space-surface shadow-2xl">
+                {isAuthor && (
+                  <button
+                    type="button"
+                    onClick={() => { setDraft(content); setEditing(true); setMenuOpen(false); }}
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-white/85 hover:bg-white/5"
+                  >
+                    <Pencil className="h-4 w-4" /> Editar publicação
+                  </button>
+                )}
+                {canPin && (
+                  <button
+                    type="button"
+                    onClick={togglePin}
+                    disabled={pinBusy}
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-white/85 hover:bg-white/5 disabled:opacity-50"
+                  >
+                    {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                    {pinned ? "Desafixar do perfil" : "Fixar no perfil"}
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={togglePin}
-                  disabled={pinBusy}
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-white/80 hover:bg-white/5 disabled:opacity-50"
+                  onClick={copyLink}
+                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-white/85 hover:bg-white/5"
                 >
-                  {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
-                  {pinned ? "Desafixar do perfil" : "Fixar no perfil"}
+                  {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Link2 className="h-4 w-4" />} {copied ? "Link copiado!" : "Copiar link"}
                 </button>
+                {isAuthor && (
+                  <button
+                    type="button"
+                    onClick={() => { setConfirmDelete(true); setMenuOpen(false); }}
+                    className="flex w-full items-center gap-2.5 border-t border-white/10 px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/5"
+                  >
+                    <Trash2 className="h-4 w-4" /> Excluir publicação
+                  </button>
+                )}
               </div>
-            )}
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </div>
 
-      {post.content && <p className="mb-3 text-sm text-white/90"><RichText text={post.content} /></p>}
+      {editing ? (
+        <div className="mb-3">
+          <textarea
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={3}
+            maxLength={5000}
+            className="w-full resize-none rounded-xl border border-white/10 bg-space-bg/60 px-3 py-2.5 text-sm text-white outline-none focus:border-orbit-purple/60"
+          />
+          <div className="mt-2 flex items-center justify-end gap-2">
+            <button type="button" onClick={() => setEditing(false)} className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/5">
+              <X className="h-3.5 w-3.5" /> Cancelar
+            </button>
+            <button type="button" onClick={saveEdit} disabled={saving} className="flex items-center gap-1.5 rounded-full bg-orbit-gradient px-4 py-1.5 text-xs font-semibold text-snow shadow-glow disabled:opacity-60">
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Salvar
+            </button>
+          </div>
+        </div>
+      ) : (
+        content && <p className="mb-3 text-sm text-white/90"><RichText text={content} /></p>
+      )}
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <button type="button" aria-label="Fechar" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !deleting && setConfirmDelete(false)} />
+          <div className="relative w-full max-w-sm rounded-2xl border border-white/10 bg-space-surface p-5 text-center shadow-2xl">
+            <Trash2 className="mx-auto mb-2 h-7 w-7 text-red-400" />
+            <p className="text-sm font-semibold text-white">Excluir esta publicação?</p>
+            <p className="mt-1 text-xs text-white/55">Isso não pode ser desfeito.</p>
+            <div className="mt-4 flex gap-2">
+              <button type="button" onClick={() => setConfirmDelete(false)} disabled={deleting} className="flex-1 rounded-full border border-white/15 py-2 text-sm font-semibold text-white/80 hover:bg-white/5">
+                Cancelar
+              </button>
+              <button type="button" onClick={removePost} disabled={deleting} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-red-500/90 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-60">
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {post.shared !== undefined && <SharedCard shared={post.shared} />}
 

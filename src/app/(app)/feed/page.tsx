@@ -17,7 +17,7 @@ export default async function FeedPage() {
   const { data: posts } = await supabase
     .from("Post")
     .select(
-      "id, content, createdAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, position), sharedPostId"
+      "id, content, createdAt, editedAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, position), sharedPostId"
     )
     .is("communityId", null)
     .order("createdAt", { ascending: false })
@@ -48,6 +48,7 @@ export default async function FeedPage() {
     id: p.id,
     content: p.content,
     createdAt: p.createdAt,
+    editedAt: p.editedAt,
     kind: p.kind,
     author: p.author as unknown as FeedPost["author"],
     media: sortMedia(p.media),

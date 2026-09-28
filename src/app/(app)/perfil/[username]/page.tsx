@@ -112,7 +112,7 @@ export default async function ProfilePage(props: { params: Promise<{ username: s
   });
 
   const postSelect =
-    "id, content, createdAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, position), sharedPostId" as const;
+    "id, content, createdAt, editedAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, position), sharedPostId" as const;
 
   const { data: recentPosts } = await supabase
     .from("Post")
@@ -154,6 +154,7 @@ export default async function ProfilePage(props: { params: Promise<{ username: s
     id: p.id,
     content: p.content,
     createdAt: p.createdAt,
+    editedAt: p.editedAt,
     kind: p.kind,
     author: p.author as unknown as FeedPost["author"],
     media: sortMedia(p.media),
