@@ -52,6 +52,35 @@ function MentionSuggestions({ items, onPick }: { items: MentionItem[]; onPick: (
   );
 }
 
+/** Miniaturas das fotos/vídeos escolhidos, numeradas na ordem em que serão publicadas. */
+function MediaThumbs({ files, onRemove }: { files: { url: string; video: boolean }[]; onRemove: (i: number) => void }) {
+  if (files.length === 0) return null;
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      {files.map((f, i) => (
+        <div key={f.url} className="relative h-20 w-20 overflow-hidden rounded-xl border border-white/10 bg-white/[0.05]">
+          {f.video ? (
+            // eslint-disable-next-line jsx-a11y/media-has-caption
+            <video src={f.url} muted className="h-full w-full object-cover" />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={f.url} alt="" className="h-full w-full object-cover" />
+          )}
+          <span className="absolute left-1 top-1 rounded bg-black/60 px-1 text-[10px] font-semibold text-white">{i + 1}</span>
+          <button
+            type="button"
+            onClick={() => onRemove(i)}
+            aria-label={`Remover foto ${i + 1}`}
+            className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white hover:bg-black/90"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function PostComposer({
   userId,
   name,
@@ -69,8 +98,7 @@ export function PostComposer({
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   const [content, setContent] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [files, setFiles] = useState<{ file: File; url: string; video: boolean }[]>([]);
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mentions, setMentions] = useState<MentionItem[]>([]);
@@ -120,62 +148,82 @@ export function PostComposer({
     });
   }
 
+  const MAX_FILES = 10;
+
   function pickFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setFile(f);
-    setPreview(URL.createObjectURL(f));
+    const chosen = Array.from(e.target.files ?? []);
+    if (!chosen.length) return;
+    setFiles((prev) =>
+      [...prev, ...chosen.map((file) => ({ file, url: URL.createObjectURL(file), video: file.type.startsWith("video") }))].slice(0, MAX_FILES)
+    );
+    if (fileRef.current) fileRef.current.value = "";
   }
 
-  function clearFile() {
-    setFile(null);
-    setPreview(null);
+  function removeAt(i: number) {
+    setFiles((prev) => {
+      const target = prev[i];
+      if (target) URL.revokeObjectURL(target.url);
+      return prev.filter((_, j) => j !== i);
+    });
+  }
+
+  function clearFiles() {
+    setFiles((prev) => {
+      prev.forEach((p) => URL.revokeObjectURL(p.url));
+      return [];
+    });
     if (fileRef.current) fileRef.current.value = "";
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!content.trim() && !file) return;
+    if (!content.trim() && files.length === 0) return;
     setPosting(true);
     setError(null);
 
     try {
       const postId = crypto.randomUUID();
-      // Confirm the real file type before creating anything, so a fake image cannot leave an orphan post.
-      const media = file ? await verifyUpload(file, ["image", "video"]) : null;
-      const isVideo = media?.startsWith("video") ?? false;
+      // Confirma o tipo real de cada arquivo antes de criar qualquer coisa (um "png" falso não passa).
+      const verified: string[] = [];
+      for (const f of files) {
+        const mime = await verifyUpload(f.file, ["image", "video"]);
+        verified.push(mime);
+      }
+      const hasImage = verified.some((m) => m.startsWith("image"));
+      const kind = files.length === 0 ? "text" : hasImage ? "image" : "video";
 
       const { error: postError } = await supabase.from("Post").insert({
         id: postId,
         authorId: userId,
         content: content.trim(),
-        kind: file ? (isVideo ? "video" : "image") : "text",
+        kind,
         updatedAt: new Date().toISOString(),
       });
       if (postError) throw postError;
 
-      if (file) {
-        const ext = file.name.split(".").pop();
-        const path = `${userId}/posts/${postId}.${ext}`;
-        const { error: uploadError } = await supabase.storage.from("media").upload(path, file, {
-          upsert: true,
-          contentType: media!,
-        });
+      // Sobe cada arquivo e grava a Media na ordem escolhida (position), para o carrossel/grade.
+      for (let i = 0; i < files.length; i++) {
+        const { file } = files[i];
+        const mime = verified[i];
+        const isVideo = mime.startsWith("video");
+        const ext = file.name.split(".").pop() || (isVideo ? "mp4" : "jpg");
+        const path = `${userId}/posts/${postId}-${i}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from("media").upload(path, file, { upsert: true, contentType: mime });
         if (uploadError) throw uploadError;
-
         const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
         const { error: mediaError } = await supabase.from("Media").insert({
           id: crypto.randomUUID(),
           postId,
           type: isVideo ? "video" : "image",
           url: pub.publicUrl,
-          mimeType: media!,
+          mimeType: mime,
+          position: i,
         });
         if (mediaError) throw mediaError;
       }
 
       setContent("");
-      clearFile();
+      clearFiles();
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Não foi possível publicar.");
@@ -225,26 +273,13 @@ export function PostComposer({
           </span>
         </div>
 
-        {preview && (
-          <div className="relative mt-3 inline-block">
-            {file?.type.startsWith("video") ? (
-              // eslint-disable-next-line jsx-a11y/media-has-caption
-              <video src={preview} className="max-h-64 rounded-xl" controls />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={preview} alt="" className="max-h-64 rounded-xl" />
-            )}
-            <button type="button" onClick={clearFile} className="absolute -right-2 -top-2 rounded-full bg-black/80 p-1 text-white">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        )}
+        <MediaThumbs files={files} onRemove={removeAt} />
 
         {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
 
         <div className="mt-3 flex items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-0.5 md:pl-14">
-            <input ref={fileRef} type="file" accept="image/*,video/*" hidden onChange={pickFile} />
+            <input ref={fileRef} type="file" accept="image/*,video/*" multiple hidden onChange={pickFile} />
             <button type="button" onClick={() => fileRef.current?.click()} className={action}>
               <ImageIcon className="h-4 w-4" /> Foto
             </button>
@@ -269,14 +304,14 @@ export function PostComposer({
           </div>
           <button
             type="submit"
-            disabled={posting || (!content.trim() && !file)}
+            disabled={posting || (!content.trim() && files.length === 0)}
             className="hidden shrink-0 rounded-full bg-orbit-gradient px-7 py-2 text-sm font-semibold text-snow shadow-glow transition hover:opacity-90 disabled:opacity-60 md:block"
           >
             {posting ? "Publicando..." : "Publicar"}
           </button>
         </div>
 
-        {(content.trim() || file) && (
+        {(content.trim() || files.length > 0) && (
           <button
             type="submit"
             disabled={posting}
@@ -311,30 +346,13 @@ export function PostComposer({
         </div>
       </div>
 
-      {preview && (
-        <div className="relative mt-3 inline-block">
-          {file?.type.startsWith("video") ? (
-            // eslint-disable-next-line jsx-a11y/media-has-caption
-            <video src={preview} className="max-h-64 rounded-xl" controls />
-          ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt="" className="max-h-64 rounded-xl" />
-          )}
-          <button
-            type="button"
-            onClick={clearFile}
-            className="absolute -right-2 -top-2 rounded-full bg-black/80 p-1 text-white"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      )}
+      <MediaThumbs files={files} onRemove={removeAt} />
 
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
 
       <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-3">
         <div className="flex gap-2">
-          <input ref={fileRef} type="file" accept="image/*,video/*" hidden onChange={pickFile} />
+          <input ref={fileRef} type="file" accept="image/*,video/*" multiple hidden onChange={pickFile} />
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
@@ -352,7 +370,7 @@ export function PostComposer({
         </div>
         <button
           type="submit"
-          disabled={posting || (!content.trim() && !file)}
+          disabled={posting || (!content.trim() && files.length === 0)}
           className="rounded-full bg-orbit-gradient px-5 py-1.5 text-sm font-semibold text-snow shadow-glow transition hover:opacity-90 disabled:opacity-40"
         >
           {posting ? "Publicando..." : "Publicar"}

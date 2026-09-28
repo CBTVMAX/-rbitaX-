@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/current-user";
 import { PostComposer } from "@/components/post-composer";
 import { PostCard, type FeedPost } from "@/components/post-card";
 import { loadSharedEmbeds } from "@/lib/shared-posts";
+import { sortMedia } from "@/lib/post-media";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export default async function FeedPage() {
   const { data: posts } = await supabase
     .from("Post")
     .select(
-      "id, content, createdAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url), sharedPostId"
+      "id, content, createdAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, position), sharedPostId"
     )
     .is("communityId", null)
     .order("createdAt", { ascending: false })
@@ -49,7 +50,7 @@ export default async function FeedPage() {
     createdAt: p.createdAt,
     kind: p.kind,
     author: p.author as unknown as FeedPost["author"],
-    media: (p.media as unknown as FeedPost["media"]) ?? [],
+    media: sortMedia(p.media),
     likeCount: likeCountByPost.get(p.id) ?? 0,
     commentCount: commentCountByPost.get(p.id) ?? 0,
     likedByMe: likedSet.has(p.id),

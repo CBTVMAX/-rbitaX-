@@ -9,6 +9,7 @@ import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Re
 import type { SharedEmbed } from "@/lib/shared-posts";
 import { clsx } from "clsx";
 import { VerifiedBadge } from "@/components/verified-badge";
+import { PostMedia } from "@/components/post-media";
 import { RichText } from "@/lib/rich-text";
 
 export type FeedPost = {
@@ -163,19 +164,7 @@ export function PostCard({
 
       {post.shared !== undefined && <SharedCard shared={post.shared} />}
 
-      {post.media.length > 0 && (
-        <div className={clsx("mb-3 grid gap-1 overflow-hidden rounded-xl", post.media.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
-          {post.media.map((m) =>
-            m.type === "video" ? (
-              // eslint-disable-next-line jsx-a11y/media-has-caption
-              <video key={m.id} src={m.url} controls className="max-h-[480px] w-full bg-black object-contain" />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={m.id} src={m.url} alt="" className="max-h-[480px] w-full object-cover" />
-            )
-          )}
-        </div>
-      )}
+      {post.media.length > 0 && <PostMedia media={post.media} />}
 
       <div className="flex items-center gap-5 border-t border-white/5 pt-3 text-xs text-white/50">
         <button

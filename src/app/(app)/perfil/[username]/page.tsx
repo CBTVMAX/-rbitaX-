@@ -3,6 +3,7 @@ import { parseFriendState } from "@/lib/friends";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, PUBLIC_USER_COLUMNS } from "@/lib/current-user";
 import type { FeedPost } from "@/components/post-card";
+import { sortMedia } from "@/lib/post-media";
 import { loadSharedEmbeds } from "@/lib/shared-posts";
 import { computeLevel } from "@/lib/level";
 import {
@@ -111,7 +112,7 @@ export default async function ProfilePage(props: { params: Promise<{ username: s
   });
 
   const postSelect =
-    "id, content, createdAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url), sharedPostId" as const;
+    "id, content, createdAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, position), sharedPostId" as const;
 
   const { data: recentPosts } = await supabase
     .from("Post")
@@ -155,7 +156,7 @@ export default async function ProfilePage(props: { params: Promise<{ username: s
     createdAt: p.createdAt,
     kind: p.kind,
     author: p.author as unknown as FeedPost["author"],
-    media: (p.media as unknown as FeedPost["media"]) ?? [],
+    media: sortMedia(p.media),
     likeCount: likeCountByPost.get(p.id) ?? 0,
     commentCount: commentCountByPost.get(p.id) ?? 0,
     likedByMe: likedSet.has(p.id),
