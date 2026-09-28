@@ -22,7 +22,7 @@ type CommentRow = { content: string; createdAt: string; id: string; postId: stri
 type CommentInsert = { content: string; createdAt?: string; id: string; postId: string; updatedAt: string; userId: string; parentId?: string | null };
 type CommentUpdate = Partial<CommentInsert>;
 
-type CommunityRow = { avatarUrl: string | null; category: string | null; coverUrl: string | null; createdAt: string; description: string | null; id: string; isPrivate: boolean; name: string; slug: string; username: string; isOfficial: boolean; accentColor: string | null; rules: string | null; links: Json; permissions: Json; moderation: Json; notifyPrefs: Json; memberCount: number; createdById: string | null; updatedAt: string; ownerId: string | null; status: string; tags: Json; welcome: Json; rulesList: Json; hashtagSuffix: string | null };
+type CommunityRow = { avatarUrl: string | null; category: string | null; coverUrl: string | null; createdAt: string; description: string | null; id: string; isPrivate: boolean; name: string; slug: string; username: string; isOfficial: boolean; accentColor: string | null; rules: string | null; links: Json; permissions: Json; moderation: Json; notifyPrefs: Json; memberCount: number; createdById: string | null; updatedAt: string; ownerId: string | null; status: string; tags: Json; welcome: Json; rulesList: Json; hashtagSuffix: string | null; isRpg: boolean };
 type CommunityRoleRow = { id: string; communityId: string; name: string; description: string | null; color: string; icon: string; rank: number; permissions: Json; sortOrder: number; createdAt: string };
 type CommunityMemberRoleRow = { id: string; communityId: string; userId: string; roleId: string; assignedById: string | null; createdAt: string };
 type CommunityTabRow = { id: string; communityId: string; name: string; hashtags: Json; sortOrder: number; createdAt: string };
@@ -490,6 +490,18 @@ export type Database = {
       community_hashtags: { Args: { p_community: string }; Returns: { id: string; label: string; slug: string; tag: string; sortOrder: number; count: number }[] };
       community_hashtag_posts: { Args: { p_community: string; p_slug: string; p_limit?: number; p_offset?: number }; Returns: { id: string; kind: string; content: string; createdAt: string; authorId: string; authorType: string }[] };
       search_community_topics: { Args: { p_query: string; p_limit?: number }; Returns: { communityId: string; communityName: string; communitySlug: string; communityAvatar: string | null; suffix: string; id: string; label: string; tag: string; count: number }[] };
+      rpg_set_config: { Args: { p_community: string; p: Json }; Returns: undefined };
+      rpg_config: { Args: { p_community: string }; Returns: { isRpg: boolean; requireApproval: boolean; whoCanCreate: string; allowHtml: boolean; intro: string | null; canManage: boolean; canCreate: boolean; myCharacterId: string | null }[] };
+      rpg_field_save: { Args: { p_community: string; p: Json }; Returns: string };
+      rpg_field_delete: { Args: { p_field: string }; Returns: undefined };
+      rpg_field_reorder: { Args: { p_community: string; p_ids: string[] }; Returns: undefined };
+      rpg_fields: { Args: { p_community: string }; Returns: { id: string; fkey: string; label: string; type: string; options: Json; required: boolean; section: string | null; sortOrder: number }[] };
+      rpg_character_save: { Args: { p_community: string; p: Json }; Returns: string };
+      rpg_character_delete: { Args: { p_character: string }; Returns: undefined };
+      rpg_character_moderate: { Args: { p_character: string; p_approve: boolean; p_reason?: string | null }; Returns: undefined };
+      rpg_character_get: { Args: { p_community: string; p_user: string }; Returns: { id: string; userId: string; name: string; role: string | null; quote: string | null; avatarUrl: string | null; coverUrl: string | null; theme: string; customHtml: string | null; status: string; rejectReason: string | null; values: Json; gallery: Json; ownerName: string; ownerUsername: string; ownerAvatar: string | null; isMine: boolean; canManage: boolean }[] };
+      rpg_characters: { Args: { p_community: string; p_limit?: number; p_offset?: number }; Returns: { id: string; userId: string; name: string; role: string | null; avatarUrl: string | null; status: string; ownerName: string; ownerUsername: string }[] };
+      my_rpg_characters: { Args: Record<string, never>; Returns: { communityId: string; communityName: string; communitySlug: string; communityAvatar: string | null; id: string; name: string; role: string | null; status: string; avatarUrl: string | null }[] };
       community_register_download: { Args: { p_post: string; p_media?: string | null }; Returns: undefined };
       community_download_stats: { Args: { p_post: string }; Returns: Json };
       community_download_audit: { Args: { p_community: string; p_limit?: number; p_offset?: number }; Returns: Json };

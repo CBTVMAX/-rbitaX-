@@ -39,10 +39,12 @@ export type Community = {
   status: "active" | "disabled";
   /** Sufixo curto (1–4 letras/números) no fim das hashtags de assunto, ex.: "OX". */
   hashtagSuffix: string | null;
+  /** Comunidade marcada como RPG (habilita Personagens/Fichas). */
+  isRpg: boolean;
 };
 
 export const COMMUNITY_COLUMNS =
-  "id, name, slug, username, description, category, avatarUrl, coverUrl, isPrivate, isOfficial, accentColor, rules, links, permissions, moderation, notifyPrefs, memberCount, createdAt, ownerId, status, hashtagSuffix";
+  "id, name, slug, username, description, category, avatarUrl, coverUrl, isPrivate, isOfficial, accentColor, rules, links, permissions, moderation, notifyPrefs, memberCount, createdAt, ownerId, status, hashtagSuffix, isRpg";
 
 /** Um assunto (ator/personagem) do catálogo da comunidade e sua hashtag final. */
 export type CommunitySubject = { id: string; label: string; slug: string; tag: string; sortOrder: number; count: number };

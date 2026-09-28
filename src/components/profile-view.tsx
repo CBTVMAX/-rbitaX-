@@ -15,6 +15,7 @@ import {
 import { presenceOf } from "@/lib/presence";
 import { relationshipLabel } from "@/lib/profile-options";
 import { CoinIcon, formatCoins } from "@/components/coins";
+import { MyRpgsCard } from "@/components/my-rpgs-card";
 import type { LevelInfo } from "@/lib/level";
 import { frameBackdropStyle, frameSrc, getFrame, type AvatarFrame } from "@/lib/avatar-frames";
 import { hasCustomAccent, profileAccentStyle, profileColorHex, profileColorLabel } from "@/lib/profile-colors";
@@ -616,6 +617,8 @@ export function ProfileView({
             </Link>
           </SideCard>
         ))}
+
+      {isMe && <MyRpgsCard username={user.username} />}
 
       {isMe && (
         <SideCard title="Seu tema atual">
