@@ -945,8 +945,8 @@ export function ProfileView({
           }}
         />
 
-        {/* Módulos laterais empilhados no mobile/tablet (no desktop ficam à direita). */}
-        <div className="space-y-3 lg:hidden">{aside}</div>
+        {/* Módulos laterais empilhados só no celular (no tablet/desktop ficam na coluna à direita). */}
+        <div className="space-y-3 md:hidden">{aside}</div>
       </div>
 
       <ProfileRightRail />

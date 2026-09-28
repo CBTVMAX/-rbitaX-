@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
+import { presenceOf } from "@/lib/presence";
+import { PresenceDot } from "@/components/presence-picker";
 import { disablePush } from "@/lib/push-client";
 import { endPresenceForSignOut } from "@/components/presence-heartbeat";
 import { saveCover } from "@/lib/cover-upload";
@@ -200,36 +202,37 @@ export function ProfileMoreMenu({
   );
 }
 
-function RailCard({
-  title,
-  icon: Icon,
-  heading,
-  text,
-  action,
-}: {
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  heading: string;
-  text: string;
-  action?: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-2xl border border-white/10 bg-space-surface/80 p-4">
-      <h2 className="mb-6 text-sm font-semibold text-white">{title}</h2>
-      <div className="flex flex-col items-center px-2 pb-4 text-center">
-        <Icon className="mb-4 h-11 w-11 text-orbit-blue/80" />
-        <p className="mb-2 text-sm font-semibold text-white">{heading}</p>
-        <p className="text-xs leading-relaxed text-white/50">{text}</p>
-        {action}
-      </div>
-    </section>
-  );
-}
 
 const RAIL_KEY = "orbitax:profile-rail-collapsed";
 
+type RailFriend = { id: string; name: string; username: string; avatarUrl: string | null; presence: string };
+type RailConv = {
+  id: string;
+  name: string | null;
+  avatarUrl: string | null;
+  isGroup: boolean;
+  unread: number;
+  otherUser: { username?: string; name?: string; avatarUrl?: string | null } | null;
+  lastMessage: { preview?: string; content?: string; type?: string } | null;
+};
+
+function convPreview(m: RailConv["lastMessage"]): string {
+  if (!m) return "";
+  if (m.preview) return m.preview;
+  if (m.type && m.type !== "text") {
+    const map: Record<string, string> = { image: "📷 Foto", video: "🎬 Vídeo", audio: "🎵 Áudio", sticker: "Figurinha", file: "📎 Arquivo", gift: "🎁 Presente" };
+    return map[m.type] ?? "Mensagem";
+  }
+  return m.content ?? "";
+}
+
 export function ProfileRightRail() {
+  const supabase = useMemo(() => createClient(), []);
   const [collapsed, setCollapsed] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+  const [friends, setFriends] = useState<RailFriend[]>([]);
+  const [convs, setConvs] = useState<RailConv[]>([]);
 
   useEffect(() => {
     try {
@@ -238,6 +241,38 @@ export function ProfileRightRail() {
       // storage unavailable: keep default
     }
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth.user?.id;
+      if (!uid) {
+        if (alive) setReady(true);
+        return;
+      }
+      if (alive) setSignedIn(true);
+      const [{ data: fr }, { data: cv }] = await Promise.all([
+        supabase.from("Friendship").select("requesterId, addresseeId").eq("status", "accepted").or(`requesterId.eq.${uid},addresseeId.eq.${uid}`).limit(200),
+        supabase.rpc("my_conversations"),
+      ]);
+      const ids = (fr ?? []).map((f) => (f.requesterId === uid ? f.addresseeId : f.requesterId));
+      let online: RailFriend[] = [];
+      if (ids.length) {
+        const { data: us } = await supabase.from("User").select("id, name, username, avatarUrl, presence").in("id", ids.slice(0, 200));
+        online = ((us ?? []) as RailFriend[]).filter((u) => presenceOf(u.presence) === "online");
+      }
+      const conversations = ((cv as unknown as RailConv[]) ?? []).slice(0, 6);
+      if (alive) {
+        setFriends(online);
+        setConvs(conversations);
+        setReady(true);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [supabase]);
 
   function toggle() {
     setCollapsed((v) => {
@@ -249,6 +284,9 @@ export function ProfileRightRail() {
       return !v;
     });
   }
+
+  // Rail é decoração opcional de telas largas; sem login (ou antes de carregar) não aparece.
+  if (!ready || !signedIn) return null;
 
   if (collapsed) {
     return (
@@ -266,42 +304,107 @@ export function ProfileRightRail() {
   }
 
   return (
-    <aside className="hidden w-[250px] shrink-0 space-y-4 2xl:block">
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={toggle}
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-white/50 transition hover:text-white"
-        >
-          <PanelRightClose className="h-3.5 w-3.5" /> Recolher
-        </button>
-      </div>
-      <RailCard
-        title="Amigos online"
-        icon={UsersRound}
-        heading="Nenhum amigo online no momento."
-        text="Quando seus amigos estiverem online, eles aparecerão aqui."
-      />
-      <RailCard
-        title="Conversas recentes"
-        icon={MessageCircle}
-        heading="Nenhuma conversa ainda."
-        text="Quando você conversar com alguém, suas conversas aparecerão aqui."
-      />
-      <RailCard
-        title="Comunidades sugeridas"
-        icon={OrbitIcon}
-        heading="Nenhuma comunidade por enquanto."
-        text="Explore comunidades e encontre conteúdos que você gosta."
-        action={
-          <Link
-            href="/comunidades"
-            className="mt-5 w-full rounded-xl border border-orbit-blue/60 py-2.5 text-sm font-medium text-orbit-blue transition hover:bg-orbit-blue/10"
+    <aside className="hidden w-[260px] shrink-0 space-y-4 2xl:block">
+      <div className="sticky top-20 space-y-4">
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={toggle}
+            className="flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-white/50 transition hover:text-white"
           >
-            Explorar comunidades
-          </Link>
-        }
-      />
+            <PanelRightClose className="h-3.5 w-3.5" /> Recolher
+          </button>
+        </div>
+
+        {/* Amigos online (dados reais) */}
+        <section className="rounded-2xl border border-white/10 bg-space-surface/80 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="flex items-center gap-1.5 text-sm font-semibold text-white">
+              <UsersRound className="h-4 w-4 text-orbit-cyan" /> Amigos online
+              {friends.length > 0 && <span className="text-xs font-normal text-white/45">({friends.length})</span>}
+            </h2>
+          </div>
+          {friends.length === 0 ? (
+            <p className="px-1 text-xs text-white/50">Nenhum amigo online agora.</p>
+          ) : (
+            <>
+              <ul className="space-y-1">
+                {friends.slice(0, 8).map((f) => (
+                  <li key={f.id}>
+                    <Link href={`/perfil/${f.username}`} className="flex items-center gap-2.5 rounded-xl px-1.5 py-1.5 transition hover:bg-white/5">
+                      <span className="relative shrink-0">
+                        <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-space-card">
+                          {f.avatarUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={f.avatarUrl} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <UsersRound className="h-4 w-4 text-white/40" />
+                          )}
+                        </span>
+                        <PresenceDot value={f.presence} userId={f.id} className="absolute -bottom-0.5 -right-0.5 h-3 w-3 border-2 border-space-surface" />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-sm text-white">{f.name}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <Link href="/amigos" className="mt-2 block rounded-lg py-1.5 text-center text-xs font-medium text-orbit-cyan hover:underline">
+                Mostrar todos
+              </Link>
+            </>
+          )}
+        </section>
+
+        {/* Conversas recentes (Messenger real) */}
+        <section className="rounded-2xl border border-white/10 bg-space-surface/80 p-4">
+          <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-white">
+            <MessageCircle className="h-4 w-4 text-orbit-cyan" /> Conversas
+          </h2>
+          {convs.length === 0 ? (
+            <p className="px-1 text-xs text-white/50">Nenhuma conversa ainda.</p>
+          ) : (
+            <>
+              <ul className="space-y-1">
+                {convs.map((c) => {
+                  const name = c.isGroup ? c.name ?? "Grupo" : c.otherUser?.name ?? "Conversa";
+                  const avatar = c.isGroup ? c.avatarUrl : c.otherUser?.avatarUrl ?? null;
+                  const href = c.isGroup
+                    ? `/mensagens?c=${encodeURIComponent(c.id)}`
+                    : c.otherUser?.username
+                      ? `/mensagens?com=${encodeURIComponent(c.otherUser.username)}`
+                      : "/mensagens";
+                  return (
+                    <li key={c.id}>
+                      <Link href={href} className="flex items-center gap-2.5 rounded-xl px-1.5 py-1.5 transition hover:bg-white/5">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-space-card">
+                          {avatar ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={avatar} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <MessageCircle className="h-4 w-4 text-white/40" />
+                          )}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm text-white">{name}</span>
+                          <span className="block truncate text-[11px] text-white/45">{convPreview(c.lastMessage)}</span>
+                        </span>
+                        {c.unread > 0 && (
+                          <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-orbit-pink px-1.5 text-[11px] font-bold text-snow">
+                            {c.unread > 99 ? "99+" : c.unread}
+                          </span>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+              <Link href="/mensagens" className="mt-2 block rounded-lg py-1.5 text-center text-xs font-medium text-orbit-cyan hover:underline">
+                Ver todas as conversas
+              </Link>
+            </>
+          )}
+        </section>
+      </div>
     </aside>
   );
 }
