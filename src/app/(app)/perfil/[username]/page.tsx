@@ -187,11 +187,26 @@ export default async function ProfilePage(props: { params: Promise<{ username: s
     if (b?.id && Array.isArray(b.badges) && b.badges.length) roleBadges[b.id] = b.badges;
   }
 
+  // Parentes (Família) e Depoimentos.
+  const [{ data: familyRows }, { data: testimonialRows }, familyReq, testiPend, myTesti] = await Promise.all([
+    supabase.rpc("family_of", { p_user_id: user.id }),
+    supabase.rpc("testimonials_of", { p_profile_id: user.id }),
+    isMe ? supabase.rpc("family_requests") : Promise.resolve({ data: [] }),
+    isMe ? supabase.rpc("testimonials_pending") : Promise.resolve({ data: [] }),
+    current && !isMe ? supabase.rpc("my_testimonial_for", { p_profile_id: user.id }) : Promise.resolve({ data: [] }),
+  ]);
+  const myTestimonial = Array.isArray(myTesti.data) && myTesti.data[0] ? myTesti.data[0] : null;
+
   return (
     <ProfileView
       user={user}
       info={info}
       current={current}
+      family={(familyRows ?? []) as never}
+      familyRequests={(familyReq.data ?? []) as never}
+      testimonials={(testimonialRows ?? []) as never}
+      testimonialsPending={(testiPend.data ?? []) as never}
+      myTestimonial={myTestimonial as never}
       isFollowing={!!myFollow}
       stats={{
         posts: postCount ?? 0,

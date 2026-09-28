@@ -119,6 +119,14 @@ type WebhookEventRow = { id: number; provider: string; eventType: string | null;
 type WebhookEventInsert = { provider: string; eventType?: string | null; resourceId?: string | null; requestId?: string | null; signatureOk?: boolean; status?: string; payload?: Json; note?: string | null; receivedAt?: string; processedAt?: string | null };
 type WebhookEventUpdate = Partial<WebhookEventInsert>;
 
+type FamilyLinkRow = { id: string; userId: string; relativeId: string; relation: string; status: string; createdAt: string; respondedAt: string | null };
+type FamilyLinkInsert = { id?: string; userId: string; relativeId: string; relation: string; status?: string; createdAt?: string; respondedAt?: string | null };
+type FamilyLinkUpdate = Partial<FamilyLinkInsert>;
+
+type TestimonialRow = { id: string; profileId: string; authorId: string; body: string; status: string; createdAt: string; approvedAt: string | null };
+type TestimonialInsert = { id?: string; profileId: string; authorId: string; body: string; status?: string; createdAt?: string; approvedAt?: string | null };
+type TestimonialUpdate = Partial<TestimonialInsert>;
+
 type PostRow = { authorId: string; commentsEnabled: boolean; content: string; createdAt: string; editedAt: string | null; id: string; isArchived: boolean; isPinned: boolean; kind: string; linkUrl: string | null; location: string | null; moderationStatus: string; sharedPostId: string | null; updatedAt: string; viewCount: number; visibility: string; communityId: string | null; albumId: string | null; meta: Json; authorType: string };
 type PostInsert = { authorId: string; commentsEnabled?: boolean; content: string; createdAt?: string; editedAt?: string | null; id: string; isArchived?: boolean; isPinned?: boolean; kind?: string; linkUrl?: string | null; location?: string | null; moderationStatus?: string; sharedPostId?: string | null; updatedAt: string; viewCount?: number; visibility?: string };
 type PostUpdate = Partial<PostInsert>;
@@ -295,6 +303,14 @@ export type Database = {
         { foreignKeyName: "DiamondOrder_packageId_fkey"; columns: ["packageId"]; isOneToOne: false; referencedRelation: "DiamondPackage"; referencedColumns: ["id"] }
       ] };
       WebhookEvent: { Row: WebhookEventRow; Insert: WebhookEventInsert; Update: WebhookEventUpdate; Relationships: [] };
+      FamilyLink: { Row: FamilyLinkRow; Insert: FamilyLinkInsert; Update: FamilyLinkUpdate; Relationships: [
+        { foreignKeyName: "FamilyLink_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
+        { foreignKeyName: "FamilyLink_relativeId_fkey"; columns: ["relativeId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
+      ] };
+      Testimonial: { Row: TestimonialRow; Insert: TestimonialInsert; Update: TestimonialUpdate; Relationships: [
+        { foreignKeyName: "Testimonial_profileId_fkey"; columns: ["profileId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
+        { foreignKeyName: "Testimonial_authorId_fkey"; columns: ["authorId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
+      ] };
       Post: { Row: PostRow; Insert: PostInsert; Update: PostUpdate; Relationships: [
         { foreignKeyName: "Post_authorId_fkey"; columns: ["authorId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
         { foreignKeyName: "Post_sharedPostId_fkey"; columns: ["sharedPostId"]; isOneToOne: false; referencedRelation: "Post"; referencedColumns: ["id"] }
@@ -342,6 +358,18 @@ export type Database = {
       admin_diamond_orders: { Args: { p_status?: string | null; p_limit?: number }; Returns: { id: string; userId: string; username: string; name: string; diamonds: number; amountBRL: number; status: string; provider: string; providerPaymentId: string | null; createdAt: string; paidAt: string | null }[] };
       admin_user_wallet: { Args: { p_query: string }; Returns: Json };
       admin_adjust_diamonds: { Args: { p_user: string; p_amount: number; p_reason: string }; Returns: Json };
+      family_relations: { Args: Record<string, never>; Returns: string[] };
+      family_default_inverse: { Args: { p_relation: string }; Returns: string };
+      family_add: { Args: { p_relative_id: string; p_relation: string }; Returns: Json };
+      family_respond: { Args: { p_link_id: string; p_accept: boolean; p_relation?: string | null }; Returns: Json };
+      family_remove: { Args: { p_relative_id: string }; Returns: void };
+      family_of: { Args: { p_user_id: string }; Returns: { relativeId: string; relation: string; username: string; name: string; avatarUrl: string | null; isVerified: boolean }[] };
+      family_requests: { Args: Record<string, never>; Returns: { id: string; userId: string; username: string; name: string; avatarUrl: string | null; relation: string; createdAt: string }[] };
+      testimonial_write: { Args: { p_profile_id: string; p_body: string }; Returns: Json };
+      testimonial_moderate: { Args: { p_id: string; p_action: string }; Returns: void };
+      testimonials_of: { Args: { p_profile_id: string }; Returns: { id: string; authorId: string; username: string; name: string; avatarUrl: string | null; isVerified: boolean; body: string; createdAt: string }[] };
+      testimonials_pending: { Args: Record<string, never>; Returns: { id: string; authorId: string; username: string; name: string; avatarUrl: string | null; body: string; createdAt: string }[] };
+      my_testimonial_for: { Args: { p_profile_id: string }; Returns: { body: string; status: string }[] };
       my_sessions: {
         Args: Record<string, never>;
         Returns: { id: string; device: string; ip: string | null; createdAt: string; lastActiveAt: string; current: boolean; mfaVerified: boolean }[];

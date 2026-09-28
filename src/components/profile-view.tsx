@@ -5,6 +5,8 @@ import { ProfileTabs } from "@/components/profile-tabs";
 import { FollowButton } from "@/components/follow-button";
 import { FriendButton, FriendRequestActions } from "@/components/friend-button";
 import { ProfileGiftButton } from "@/components/profile-gift-button";
+import { ProfileFamily, type FamilyMember, type FamilyRequest } from "@/components/profile-family";
+import { ProfileTestimonials, type Testimonial, type PendingTestimonial } from "@/components/profile-testimonials";
 import type { FriendState } from "@/lib/friends";
 import {
   OrbitIcon,
@@ -43,7 +45,6 @@ import {
   PenLine,
   Play,
   Plus,
-  Quote,
   Shield,
   Sparkles,
   User as UserIcon,
@@ -196,6 +197,11 @@ export type ProfileViewProps = {
   friends: ProfileFriend[];
   friendState?: FriendState;
   friendRequests?: ProfileFriend[];
+  family?: FamilyMember[];
+  familyRequests?: FamilyRequest[];
+  testimonials?: Testimonial[];
+  testimonialsPending?: PendingTestimonial[];
+  myTestimonial?: { body: string; status: string } | null;
 };
 
 export type ProfileCommunity = { id: string; name: string; slug: string; avatarUrl: string | null; role: string };
@@ -243,6 +249,11 @@ export function ProfileView({
   friends,
   friendState = "none",
   friendRequests = [],
+  family = [],
+  familyRequests = [],
+  testimonials = [],
+  testimonialsPending = [],
+  myTestimonial = null,
 }: ProfileViewProps) {
   const isMe = current?.authId === user.id;
 
@@ -825,20 +836,6 @@ export function ProfileView({
     </div>
   ) : undefined;
 
-  const testimonialsEmpty = (
-    <div className="rounded-2xl border border-white/10 bg-space-surface/80 px-6 py-12 text-center">
-      <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-pa/40 bg-pa/10">
-        <Quote className="h-6 w-6 text-pa" />
-      </span>
-      <p className="text-sm font-medium text-white/85">Nenhum depoimento ainda</p>
-      <p className="mx-auto mt-1 max-w-sm text-xs text-white/50">
-        {isMe
-          ? "Quando seus amigos escreverem depoimentos, eles aparecerão aqui para você aprovar antes de ficarem públicos."
-          : `Os depoimentos aprovados por ${user.name} aparecerão aqui.`}
-      </p>
-    </div>
-  );
-
   return (
     <div className="mx-auto flex max-w-[1240px] gap-5 px-3 pt-3 md:px-5 md:py-5" style={profileAccentStyle(user.profileColor)}>
       <div className="min-w-0 flex-1 space-y-3 md:space-y-4">
@@ -968,9 +965,20 @@ export function ProfileView({
               <div className="rounded-2xl border border-white/10 bg-space-surface/80 p-5">{aboutList}</div>
             ) : undefined,
             amigos: friendsList,
+            familia: <ProfileFamily isMe={isMe} family={family} requests={familyRequests} />,
             comunidades: communitiesList,
             conquistas: <AchievementsGrid achievements={achievements} isMe={isMe} name={user.name} />,
-            depoimentos: testimonialsEmpty,
+            depoimentos: (
+              <ProfileTestimonials
+                isMe={isMe}
+                canWrite={!!current}
+                profileName={user.name}
+                profileUserId={user.id}
+                approved={testimonials}
+                pending={testimonialsPending}
+                myExisting={myTestimonial}
+              />
+            ),
           }}
         />
 
