@@ -8,9 +8,11 @@ import {
   ArrowLeft,
   CalendarDays,
   ChevronRight,
+  Drama,
   FileText,
   Film,
   Globe,
+  Hash,
   Images,
   Info,
   Link2,
@@ -52,9 +54,10 @@ export type MemberPreview = { role: Role; createdAt: string; user: { id: string;
 const TAB_IDS: ContentTab[] = ["tudo", "posts", "fotos", "videos", "clipes", "musica", "gifs", "arquivos"];
 
 /** Round shortcuts under the header: each opens a real page of the community. */
-function Highlights({ slug, counts }: { slug: string; counts: { announcements: number; discussions: number; events: number } & ContentCounts }) {
+function Highlights({ slug, counts, isRpg }: { slug: string; counts: { announcements: number; discussions: number; events: number } & ContentCounts; isRpg?: boolean }) {
   const base = `/comunidades/${slug}`;
   const items: { href: string; label: string; icon: React.ComponentType<{ className?: string }>; count?: number; tone: string }[] = [
+    ...(isRpg ? [{ href: `${base}/personagens`, label: "Personagens", icon: Drama, tone: "from-orbit-purple to-orbit-pink" }] : []),
     { href: `${base}/avisos`, label: "Avisos", icon: Megaphone, count: counts.announcements, tone: "from-amber-400 to-orbit-pink" },
     { href: `${base}/discussoes`, label: "Discussões", icon: MessagesSquare, count: counts.discussions, tone: "from-orbit-purple to-orbit-pink" },
     { href: `${base}/eventos`, label: "Eventos", icon: CalendarDays, count: counts.events, tone: "from-orbit-cyan to-orbit-blue" },
@@ -63,10 +66,11 @@ function Highlights({ slug, counts }: { slug: string; counts: { announcements: n
     { href: `${base}/conteudo?aba=musica`, label: "Música", icon: Music2, count: counts.musica, tone: "from-orbit-pink to-orbit-purple" },
     { href: `${base}/conteudo?aba=arquivos`, label: "Arquivos", icon: FileText, count: counts.arquivos, tone: "from-slate-300 to-orbit-blue" },
     { href: `${base}/momentos`, label: "Momentos", icon: Sparkles, tone: "from-orbit-cyan via-orbit-purple to-orbit-pink" },
+    { href: `${base}/assuntos`, label: "Assuntos", icon: Hash, tone: "from-orbit-blue to-orbit-cyan" },
   ];
   return (
     <nav aria-label="Destaques da comunidade" className="-mx-4 md:mx-0">
-      <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:px-0 lg:grid lg:grid-cols-8 lg:gap-2">
+      <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:px-0 lg:grid lg:grid-cols-9 lg:gap-2">
         {items.map((it) => {
           const Icon = it.icon;
           return (
@@ -496,7 +500,7 @@ function Hub(p: HubProps) {
           </Link>
         )}
         {canSee && <StoriesStrip canSee={canSee} />}
-        {canSee && <Highlights slug={community.slug} counts={p.counts} />}
+        {canSee && <Highlights slug={community.slug} counts={p.counts} isRpg={community.isRpg} />}
       </div>
       <div className="mx-auto mt-4 max-w-6xl px-4 pb-10 md:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:px-10">
         <div className="min-w-0 space-y-4">

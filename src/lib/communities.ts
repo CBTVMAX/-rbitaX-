@@ -37,10 +37,29 @@ export type Community = {
   createdAt: string;
   ownerId: string | null;
   status: "active" | "disabled";
+  /** Sufixo curto (1–4 letras/números) no fim das hashtags de assunto, ex.: "OX". */
+  hashtagSuffix: string | null;
+  /** Comunidade marcada como RPG (habilita Personagens/Fichas). */
+  isRpg: boolean;
 };
 
 export const COMMUNITY_COLUMNS =
-  "id, name, slug, username, description, category, avatarUrl, coverUrl, isPrivate, isOfficial, accentColor, rules, links, permissions, moderation, notifyPrefs, memberCount, createdAt, ownerId, status";
+  "id, name, slug, username, description, category, avatarUrl, coverUrl, isPrivate, isOfficial, accentColor, rules, links, permissions, moderation, notifyPrefs, memberCount, createdAt, ownerId, status, hashtagSuffix, isRpg";
+
+/** Um assunto (ator/personagem) do catálogo da comunidade e sua hashtag final. */
+export type CommunitySubject = { id: string; label: string; slug: string; tag: string; sortOrder: number; count: number };
+
+/** Miolo da hashtag: minúsculas, alfanumérico (mantém acentos), sem espaços. Espelha o banco. */
+export function subjectSlug(label: string): string {
+  return (label || "").toLowerCase().replace(/[^a-z0-9à-ÿ]/gi, "");
+}
+
+/** Hashtag de exibição do assunto + sufixo da comunidade, ex.: #IanSomerhalderOX. */
+export function subjectHashtag(label: string, suffix: string | null | undefined): string {
+  const words = (label || "").trim().split(/[^A-Za-z0-9À-ÿ]+/).filter(Boolean);
+  const name = words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join("");
+  return `#${name}${(suffix || "").toUpperCase()}`;
+}
 
 export type Viewer = { id: string; name: string; username: string; avatarUrl: string | null } | null;
 

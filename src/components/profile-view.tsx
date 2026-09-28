@@ -14,6 +14,9 @@ import {
 } from "@/components/profile-client";
 import { presenceOf } from "@/lib/presence";
 import { relationshipLabel } from "@/lib/profile-options";
+import { CoinIcon, formatCoins } from "@/components/coins";
+import { MyRpgsCard } from "@/components/my-rpgs-card";
+import type { LevelInfo } from "@/lib/level";
 import { frameBackdropStyle, frameSrc, getFrame, type AvatarFrame } from "@/lib/avatar-frames";
 import { hasCustomAccent, profileAccentStyle, profileColorHex, profileColorLabel } from "@/lib/profile-colors";
 import { OnlineDot, PresenceDot, PresenceStatus } from "@/components/presence-picker";
@@ -169,11 +172,15 @@ export type ProfileViewProps = {
     coverUrl: string | null;
     profileColor: string;
     avatarFrame: string | null;
+    isPremium?: boolean;
   };
   info: ProfileInfo | null | undefined;
   current: { authId: string; profile: { name: string; avatarUrl: string | null } } | null;
   isFollowing: boolean;
   stats: { posts: number; friends: number; followers: number; following: number; communities: number };
+  level: LevelInfo;
+  /** Saldo real de Diamantes (Órbita Coins); só chega quando é o próprio perfil. */
+  coins?: number | null;
   feed: FeedPost[];
   pinnedPostId: string | null;
   communities: ProfileCommunity[];
@@ -220,6 +227,8 @@ export function ProfileView({
   current,
   isFollowing,
   stats,
+  level,
+  coins,
   feed,
   pinnedPostId,
   communities,
@@ -249,6 +258,11 @@ export function ProfileView({
       <div className="flex items-center gap-2">
         <h1 className="truncate font-display text-xl font-bold text-white md:text-2xl">{user.name}</h1>
         {user.isVerified && <VerifiedBadge className="h-5 w-5 md:h-6 md:w-6" />}
+        {user.isPremium && (
+          <span title="Órbita Premium" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orbit-purple text-space-bg md:h-6 md:w-6">
+            <Crown className="h-3 w-3 md:h-3.5 md:w-3.5" />
+          </span>
+        )}
       </div>
       <p className="mt-0.5 text-sm text-white/70">
         @{user.username}
@@ -527,6 +541,85 @@ export function ProfileView({
 
   const aside = (
     <>
+      <SideCard title="Nível">
+        <div className="flex items-center gap-3">
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orbit-gradient text-snow shadow-glow">
+            <span className="text-lg font-bold leading-none">{level.level}</span>
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-white">Nível {level.level}</p>
+            <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-white/10">
+              <span className="block h-full rounded-full bg-orbit-gradient" style={{ width: `${Math.round(level.progress * 100)}%` }} />
+            </div>
+            <p className="mt-1 text-[11px] text-white/50">
+              {level.xpIntoLevel.toLocaleString("pt-BR")} / {level.xpForNext.toLocaleString("pt-BR")} XP
+            </p>
+          </div>
+        </div>
+      </SideCard>
+
+      {isMe && (
+        <SideCard title="Órbita Coins">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <CoinIcon className="h-7 w-7" />
+              <div>
+                <p className="text-lg font-bold leading-none text-amber-300">{formatCoins(coins ?? 0)}</p>
+                <p className="mt-1 text-[11px] text-white/50">Diamantes</p>
+              </div>
+            </div>
+            <Link
+              href="/loja"
+              aria-label="Obter mais Diamantes"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orbit-gradient text-snow shadow-glow transition hover:opacity-90"
+            >
+              <Plus className="h-4 w-4" />
+            </Link>
+          </div>
+        </SideCard>
+      )}
+
+      {isMe &&
+        (user.isPremium ? (
+          <SideCard title="Órbita Premium">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400/30 to-orbit-purple/20 text-amber-300">
+                <Crown className="h-6 w-6" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-white">Premium ativo</p>
+                <p className="text-xs text-white/50">Perfil personalizado e vantagens.</p>
+              </div>
+            </div>
+            <Link
+              href="/configuracoes"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-space-bg/40 py-2 text-xs font-medium text-white/80 transition hover:bg-white/5 hover:text-white"
+            >
+              Gerenciar assinatura
+            </Link>
+          </SideCard>
+        ) : (
+          <SideCard title="Órbita Premium">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400/25 to-orbit-purple/15 text-amber-300">
+                <Crown className="h-6 w-6" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-white">Seja Premium</p>
+                <p className="text-xs text-white/50">Personalize seu perfil e desbloqueie vantagens.</p>
+              </div>
+            </div>
+            <Link
+              href="/loja"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-orbit-purple py-2 text-xs font-semibold text-space-bg shadow-glow transition hover:opacity-90"
+            >
+              <Crown className="h-3.5 w-3.5" /> Conhecer o Premium
+            </Link>
+          </SideCard>
+        ))}
+
+      {isMe && <MyRpgsCard username={user.username} />}
+
       {isMe && (
         <SideCard title="Seu tema atual">
           <div className="flex items-center gap-3">
@@ -854,6 +947,9 @@ export function ProfileView({
             depoimentos: testimonialsEmpty,
           }}
         />
+
+        {/* Módulos laterais empilhados só no celular (no tablet/desktop ficam na coluna à direita). */}
+        <div className="space-y-3 md:hidden">{aside}</div>
       </div>
 
       <ProfileRightRail />

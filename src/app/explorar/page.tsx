@@ -5,6 +5,7 @@ import { NotifyMeButton } from "@/components/notify-me-button";
 import { PeopleResults, type PersonResult } from "@/components/people-results";
 import { Avatar } from "@/components/post-card";
 import { COMMUNITY_CATEGORIES, categoryLabel } from "@/lib/community-categories";
+import { subjectHashtag } from "@/lib/communities";
 import { timeAgo } from "@/lib/format";
 import {
   Search,
@@ -75,6 +76,7 @@ type PublicPost = {
   imageUrl: string | null;
 };
 type CommunityCard = { id: string; name: string; slug: string; description: string | null; category: string | null; avatarUrl: string | null; coverUrl: string | null; memberCount: number };
+type TopicResult = { communityId: string; communityName: string; communitySlug: string; communityAvatar: string | null; suffix: string; id: string; label: string; tag: string; count: number };
 
 const HERO_ILLUSTRATION: Partial<Record<Tab, string>> = {
   "para-voce": "/explore-hero.webp",
@@ -130,6 +132,14 @@ export default async function ExplorarPage(
   if (searchesPeople && user) {
     const { data } = await supabase.rpc("search_profiles", { search_query: q, limit_count: 30 });
     people = (data as PersonResult[] | null) ?? [];
+  }
+
+  // Assuntos de comunidades (ator/personagem): o sufixo no fim diz de qual comunidade é.
+  const searchesTopics = q.length > 0 && (tab === "para-voce" || tab === "comunidades");
+  let topics: TopicResult[] = [];
+  if (searchesTopics) {
+    const { data } = await supabase.rpc("search_community_topics", { p_query: q, p_limit: 20 });
+    topics = (data as TopicResult[] | null) ?? [];
   }
 
   const tabHref = (id: Tab) => `/explorar?tab=${id}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
@@ -291,6 +301,37 @@ export default async function ExplorarPage(
         {searchesPeople && (
           <div className="mb-12">
             <PeopleResults query={q} people={people} signedIn={!!user} />
+          </div>
+        )}
+
+        {searchesTopics && topics.length > 0 && (
+          <div className="mb-12">
+            <h2 className="mb-4 flex items-center gap-2 text-base font-bold text-white">
+              <Search className="h-4 w-4 text-orbit-cyan" /> Assuntos em comunidades
+            </h2>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {topics.map((t) => {
+                const slugPart = t.suffix ? t.tag.slice(0, t.tag.length - t.suffix.length) : t.tag;
+                return (
+                  <Link
+                    key={t.id}
+                    href={`/comunidades/${t.communitySlug}/assuntos?a=${encodeURIComponent(slugPart)}`}
+                    className="flex items-center gap-3 rounded-2xl border border-white/10 bg-space-card p-3 transition hover:border-white/20"
+                  >
+                    <span className="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-space-bg">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={t.communityAvatar ?? "/orbit-mark.webp"} alt="" className="h-full w-full object-cover" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-orbit-cyan">{subjectHashtag(t.label, t.suffix)}</span>
+                      <span className="block truncate text-xs text-white/50">
+                        {t.communityName} · {t.count} {t.count === 1 ? "publicação" : "publicações"}
+                      </span>
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         )}
 
