@@ -11,6 +11,26 @@ import { AtSign, Bell, CalendarDays, CircleDot, Heart, Megaphone, MessageCircle,
 
 export const dynamic = "force-dynamic";
 
+// Sensible landing page per type when a notification has no actor and no explicit href,
+// so tapping a notification NEVER links back to the notifications list itself.
+const TYPE_FALLBACK: Record<string, string> = {
+  security: "/configuracoes/seguranca",
+  friend_request: "/amigos",
+  follow_request: "/amigos",
+  friend_accept: "/amigos",
+};
+
+/** Where a notification card goes when tapped. Guarantees it always leaves this page. */
+function notifTarget(type: string, href: string | null, actor: { username: string } | null | undefined): string {
+  // A stored self-href is treated as "no destination" so tapping never reloads this list.
+  const link = href && href !== "/notificacoes" ? href : null;
+  const isCommunity = type.startsWith("community_") || !!link?.startsWith("/comunidades/");
+  if (isCommunity && link) return link;
+  if (actor) return `/perfil/${actor.username}`;
+  if (link) return link;
+  return TYPE_FALLBACK[type] ?? "/feed";
+}
+
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   like: Heart,
   comment: MessageCircle,
@@ -86,7 +106,7 @@ export default async function NotificacoesPage() {
               className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-space-card p-3"
             >
               <Link
-                href={community && n.href ? n.href : actor ? `/perfil/${actor.username}` : n.href ?? "/notificacoes"}
+                href={notifTarget(n.type, n.href, actor)}
                 className="flex min-w-[12rem] flex-1 items-center gap-3"
               >
                 {actor ? (
