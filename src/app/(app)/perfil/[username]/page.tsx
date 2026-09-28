@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, PUBLIC_USER_COLUMNS } from "@/lib/current-user";
 import type { FeedPost } from "@/components/post-card";
 import { loadSharedEmbeds } from "@/lib/shared-posts";
+import { computeLevel } from "@/lib/level";
 import {
   ProfileView,
   type ProfileCommunity,
@@ -159,6 +160,22 @@ export default async function ProfilePage(props: { params: Promise<{ username: s
     return community ? [{ ...community, role: m.role }] : [];
   });
 
+  const isMe = current?.authId === user.id;
+  // Nível vem de atividade real (posts, seguidores, amizades, comunidades) — nada fictício.
+  const level = computeLevel({
+    posts: postCount ?? 0,
+    followers: followerIds.size,
+    friends: friendIds.length,
+    communities: communities.length,
+    following: followingIds.length,
+  });
+  // Diamantes = saldo real da carteira; só o dono do perfil vê o próprio saldo.
+  let coins: number | null = null;
+  if (isMe) {
+    const { data: bal } = await supabase.rpc("my_coin_balance");
+    coins = typeof bal === "number" ? bal : 0;
+  }
+
   // Privacy (idade, signo, cidade…) is applied by the database for whoever is viewing.
   const { data: detailRows } = await supabase.rpc("public_profile_details", { target_user_id: user.id });
   const info: ProfileInfo | null = Array.isArray(detailRows) && detailRows[0] ? detailRows[0] : null;
@@ -184,6 +201,8 @@ export default async function ProfilePage(props: { params: Promise<{ username: s
         communities: communities.length,
       }}
       feed={feed}
+      level={level}
+      coins={coins}
       pinnedPostId={pinnedPostId}
       communities={communities}
       roleBadges={roleBadges}
