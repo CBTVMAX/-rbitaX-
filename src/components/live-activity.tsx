@@ -80,6 +80,12 @@ export function LiveActivityProvider({
     timer.current = setTimeout(load, 250);
   }, [load]);
 
+  // Marca TODAS as notificações do usuário como lidas (RLS garante que só as dele).
+  // Awaited de propósito: o sino zera só depois que o banco confirma, sem corrida com o render.
+  const markNotificationsRead = useCallback(async () => {
+    await supabase.from("Notification").update({ isRead: true }).eq("userId", userId).eq("isRead", false);
+  }, [supabase, userId]);
+
   const pushToast = useCallback((toast: Omit<Toast, "id">) => {
     const id = crypto.randomUUID();
     setToasts((prev) => [...prev.slice(-2), { ...toast, id }]);
@@ -187,18 +193,35 @@ export function LiveActivityProvider({
   }, [supabase, userId, load, refresh, pushToast, person, router]);
 
   // Reading notifications/messages elsewhere in the app changes the counts.
-  // Abrir /notificacoes marca tudo como lido no servidor: zera o contador na hora
-  // (o refresh reconcilia depois), para o sino não ficar preso num número antigo.
+  // Ao abrir /notificacoes: zera o sino na hora (otimista), marca TUDO como lido no banco
+  // e SÓ então recarrega — sem corrida com o render do servidor, para o número não voltar.
   useEffect(() => {
-    if (pathname === "/notificacoes") setCounts((c) => (c.notifications ? { ...c, notifications: 0 } : c));
-    refresh();
-  }, [pathname, refresh]);
+    if (pathname === "/notificacoes") {
+      setCounts((c) => (c.notifications ? { ...c, notifications: 0 } : c));
+      markNotificationsRead()
+        .then(load)
+        .catch(() => refresh());
+    } else {
+      refresh();
+    }
+  }, [pathname, markNotificationsRead, load, refresh]);
 
-  // "(3) Órbita X" in the browser tab, like VK.
+  // "(3) Órbita X" na aba do navegador + número no ícone do app instalado (PWA).
   useEffect(() => {
-    const total = counts.messages + counts.notifications;
+    const total = counts.messages + counts.notifications + counts.friendRequests;
     const base = document.title.replace(/^\(\d+\+?\)\s*/, "");
     document.title = total > 0 ? `(${total > 99 ? "99+" : total}) ${base}` : base;
+    // Badging API: mantém (ou limpa) o contador no ícone do app instalado.
+    try {
+      const nav = navigator as Navigator & {
+        setAppBadge?: (n?: number) => Promise<void>;
+        clearAppBadge?: () => Promise<void>;
+      };
+      if (total > 0) nav.setAppBadge?.(total).catch(() => {});
+      else nav.clearAppBadge?.().catch(() => {});
+    } catch {
+      /* navegador sem suporte à Badging API */
+    }
   }, [counts, pathname]);
 
   const value = useMemo(() => ({ counts, refresh }), [counts, refresh]);

@@ -75,9 +75,10 @@ export default async function NotificacoesPage() {
     : { data: [] };
   const actorById = new Map((actors ?? []).map((a) => [a.id, a]));
 
-  const unreadIds = (notifications ?? []).filter((n) => !n.isRead).map((n) => n.id);
-  if (unreadIds.length) {
-    await supabase.from("Notification").update({ isRead: true }).in("id", unreadIds);
+  // Marca TODAS as não-lidas como lidas (não só as 50 exibidas), para o sino zerar de fato.
+  const hasUnread = (notifications ?? []).some((n) => !n.isRead);
+  if (hasUnread) {
+    await supabase.from("Notification").update({ isRead: true }).eq("userId", current.authId).eq("isRead", false);
   }
 
   return (
