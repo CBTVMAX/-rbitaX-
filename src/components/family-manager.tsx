@@ -137,7 +137,7 @@ export function FamilyManager({
         </button>
       </div>
 
-      {adding && <AddFamilyDialog onClose={() => setAdding(false)} />}
+      {adding && <AddFamilyDialog onClose={() => setAdding(false)} excludeIds={family.map((f) => f.relativeId)} />}
     </div>
   );
 }

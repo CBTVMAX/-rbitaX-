@@ -88,14 +88,13 @@ export function ProfileFamily({
         )}
       </div>
 
-      {adding && <AddFamilyDialog onClose={() => setAdding(false)} />}
+      {adding && <AddFamilyDialog onClose={() => setAdding(false)} excludeIds={family.map((f) => f.relativeId)} />}
     </div>
   );
 }
 
 function RequestRow({ req, onRespond }: { req: FamilyRequest; onRespond: (id: string, accept: boolean, relation?: string) => void }) {
   const [rel, setRel] = useState(defaultInverse(req.relation));
-  const [open, setOpen] = useState(false);
   return (
     <div className="rounded-xl border border-white/10 bg-space-bg/40 p-2.5">
       <div className="flex items-center gap-3">
@@ -118,7 +117,7 @@ function RequestRow({ req, onRespond }: { req: FamilyRequest; onRespond: (id: st
   );
 }
 
-export function AddFamilyDialog({ onClose }: { onClose: () => void }) {
+export function AddFamilyDialog({ onClose, excludeIds = [] }: { onClose: () => void; excludeIds?: string[] }) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -126,18 +125,41 @@ export function AddFamilyDialog({ onClose }: { onClose: () => void }) {
   const [picked, setPicked] = useState<Found | null>(null);
   const [relation, setRelation] = useState<string>("Mãe");
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [meId, setMeId] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (picked || query.trim().length < 2) { setResults([]); return; }
+    supabase.auth.getUser().then(({ data }) => setMeId(data.user?.id ?? null));
+  }, [supabase]);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (picked || q.length < 2) {
+      setResults([]);
+      setSearched(false);
+      setLoading(false);
+      return;
+    }
     if (timer.current) clearTimeout(timer.current);
+    setLoading(true);
     timer.current = setTimeout(async () => {
-      const { data } = await supabase.from("User").select("id, name, username, avatarUrl").ilike("username", `%${query.trim()}%`).limit(6);
-      setResults((data ?? []) as Found[]);
-    }, 250);
+      // Busca por NOME ou @usuário (digitar o nome da pessoa já mostra a lista).
+      const escaped = q.replace(/[%,()]/g, " ");
+      const { data } = await supabase
+        .from("User")
+        .select("id, name, username, avatarUrl")
+        .or(`name.ilike.%${escaped}%,username.ilike.%${escaped}%`)
+        .limit(12);
+      const hide = new Set([...(meId ? [meId] : []), ...excludeIds]);
+      setResults(((data ?? []) as Found[]).filter((u) => !hide.has(u.id)).slice(0, 8));
+      setLoading(false);
+      setSearched(true);
+    }, 220);
     return () => { if (timer.current) clearTimeout(timer.current); };
-  }, [query, picked, supabase]);
+  }, [query, picked, supabase, meId, excludeIds]);
 
   async function submit() {
     if (!picked) return;
@@ -186,7 +208,14 @@ export function AddFamilyDialog({ onClose }: { onClose: () => void }) {
           <div>
             <label className="relative flex items-center gap-2 rounded-2xl border border-white/10 bg-space-bg/50 px-3 py-2.5 focus-within:border-orbit-purple/60">
               <Search className="h-4 w-4 text-white/40" />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Pesquisar pessoa..." className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35" />
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Pesquisar por nome ou @usuário..."
+                className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35"
+              />
+              {loading && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-white/40" />}
             </label>
             <div className="mt-2 space-y-1">
               {results.map((r) => (
@@ -195,6 +224,12 @@ export function AddFamilyDialog({ onClose }: { onClose: () => void }) {
                   <div className="min-w-0"><p className="truncate text-sm text-white">{r.name}</p><p className="truncate text-xs text-white/50">@{r.username}</p></div>
                 </button>
               ))}
+              {!loading && searched && results.length === 0 && (
+                <p className="px-2 py-4 text-center text-sm text-white/45">Nenhuma pessoa encontrada.</p>
+              )}
+              {query.trim().length < 2 && (
+                <p className="px-2 py-4 text-center text-xs text-white/35">Digite o nome ou o @usuário para ver a lista de pessoas.</p>
+              )}
             </div>
           </div>
         )}
