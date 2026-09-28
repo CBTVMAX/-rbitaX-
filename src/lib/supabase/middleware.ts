@@ -18,16 +18,29 @@ const PROTECTED_PREFIXES = [
 // Pages a signed-in person may open before confirming the two-step verification code.
 const MFA_FREE = ["/entrar", "/auth", "/api", "/redefinir-senha", "/termos", "/privacidade", "/sobre"];
 
+// Áreas dinâmicas do app (renderizadas por requisição): aqui o Next injeta o nonce nos
+// scripts, então usamos a CSP forte com nonce + strict-dynamic. É onde vive o conteúdo
+// gerado por usuários (maior superfície de XSS). Páginas fora desta lista (login, cadastro,
+// landing, termos… muitas são estáticas/pré-renderizadas, onde o nonce por requisição não
+// entra no HTML) recebem uma CSP que funciona em página estática, sem quebrar os scripts.
+const STRICT_APP_PREFIXES = [
+  "/feed", "/mensagens", "/comunidades", "/perfil", "/configuracoes",
+  "/notificacoes", "/amigos", "/diamantes", "/loja", "/admin",
+  "/explorar", "/musica", "/videos",
+];
+
 /**
- * CSP por requisição com nonce. Em produção, script-src usa 'nonce-...' + 'strict-dynamic'
- * (sem 'unsafe-inline'): o Next.js aplica o nonce automaticamente aos próprios scripts ao
- * ler o header content-security-policy da requisição, e o strict-dynamic permite os chunks
- * carregados por eles. Em desenvolvimento mantém unsafe-inline/eval para o HMR/overlay.
+ * CSP por requisição. Em produção, nas áreas dinâmicas do app, script-src usa
+ * 'nonce-...' + 'strict-dynamic' (sem 'unsafe-inline'): o Next aplica o nonce aos próprios
+ * scripts. Nas demais páginas (estáticas), usa 'self' 'unsafe-inline' — a única forma de os
+ * scripts do Next rodarem em HTML pré-gerado. Em desenvolvimento mantém unsafe-eval p/ HMR.
  */
-function buildCsp(nonce: string, isDev: boolean): string {
+function buildCsp(nonce: string, isDev: boolean, strict: boolean): string {
   const scriptSrc = isDev
     ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`;
+    : strict
+      ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`
+      : "script-src 'self' 'unsafe-inline'";
   return [
     "default-src 'self'",
     scriptSrc,
@@ -50,7 +63,8 @@ function buildCsp(nonce: string, isDev: boolean): string {
 export async function updateSession(request: NextRequest) {
   const isDev = process.env.NODE_ENV !== "production";
   const nonce = crypto.randomUUID().replace(/-/g, "");
-  const csp = buildCsp(nonce, isDev);
+  const strictCsp = STRICT_APP_PREFIXES.some((p) => request.nextUrl.pathname.startsWith(p));
+  const csp = buildCsp(nonce, isDev, strictCsp);
 
   // O Next lê o nonce do header content-security-policy da REQUISIÇÃO e o aplica aos seus scripts.
   const requestHeaders = new Headers(request.headers);
