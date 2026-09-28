@@ -9,6 +9,7 @@ import { LiveActivityProvider } from "@/components/live-activity";
 import { PushPrompt } from "@/components/pwa";
 import { AppSidebar, AppTopBar, MobileHeader, MobileTabBar } from "@/components/app-sidebar";
 import { AccountSync } from "@/components/account-sync";
+import { ChatDock } from "@/components/chat-dock";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <AppSidebar username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} />
         <main className="min-h-screen pb-24 md:ml-64 md:pb-0 md:pt-16">{children}</main>
         <MobileTabBar username={profile.username} />
+        <ChatDock me={{ id: current.authId, name: profile.name, username: profile.username, avatarUrl: profile.avatarUrl }} />
         <PushPrompt />
       </div>
     </LiveActivityProvider>
