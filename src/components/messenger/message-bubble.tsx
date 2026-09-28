@@ -7,6 +7,7 @@ import { formatTime, isEmojiOnly, messagePreview, URL_PATTERN } from "@/lib/mess
 import type { ChatMessage, Member, PollVote, Reaction } from "@/lib/messenger/types";
 import {
   ContactCard,
+  DiceCard,
   FileCard,
   GiftCard,
   GifView,
@@ -236,6 +237,7 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
   else if (m.type === "voice") body = <VoicePlayer message={m} mine={mine} meta={<Meta m={m} mine={mine} state={state} favorite={favorite} />} />;
   else if (m.type === "music") body = <MusicCard message={m} mine={mine} meta={<Meta m={m} mine={mine} state={state} favorite={favorite} />} />;
   else if (m.type === "gift") body = <GiftCard message={m} mine={mine} />;
+  else if (m.type === "dice") body = <DiceCard message={m} mine={mine} />;
   else if (m.type === "location") body = <LocationCard message={m} mine={mine} />;
   else if (m.type === "contact") body = <ContactCard message={m} mine={mine} />;
   else if (m.type === "poll") body = <PollCard message={m} mine={mine} votes={p.votes} meId={p.meId} onVote={(ix) => p.onVote(m, ix)} />;

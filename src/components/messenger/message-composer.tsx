@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { Ban, Keyboard, Lock, Mic, Plus, Send, Smile, Trash2, UserMinus, X } from "lucide-react";
+import { Ban, Dices, Keyboard, Lock, Mic, Plus, Send, Smile, Trash2, UserMinus, X } from "lucide-react";
 import { formatDuration, messagePreview } from "@/lib/messenger/format";
 import type { Attachment, ChatMessage, SendStatus, StickerInfo } from "@/lib/messenger/types";
 import { AttachmentMenu, type AttachmentChoice } from "./attachment-menu";
@@ -24,7 +24,21 @@ export type ComposerApi = {
   openLink: () => void;
   openGift: () => void;
   openSave: () => void;
+  /** Rola dados no servidor (grupos). Retorna ok=false com error quando o comando é inválido. */
+  dice: (expr: string) => Promise<{ ok: boolean; error?: string }>;
 };
+
+const DICE = [
+  { d: "d4", sides: 4 },
+  { d: "d6", sides: 6 },
+  { d: "d8", sides: 8 },
+  { d: "d10", sides: 10 },
+  { d: "d12", sides: 12 },
+  { d: "d20", sides: 20 },
+  { d: "d100", sides: 100 },
+] as const;
+
+const DICE_CMD = /^\/(?:r|roll)\s+(.+)$/i;
 
 const drafts = new Map<string, string>();
 let lastTab: PanelTab = "stickers";
@@ -74,6 +88,7 @@ export function MessageComposer({
   onCancelReply,
   api,
   inSaved = false,
+  isGroup = false,
 }: {
   conversationId: string;
   replyTo: ChatMessage | null;
@@ -81,10 +96,13 @@ export function MessageComposer({
   onCancelReply: () => void;
   api: ComposerApi;
   inSaved?: boolean;
+  isGroup?: boolean;
 }) {
   const [text, setText] = useState(() => drafts.get(conversationId) ?? "");
   const [menuOpen, setMenuOpen] = useState(false);
   const [panel, setPanel] = useState<null | PanelTab>(null);
+  const [diceOpen, setDiceOpen] = useState(false);
+  const [hint, setHint] = useState<string | null>(null);
   const [pending, setPending] = useState<{ file: File; url: string }[]>([]);
   const [recording, setRecording] = useState<null | { started: number }>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -136,6 +154,12 @@ export function MessageComposer({
 
   useEffect(() => () => pending.forEach((p) => URL.revokeObjectURL(p.url)), [pending]);
 
+  useEffect(() => {
+    if (!hint) return;
+    const t = setTimeout(() => setHint(null), 4500);
+    return () => clearTimeout(t);
+  }, [hint]);
+
   const canSend = text.trim().length > 0 || pending.length > 0;
 
   function submit() {
@@ -150,9 +174,34 @@ export function MessageComposer({
     }
     const t = text.trim();
     if (!t) return;
+    // Comando de rolagem de dados (grupos): /r d20, /roll 2d10…
+    const dm = t.match(DICE_CMD);
+    if (dm) {
+      if (!isGroup) {
+        setHint("🎲 A rolagem de dados funciona só em grupos.");
+        return;
+      }
+      void api.dice(dm[1].trim()).then((res) => {
+        if (res.ok) {
+          setText("");
+          input.current?.focus();
+        } else if (res.error === "invalid") {
+          setHint("🎲 Comando de dado inválido. Disponíveis: D4, D6, D8, D10, D12, D20 e D100.");
+        } else {
+          setHint("🎲 Não foi possível rolar agora. Tente de novo.");
+        }
+      });
+      return;
+    }
     api.text(t.slice(0, 4000));
     setText("");
     input.current?.focus();
+  }
+
+  function rollFromSheet(d: string) {
+    setDiceOpen(false);
+    setText(`/r ${d}`);
+    requestAnimationFrame(() => input.current?.focus());
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -345,6 +394,14 @@ export function MessageComposer({
         </p>
       )}
 
+      {hint && (
+        <p className="animate-pop-in mx-auto mb-2 max-w-3xl rounded-xl border border-orbit-purple/25 bg-orbit-purple/10 px-3 py-2 text-xs text-white/80">
+          {hint}
+        </p>
+      )}
+
+      {diceOpen && <DiceSheet onPick={rollFromSheet} onClose={() => setDiceOpen(false)} />}
+
       <div className="mx-auto flex max-w-3xl items-end gap-1.5 md:gap-2">
         {recording ? (
           <>
@@ -418,6 +475,21 @@ export function MessageComposer({
               </button>
             </div>
 
+            {isGroup && !canSend && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPanel(null);
+                  setDiceOpen((v) => !v);
+                }}
+                aria-label="Rolar dados"
+                title="Rolar dados"
+                className={clsx(round, diceOpen ? "bg-chat/20 text-chat" : "border border-white/10 bg-white/[0.05] text-white/80 hover:border-chat/40 hover:text-white")}
+              >
+                <Dices className="h-5 w-5" />
+              </button>
+            )}
+
             {canSend ? (
               <button
                 type="button"
@@ -447,6 +519,44 @@ export function MessageComposer({
       <span className="sr-only" aria-live="polite">
         {recording ? "Gravando" : ""}
       </span>
+    </div>
+  );
+}
+
+/** Seletor de dados (grupos): toca no dado e o comando /r dX vai para o campo de mensagem. */
+function DiceSheet({ onPick, onClose }: { onPick: (d: string) => void; onClose: () => void }) {
+  return (
+    <div className="animate-sheet-up absolute bottom-full left-0 right-0 mb-2 md:left-auto md:right-4 md:w-[360px]">
+      <div className="rounded-2xl border border-white/10 bg-space-surface/95 p-3 shadow-2xl backdrop-blur-xl">
+        <div className="mb-2 flex items-center justify-between px-1">
+          <p className="flex items-center gap-2 text-sm font-semibold text-white">
+            <Dices className="h-4 w-4 text-chat" /> Rolar dados
+          </p>
+          <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-full p-1 text-white/50 hover:bg-white/5 hover:text-white">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => onPick("d20")}
+          className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl border border-chat/50 bg-chat/10 py-2.5 text-sm font-semibold text-white"
+        >
+          <Dices className="h-4 w-4 text-chat" /> /r d20
+        </button>
+        <div className="grid grid-cols-3 gap-2">
+          {DICE.filter((d) => d.d !== "d20").map((d) => (
+            <button
+              key={d.d}
+              type="button"
+              onClick={() => onPick(d.d)}
+              className="flex flex-col items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] py-2.5 text-white/85 transition hover:border-chat/40 hover:bg-white/[0.07]"
+            >
+              <span className="text-xs font-semibold">/r {d.d}</span>
+              <span className="text-[10px] text-white/40">{d.sides} lados</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

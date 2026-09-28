@@ -127,6 +127,10 @@ type TestimonialRow = { id: string; profileId: string; authorId: string; body: s
 type TestimonialInsert = { id?: string; profileId: string; authorId: string; body: string; status?: string; createdAt?: string; approvedAt?: string | null };
 type TestimonialUpdate = Partial<TestimonialInsert>;
 
+type DiceRollRow = { id: string; conversationId: string; userId: string; dice: string; sides: number; count: number; rolls: number[]; total: number; messageId: string | null; createdAt: string };
+type DiceRollInsert = { id?: string; conversationId: string; userId: string; dice: string; sides: number; count?: number; rolls: number[]; total: number; messageId?: string | null; createdAt?: string };
+type DiceRollUpdate = Partial<DiceRollInsert>;
+
 type PostRow = { authorId: string; commentsEnabled: boolean; content: string; createdAt: string; editedAt: string | null; id: string; isArchived: boolean; isPinned: boolean; kind: string; linkUrl: string | null; location: string | null; moderationStatus: string; sharedPostId: string | null; updatedAt: string; viewCount: number; visibility: string; communityId: string | null; albumId: string | null; meta: Json; authorType: string };
 type PostInsert = { authorId: string; commentsEnabled?: boolean; content: string; createdAt?: string; editedAt?: string | null; id: string; isArchived?: boolean; isPinned?: boolean; kind?: string; linkUrl?: string | null; location?: string | null; moderationStatus?: string; sharedPostId?: string | null; updatedAt: string; viewCount?: number; visibility?: string };
 type PostUpdate = Partial<PostInsert>;
@@ -311,6 +315,10 @@ export type Database = {
         { foreignKeyName: "Testimonial_profileId_fkey"; columns: ["profileId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
         { foreignKeyName: "Testimonial_authorId_fkey"; columns: ["authorId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
       ] };
+      DiceRoll: { Row: DiceRollRow; Insert: DiceRollInsert; Update: DiceRollUpdate; Relationships: [
+        { foreignKeyName: "DiceRoll_conversationId_fkey"; columns: ["conversationId"]; isOneToOne: false; referencedRelation: "Conversation"; referencedColumns: ["id"] },
+        { foreignKeyName: "DiceRoll_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
+      ] };
       Post: { Row: PostRow; Insert: PostInsert; Update: PostUpdate; Relationships: [
         { foreignKeyName: "Post_authorId_fkey"; columns: ["authorId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
         { foreignKeyName: "Post_sharedPostId_fkey"; columns: ["sharedPostId"]; isOneToOne: false; referencedRelation: "Post"; referencedColumns: ["id"] }
@@ -370,6 +378,7 @@ export type Database = {
       testimonials_of: { Args: { p_profile_id: string }; Returns: { id: string; authorId: string; username: string; name: string; avatarUrl: string | null; isVerified: boolean; body: string; createdAt: string }[] };
       testimonials_pending: { Args: Record<string, never>; Returns: { id: string; authorId: string; username: string; name: string; avatarUrl: string | null; body: string; createdAt: string }[] };
       my_testimonial_for: { Args: { p_profile_id: string }; Returns: { body: string; status: string }[] };
+      roll_dice: { Args: { p_conversation_id: string; p_expr: string }; Returns: Json };
       my_sessions: {
         Args: Record<string, never>;
         Returns: { id: string; device: string; ip: string | null; createdAt: string; lastActiveAt: string; current: boolean; mfaVerified: boolean }[];

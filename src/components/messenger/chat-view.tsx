@@ -497,6 +497,12 @@ export function ChatView({
 
   const api: ComposerApi = {
     text: (text) => queue({ type: "text", content: text, attachments: [], meta: {}, uploads: [] }),
+    dice: async (expr) => {
+      // Resultado gerado no servidor; o realtime entrega a mensagem para todos os membros.
+      const { error } = await supabase.rpc("roll_dice", { p_conversation_id: c.id, p_expr: expr });
+      if (error) return { ok: false, error: /invalid_dice/.test(error.message) ? "invalid" : "fail" };
+      return { ok: true };
+    },
     sticker: (id, info) => queue({ type: "sticker", content: "", attachments: [], meta: { sticker: id, stickerInfo: info ?? null }, uploads: [] }),
     media: async (files, caption) => {
       const attachments: Attachment[] = [];
@@ -914,7 +920,7 @@ export function ChatView({
         </div>
 
         {c.sendStatus === "ok" ? (
-          <MessageComposer conversationId={c.id} replyTo={replyTo} replyName={replyName} onCancelReply={() => setReplyTo(null)} api={api} inSaved={c.isSaved} />
+          <MessageComposer conversationId={c.id} replyTo={replyTo} replyName={replyName} onCancelReply={() => setReplyTo(null)} api={api} inSaved={c.isSaved} isGroup={!!c.isGroup} />
         ) : (
           <ComposerLocked status={c.sendStatus} username={c.otherUser?.username} name={c.otherUser?.name} />
         )}

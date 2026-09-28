@@ -92,6 +92,8 @@ export function messagePreview(type: MessageType | string, content: string, meta
       return `📊 ${meta.question ?? "Enquete"}`;
     case "gift":
       return `🎁 Presente: ${meta.giftName ?? "Presente"}`;
+    case "dice":
+      return `🎲 ${meta.roll ? `${meta.roll.dice.toUpperCase()} → ${meta.roll.total}` : "Rolagem de dados"}`;
     default:
       return content;
   }

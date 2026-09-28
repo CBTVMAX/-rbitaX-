@@ -5,6 +5,7 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import {
   Check,
+  Dices,
   Download,
   FileArchive,
   FileAudio,
@@ -460,6 +461,34 @@ export function MusicCard({ message, mine, meta }: { message: ChatMessage; mine:
             setProgress(el.duration ? el.currentTime / el.duration : 0);
           }}
         />
+      )}
+    </div>
+  );
+}
+
+/** Rolagem de dados nativa do Messenger (resultado gerado no servidor). */
+export function DiceCard({ message, mine }: { message: ChatMessage; mine: boolean }) {
+  const roll = message.meta.roll;
+  if (!roll) return <span className="text-[15px]">{message.content}</span>;
+  const dice = roll.dice.toUpperCase();
+  return (
+    <div className="w-[min(230px,62vw)] p-0.5">
+      <div className="flex items-center gap-2.5">
+        <span className={clsx("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", mine ? "bg-white/15" : "bg-chat/15")}>
+          <Dices className={clsx("h-5 w-5", mine ? "text-snow" : "text-chat")} />
+        </span>
+        <div className="min-w-0">
+          <span className="block truncate text-[13px] font-semibold leading-tight">{roll.player}</span>
+          <span className={clsx("block text-[11px] uppercase tracking-wider", mine ? "text-snow/70" : "text-chat")}>rolou {dice}</span>
+        </div>
+      </div>
+      <div className={clsx("mt-2 flex items-end justify-center rounded-xl py-2", mine ? "bg-white/10" : "bg-white/[0.04]")}>
+        <span className="text-3xl font-extrabold tabular-nums leading-none">{roll.total}</span>
+      </div>
+      {roll.count > 1 && (
+        <p className={clsx("mt-1.5 text-center text-[11px]", mine ? "text-snow/70" : "text-white/50")}>
+          Dados: [{roll.rolls.join(", ")}]
+        </p>
       )}
     </div>
   );
