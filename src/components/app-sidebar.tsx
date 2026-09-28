@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { CoinIcon, formatCoins } from "@/components/coins";
+import { DiamondIcon, formatDiamonds } from "@/components/diamonds";
 import { useCoinBalance } from "@/components/store/coin-balance";
 import { clsx } from "clsx";
 import { createClient } from "@/lib/supabase/client";
@@ -17,10 +17,10 @@ import {
   CalendarDays,
   ChevronDown,
   Clapperboard,
-  Coins,
   Compass,
   Download,
   Gamepad2,
+  Gem,
   Grid2x2,
   Home,
   Image as ImageIcon,
@@ -62,6 +62,7 @@ function sidebarItems(username: string): NavItem[] {
     { href: "/videos", label: "Vídeos", icon: Video },
     { href: null, label: "Clipes", icon: Clapperboard },
     { href: null, label: "Jogos", icon: Gamepad2 },
+    { href: "/diamantes", label: "Diamantes", icon: Gem },
     { href: "/loja/adesivos", label: "Adesivos", icon: Smile },
     { href: "/loja", label: "Mercado", icon: Store },
     { href: null, label: "Serviços", icon: Grid2x2 },
@@ -272,9 +273,9 @@ export function AppSidebar({ username }: { username: string; name: string; avata
 function CoinBadge() {
   const balance = useCoinBalance();
   return balance === null ? null : (
-    <span className="ml-auto flex items-center gap-1 text-xs font-semibold tabular-nums text-amber-400">
-      <CoinIcon className="h-3.5 w-3.5" />
-      {formatCoins(balance)}
+    <span className="ml-auto flex items-center gap-1 text-xs font-semibold tabular-nums text-sky-300">
+      <DiamondIcon className="h-3.5 w-3.5" />
+      {formatDiamonds(balance)}
     </span>
   );
 }
@@ -284,20 +285,26 @@ function CoinsCard() {
   const balance = useCoinBalance();
   return (
     <div className="m-3 rounded-2xl border border-white/10 bg-space-surface/80 p-4">
-      <p className="flex items-center gap-2 text-sm font-semibold text-white">
-        <Coins className="h-5 w-5 text-amber-400" /> Órbita Coins
-      </p>
-      <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold tabular-nums text-amber-400">
-        <CoinIcon className="h-4 w-4" />
-        {balance === null ? "…" : `${formatCoins(balance)} Coins`}
-      </p>
+      <Link href="/diamantes" className="flex items-center justify-between">
+        <span className="flex items-center gap-2 text-sm font-semibold text-white">
+          <DiamondIcon className="h-5 w-5" /> Diamantes
+        </span>
+        <span className="flex items-center gap-1.5 text-sm font-semibold tabular-nums text-sky-300">
+          {balance === null ? "…" : formatDiamonds(balance)}
+        </span>
+      </Link>
+      <Link
+        href="/diamantes"
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-orbit-gradient py-2 text-sm font-semibold text-snow shadow-glow transition hover:opacity-95"
+      >
+        <DiamondIcon className="h-4 w-4" /> Comprar Diamantes
+      </Link>
       <Link
         href="/loja"
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-orbit-gradient py-2 text-sm font-semibold text-snow shadow-glow transition hover:opacity-95"
+        className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-white/12 py-2 text-sm font-semibold text-white/85 transition hover:bg-white/5"
       >
         <ShoppingBag className="h-4 w-4" /> Órbita X Store
       </Link>
-      <p className="mt-2 text-center text-[11px] text-white/40">Compra de Coins em breve</p>
     </div>
   );
 }

@@ -10,6 +10,8 @@ const PROTECTED_PREFIXES = [
   "/configuracoes",
   "/notificacoes",
   "/amigos",
+  "/diamantes",
+  "/loja",
   "/admin",
 ];
 

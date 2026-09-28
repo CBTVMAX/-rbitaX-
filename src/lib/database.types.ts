@@ -107,6 +107,18 @@ type PaymentRow = { amount: number; createdAt: string; externalId: string | null
 type PaymentInsert = { amount: number; createdAt?: string; externalId?: string | null; id: string; status?: string; type: string; updatedAt: string; userId: string };
 type PaymentUpdate = Partial<PaymentInsert>;
 
+type DiamondPackageRow = { id: string; diamonds: number; priceBRL: number; label: string | null; badge: string | null; sortOrder: number; active: boolean; createdAt: string; updatedAt: string };
+type DiamondPackageInsert = { id?: string; diamonds: number; priceBRL: number; label?: string | null; badge?: string | null; sortOrder?: number; active?: boolean; createdAt?: string; updatedAt?: string };
+type DiamondPackageUpdate = Partial<DiamondPackageInsert>;
+
+type DiamondOrderRow = { id: string; userId: string; packageId: string | null; diamonds: number; amountBRL: number; currency: string; provider: string; providerRef: string | null; providerPaymentId: string | null; status: string; creditTxnId: string | null; rawStatus: string | null; metadata: Json; createdAt: string; updatedAt: string; paidAt: string | null };
+type DiamondOrderInsert = { id?: string; userId: string; packageId?: string | null; diamonds: number; amountBRL: number; currency?: string; provider?: string; providerRef?: string | null; providerPaymentId?: string | null; status?: string; creditTxnId?: string | null; rawStatus?: string | null; metadata?: Json; createdAt?: string; updatedAt?: string; paidAt?: string | null };
+type DiamondOrderUpdate = Partial<DiamondOrderInsert>;
+
+type WebhookEventRow = { id: number; provider: string; eventType: string | null; resourceId: string | null; requestId: string | null; signatureOk: boolean; status: string; payload: Json; note: string | null; receivedAt: string; processedAt: string | null };
+type WebhookEventInsert = { provider: string; eventType?: string | null; resourceId?: string | null; requestId?: string | null; signatureOk?: boolean; status?: string; payload?: Json; note?: string | null; receivedAt?: string; processedAt?: string | null };
+type WebhookEventUpdate = Partial<WebhookEventInsert>;
+
 type PostRow = { authorId: string; commentsEnabled: boolean; content: string; createdAt: string; editedAt: string | null; id: string; isArchived: boolean; isPinned: boolean; kind: string; linkUrl: string | null; location: string | null; moderationStatus: string; sharedPostId: string | null; updatedAt: string; viewCount: number; visibility: string; communityId: string | null; albumId: string | null; meta: Json; authorType: string };
 type PostInsert = { authorId: string; commentsEnabled?: boolean; content: string; createdAt?: string; editedAt?: string | null; id: string; isArchived?: boolean; isPinned?: boolean; kind?: string; linkUrl?: string | null; location?: string | null; moderationStatus?: string; sharedPostId?: string | null; updatedAt: string; viewCount?: number; visibility?: string };
 type PostUpdate = Partial<PostInsert>;
@@ -277,6 +289,12 @@ export type Database = {
       Payment: { Row: PaymentRow; Insert: PaymentInsert; Update: PaymentUpdate; Relationships: [
         { foreignKeyName: "Payment_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
       ] };
+      DiamondPackage: { Row: DiamondPackageRow; Insert: DiamondPackageInsert; Update: DiamondPackageUpdate; Relationships: [] };
+      DiamondOrder: { Row: DiamondOrderRow; Insert: DiamondOrderInsert; Update: DiamondOrderUpdate; Relationships: [
+        { foreignKeyName: "DiamondOrder_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
+        { foreignKeyName: "DiamondOrder_packageId_fkey"; columns: ["packageId"]; isOneToOne: false; referencedRelation: "DiamondPackage"; referencedColumns: ["id"] }
+      ] };
+      WebhookEvent: { Row: WebhookEventRow; Insert: WebhookEventInsert; Update: WebhookEventUpdate; Relationships: [] };
       Post: { Row: PostRow; Insert: PostInsert; Update: PostUpdate; Relationships: [
         { foreignKeyName: "Post_authorId_fkey"; columns: ["authorId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
         { foreignKeyName: "Post_sharedPostId_fkey"; columns: ["sharedPostId"]; isOneToOne: false; referencedRelation: "Post"; referencedColumns: ["id"] }
@@ -309,6 +327,21 @@ export type Database = {
     };
     Views: { [_ in never]: never };
     Functions: {
+      create_diamond_order: { Args: { p_package_id: string }; Returns: Json };
+      diamond_attach_provider_ref: { Args: { p_order_id: string; p_provider_ref: string }; Returns: void };
+      diamond_credit_order: { Args: { p_order_id: string; p_provider_payment_id: string; p_raw_status?: string | null; p_amount_brl?: number | null }; Returns: Json };
+      diamond_fail_order: { Args: { p_order_id: string; p_status: string; p_raw_status?: string | null }; Returns: void };
+      send_gift_to_user: { Args: { p_recipient_id: string; p_product_id: string; p_note?: string | null; p_context?: string | null }; Returns: Json };
+      my_diamond_history: { Args: { p_limit?: number }; Returns: { id: string; kind: string; amount: number; balanceAfter: number; description: string; createdAt: string; amountBRL: number | null; status: string | null }[] };
+      admin_diamond_packages: { Args: Record<string, never>; Returns: DiamondPackageRow[] };
+      admin_save_diamond_package: { Args: { p_id: string; p_diamonds: number; p_price: number; p_label?: string | null; p_badge?: string | null; p_sort?: number; p_active?: boolean }; Returns: DiamondPackageRow };
+      admin_gifts: { Args: Record<string, never>; Returns: { id: string; name: string; description: string; image: string; priceCoins: number; active: boolean; badge: string | null; sortOrder: number }[] };
+      admin_save_gift: { Args: { p_id: string; p_name: string; p_image: string; p_price: number; p_active?: boolean; p_description?: string; p_badge?: string | null; p_sort?: number }; Returns: string };
+      admin_toggle_gift: { Args: { p_id: string; p_active: boolean }; Returns: void };
+      admin_finance_overview: { Args: Record<string, never>; Returns: Json };
+      admin_diamond_orders: { Args: { p_status?: string | null; p_limit?: number }; Returns: { id: string; userId: string; username: string; name: string; diamonds: number; amountBRL: number; status: string; provider: string; providerPaymentId: string | null; createdAt: string; paidAt: string | null }[] };
+      admin_user_wallet: { Args: { p_query: string }; Returns: Json };
+      admin_adjust_diamonds: { Args: { p_user: string; p_amount: number; p_reason: string }; Returns: Json };
       my_sessions: {
         Args: Record<string, never>;
         Returns: { id: string; device: string; ip: string | null; createdAt: string; lastActiveAt: string; current: boolean; mfaVerified: boolean }[];

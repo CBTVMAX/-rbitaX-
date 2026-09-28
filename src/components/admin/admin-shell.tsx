@@ -8,6 +8,8 @@ import {
   BarChart3,
   Bell,
   Flag,
+  Gem,
+  Gift,
   Home,
   LayoutGrid,
   Loader2,
@@ -20,6 +22,7 @@ import {
   Sparkles,
   Users,
   Users2,
+  Wallet,
   X,
 } from "lucide-react";
 import { OrbitLogo } from "@/components/orbit-logo";
@@ -36,6 +39,9 @@ const NAV: NavItem[] = [
   { href: "/admin/comunidades", label: "Comunidades", icon: Users2 },
   { href: "/admin/denuncias", label: "Denúncias", icon: Flag },
   { href: "/admin/estatisticas", label: "Estatísticas", icon: BarChart3 },
+  { href: "/admin/financeiro", label: "Financeiro", icon: Wallet },
+  { href: "/admin/diamantes", label: "Diamantes", icon: Gem },
+  { href: "/admin/presentes", label: "Presentes", icon: Gift },
   { href: "/admin/ia", label: "IA Assistente", icon: Sparkles },
   { href: "/admin/adesivos", label: "Adesivos", icon: Smile },
   { href: "/admin/configuracoes", label: "Configurações", icon: Settings },

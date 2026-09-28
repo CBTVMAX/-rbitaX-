@@ -4,6 +4,7 @@ import { PostComposer } from "@/components/post-composer";
 import { ProfileTabs } from "@/components/profile-tabs";
 import { FollowButton } from "@/components/follow-button";
 import { FriendButton, FriendRequestActions } from "@/components/friend-button";
+import { ProfileGiftButton } from "@/components/profile-gift-button";
 import type { FriendState } from "@/lib/friends";
 import {
   OrbitIcon,
@@ -412,6 +413,10 @@ export function ProfileView({
         <FriendButton targetUserId={user.id} initialState={friendState} className={compact ? "min-w-0 flex-1" : ""} />
         <FollowButton targetUserId={user.id} initiallyFollowing={isFollowing} variant="outline" compact={compact} />
         {messageButton(compact)}
+        <ProfileGiftButton
+          recipient={{ id: user.id, name: user.name, username: user.username, avatarUrl: user.avatarUrl }}
+          compact={compact}
+        />
       </>
     );
 
