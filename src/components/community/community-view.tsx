@@ -60,6 +60,7 @@ function Highlights({ slug, counts, isRpg }: { slug: string; counts: { announcem
     ...(isRpg ? [{ href: `${base}/personagens`, label: "Personagens", icon: Drama, tone: "from-orbit-purple to-orbit-pink" }] : []),
     { href: `${base}/avisos`, label: "Avisos", icon: Megaphone, count: counts.announcements, tone: "from-amber-400 to-orbit-pink" },
     { href: `${base}/discussoes`, label: "Discussões", icon: MessagesSquare, count: counts.discussions, tone: "from-orbit-purple to-orbit-pink" },
+    { href: `${base}/chats`, label: "Bate-papos", icon: MessageSquareText, tone: "from-orbit-blue to-orbit-purple" },
     { href: `${base}/eventos`, label: "Eventos", icon: CalendarDays, count: counts.events, tone: "from-orbit-cyan to-orbit-blue" },
     { href: `${base}/conteudo?aba=fotos`, label: "Fotos", icon: Images, count: counts.fotos, tone: "from-emerald-400 to-orbit-cyan" },
     { href: `${base}/conteudo?aba=videos`, label: "Vídeos", icon: Film, count: (counts.videos ?? 0) + (counts.clipes ?? 0), tone: "from-red-400 to-orbit-purple" },
@@ -70,7 +71,7 @@ function Highlights({ slug, counts, isRpg }: { slug: string; counts: { announcem
   ];
   return (
     <nav aria-label="Destaques da comunidade" className="-mx-4 md:mx-0">
-      <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:px-0 lg:grid lg:grid-cols-9 lg:gap-2">
+      <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:px-0 lg:grid lg:grid-cols-10 lg:gap-2">
         {items.map((it) => {
           const Icon = it.icon;
           return (
