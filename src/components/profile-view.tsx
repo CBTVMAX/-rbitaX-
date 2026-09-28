@@ -17,6 +17,9 @@ import { relationshipLabel } from "@/lib/profile-options";
 import { CoinIcon, formatCoins } from "@/components/coins";
 import { MyRpgsCard } from "@/components/my-rpgs-card";
 import { ProfileStatus } from "@/components/profile-status";
+import { ProfileMusic, type ProfileMusicData } from "@/components/profile-music";
+import { AchievementsCard, AchievementsGrid } from "@/components/achievements";
+import { computeAchievements } from "@/lib/achievements";
 import type { LevelInfo } from "@/lib/level";
 import { frameBackdropStyle, frameSrc, getFrame, type AvatarFrame } from "@/lib/avatar-frames";
 import { hasCustomAccent, profileAccentStyle, profileColorHex, profileColorLabel } from "@/lib/profile-colors";
@@ -174,6 +177,8 @@ export type ProfileViewProps = {
     profileColor: string;
     avatarFrame: string | null;
     isPremium?: boolean;
+    createdAt?: string | null;
+    profileMusic?: unknown;
   };
   info: ProfileInfo | null | undefined;
   current: { authId: string; profile: { name: string; avatarUrl: string | null } } | null;
@@ -244,6 +249,22 @@ export function ProfileView({
   const online = presence === "online";
   const accent = hasCustomAccent(user.profileColor);
   const frame = getFrame(user.avatarFrame);
+
+  const accountAgeDays = user.createdAt ? Math.floor((Date.now() - new Date(user.createdAt).getTime()) / 86400000) : 0;
+  const achievements = computeAchievements({
+    posts: stats.posts,
+    followers: stats.followers,
+    friends: stats.friends,
+    communities: stats.communities,
+    level: level.level,
+    accountAgeDays,
+    isVerified: user.isVerified,
+    isPremium: !!user.isPremium,
+    hasAvatar: !!user.avatarUrl,
+    hasCover: !!user.coverUrl,
+    hasBio: !!user.bio,
+  });
+  const music = (user.profileMusic ?? null) as ProfileMusicData | null;
 
   const age = info?.age ?? null;
   const sign = info?.zodiacSign && (isMe || info.showSign) ? info.zodiacSign : null;
@@ -674,31 +695,11 @@ export function ProfileView({
         </SideCard>
       )}
       <SideCard title="Conquistas">
-        <div className="flex items-center gap-3">
-          <div className="flex shrink-0 -space-x-2">
-            <span className="h-10 w-9 [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)] bg-white/10" />
-            <span className="h-10 w-9 [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)] bg-white/5" />
-          </div>
-          <div>
-            <p className="text-sm text-white/80">Ainda não há conquistas</p>
-            {isMe && <p className="text-xs text-white/50">Explore a plataforma e conquiste seus emblemas!</p>}
-          </div>
-        </div>
+        <AchievementsCard achievements={achievements} isMe={isMe} name={user.name} />
       </SideCard>
-      {isMe && (
+      {(music || isMe) && (
         <SideCard title="Música do perfil">
-          <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-space-bg/40 p-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10">
-              <Music2 className="h-5 w-5 text-white/60" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm text-white/80">Nenhuma música adicionada</p>
-              <p className="text-xs text-white/50">Adicione uma música ao seu perfil</p>
-            </div>
-            <span title="Em breve" className="flex h-8 w-8 items-center justify-center rounded-full border border-orbit-purple/50 text-white/60">
-              <Play className="h-3.5 w-3.5" />
-            </span>
-          </div>
+          <ProfileMusic music={music} isMe={isMe} userId={user.id} />
         </SideCard>
       )}
       {aboutList && (
@@ -818,20 +819,6 @@ export function ProfileView({
       ))}
     </div>
   ) : undefined;
-
-  const achievementsEmpty = (
-    <div className="rounded-2xl border border-white/10 bg-space-surface/80 px-6 py-12 text-center">
-      <div className="mx-auto mb-4 flex w-fit -space-x-2">
-        <span className="h-12 w-11 [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)] bg-white/10" />
-        <span className="h-12 w-11 [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)] bg-gradient-to-b from-orbit-blue/40 to-orbit-purple/40" />
-        <span className="h-12 w-11 [clip-path:polygon(50%_0,100%_25%,100%_75%,50%_100%,0_75%,0_25%)] bg-white/5" />
-      </div>
-      <p className="text-sm font-medium text-white/85">Ainda não há conquistas</p>
-      <p className="mt-1 text-xs text-white/50">
-        {isMe ? "Explore a plataforma e conquiste seus emblemas!" : `${user.name} ainda não conquistou emblemas.`}
-      </p>
-    </div>
-  );
 
   const testimonialsEmpty = (
     <div className="rounded-2xl border border-white/10 bg-space-surface/80 px-6 py-12 text-center">
@@ -977,7 +964,7 @@ export function ProfileView({
             ) : undefined,
             amigos: friendsList,
             comunidades: communitiesList,
-            conquistas: achievementsEmpty,
+            conquistas: <AchievementsGrid achievements={achievements} isMe={isMe} name={user.name} />,
             depoimentos: testimonialsEmpty,
           }}
         />
