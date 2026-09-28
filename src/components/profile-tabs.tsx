@@ -68,7 +68,7 @@ export function ProfileTabs({
         ))}
       </div>
 
-      <div className="md:grid md:grid-cols-[minmax(0,1fr)_260px] md:items-start md:gap-4 lg:grid-cols-[minmax(0,1fr)_290px]">
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_290px] lg:items-start lg:gap-4">
         <div className="min-w-0" role="tabpanel">
           {slots[active] ?? (
             <div className="rounded-2xl border border-white/10 bg-space-surface/80 p-10 text-center text-sm text-white/50">
@@ -76,7 +76,7 @@ export function ProfileTabs({
             </div>
           )}
         </div>
-        {aside && <div className="hidden space-y-4 md:block">{aside}</div>}
+        {aside && <div className="hidden space-y-4 lg:block">{aside}</div>}
       </div>
     </div>
   );

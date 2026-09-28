@@ -4,7 +4,7 @@ import type { Tables } from "@/lib/database.types";
 // Columns of "User" anyone may read. Private data (email, phone, terms, role, status…)
 // is not readable through the API; the owner gets it from my_account_details().
 export const PUBLIC_USER_COLUMNS =
-  "id, username, name, bio, avatarUrl, coverUrl, isPrivate, isVerified, createdAt, updatedAt, lastSeenAt, orbitId, pinnedPostId, presence, profileColor, avatarFrame, discoverable, isPremium" as const;
+  "id, username, name, bio, avatarUrl, coverUrl, isPrivate, isVerified, createdAt, updatedAt, lastSeenAt, orbitId, pinnedPostId, presence, profileColor, avatarFrame, discoverable" as const;
 
 export type PublicUser = Pick<
   Tables<"User">,

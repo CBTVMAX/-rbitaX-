@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { Activity, AlertTriangle, ArrowLeft, BarChart3, Bell, CalendarDays, ChevronRight, Download, Drama, FileStack, Hash, KeyRound, LayoutGrid, Lock, Palette, ScrollText, Settings2, ShieldAlert, Sparkles, UserCog, Users } from "lucide-react";
+import { Activity, AlertTriangle, ArrowLeft, BarChart3, Bell, CalendarDays, ChevronRight, Download, FileStack, KeyRound, LayoutGrid, Lock, Palette, ScrollText, Settings2, ShieldAlert, Sparkles, UserCog, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useStoreToast } from "@/components/store/store-view";
 import { accentOf, rank, type Community, type Role, type Viewer } from "@/lib/communities";
@@ -23,13 +23,11 @@ import { LogSection } from "./log";
 import { RolesSection } from "./roles";
 import { DangerSection } from "./danger";
 import { TabsSection } from "./tabs";
-import { SubjectsSection } from "./subjects";
-import { RpgSection } from "./rpg";
 import { DownloadsSection } from "./downloads";
 import { ActivitySection } from "./activity";
 import { WelcomeSection } from "./welcome";
 
-type Section = "geral" | "personalizacao" | "privacidade" | "conteudo" | "abas" | "assuntos" | "rpg" | "boasvindas" | "eventos" | "membros" | "equipe" | "permissoes" | "moderacao" | "notificacoes" | "atividade" | "estatisticas" | "downloads" | "registro" | "perigo";
+type Section = "geral" | "personalizacao" | "privacidade" | "conteudo" | "abas" | "boasvindas" | "eventos" | "membros" | "equipe" | "permissoes" | "moderacao" | "notificacoes" | "atividade" | "estatisticas" | "downloads" | "registro" | "perigo";
 
 const SECTIONS: { id: Section; label: string; desc: string; icon: React.ComponentType<{ className?: string }>; min: number }[] = [
   { id: "geral", label: "Editar informações", desc: "Nome, @, categoria, descrição, regras e links", icon: Settings2, min: 3 },
@@ -37,8 +35,6 @@ const SECTIONS: { id: Section; label: string; desc: string; icon: React.Componen
   { id: "privacidade", label: "Privacidade", desc: "Pública ou privada", icon: Lock, min: 3 },
   { id: "conteudo", label: "Conteúdo", desc: "Fixados, publicações e discussões", icon: FileStack, min: 2 },
   { id: "abas", label: "Abas do mural", desc: "Organize o conteúdo em abas e por hashtag", icon: LayoutGrid, min: 3 },
-  { id: "assuntos", label: "Assuntos e hashtag", desc: "Sufixo da comunidade e nomes (ator/personagem) pesquisáveis", icon: Hash, min: 3 },
-  { id: "rpg", label: "RPG / Fichas", desc: "Ativar personagens, campos da ficha e aprovação", icon: Drama, min: 3 },
   { id: "boasvindas", label: "Boas-vindas e regras", desc: "Mensagem de entrada, regras e mensagem coletiva", icon: Sparkles, min: 3 },
   { id: "eventos", label: "Eventos", desc: "Criar, editar, cancelar e excluir", icon: CalendarDays, min: 3 },
   { id: "membros", label: "Membros", desc: "Cargos, pedidos, bloqueados e removidos", icon: Users, min: 2 },
@@ -118,12 +114,6 @@ export function ManageView(props: {
       break;
     case "abas":
       content = <TabsSection />;
-      break;
-    case "assuntos":
-      content = <SubjectsSection />;
-      break;
-    case "rpg":
-      content = <RpgSection />;
       break;
     case "boasvindas":
       content = <WelcomeSection />;
