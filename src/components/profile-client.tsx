@@ -11,6 +11,10 @@ import { disablePush } from "@/lib/push-client";
 import { endPresenceForSignOut } from "@/components/presence-heartbeat";
 import { saveCover } from "@/lib/cover-upload";
 import { CoverCropDialog } from "@/components/cover-crop-dialog";
+import { saveAvatar } from "@/lib/avatar-upload";
+import { AvatarEditor } from "@/components/avatar-editor";
+import { verifyUpload } from "@/lib/upload-guard";
+import { avatarFrameMode } from "@/lib/avatar-frame-mode";
 import {
   Archive,
   BarChart3,
@@ -430,23 +434,32 @@ export function ProfileImageUpload({
   field,
   className,
   ariaLabel,
+  currentUrl,
   children,
 }: {
   userId: string;
   field: "avatarUrl" | "coverUrl";
   className: string;
   ariaLabel: string;
+  /** Only for avatarUrl: keeps the user's current frame mode when the photo is replaced. */
+  currentUrl?: string | null;
   children: React.ReactNode;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   async function applyCover(blob: Blob) {
     await saveCover(userId, blob);
     setCoverFile(null);
+    router.refresh();
+  }
+
+  async function applyAvatar(blob: Blob, ratio: number) {
+    await saveAvatar(userId, blob, ratio, avatarFrameMode(currentUrl));
+    setAvatarFile(null);
     router.refresh();
   }
 
@@ -463,36 +476,17 @@ export function ProfileImageUpload({
       setError(`A imagem precisa ter no máximo ${limitMb} MB.`);
       return;
     }
-    if (field === "coverUrl") {
-      setError(null);
-      setCoverFile(file);
-      return;
-    }
-
-    setBusy(true);
+    // Both fields go through an editor first, so nothing is cropped for the user.
     setError(null);
-    const supabase = createClient();
-    const ext = file.name.split(".").pop() || "jpg";
-    const folder = field === "avatarUrl" ? "avatar" : "cover";
-    const path = `${userId}/${folder}/${crypto.randomUUID()}.${ext}`;
-
-    const { error: uploadError } = await supabase.storage.from("media").upload(path, file, { upsert: true });
-    if (uploadError) {
-      setBusy(false);
-      setError("Não foi possível enviar a imagem.");
+    // The declared MIME type is not trusted — check the real bytes before the editor opens.
+    try {
+      await verifyUpload(file, ["image"], file.name);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Imagem inválida.");
       return;
     }
-    const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
-    const { error: updateError } = await supabase
-      .from("User")
-      .update(field === "avatarUrl" ? { avatarUrl: pub.publicUrl } : { coverUrl: pub.publicUrl })
-      .eq("id", userId);
-    setBusy(false);
-    if (updateError) {
-      setError("Não foi possível salvar a imagem.");
-      return;
-    }
-    router.refresh();
+    if (field === "coverUrl") setCoverFile(file);
+    else setAvatarFile(file);
   }
 
   return (
@@ -500,14 +494,14 @@ export function ProfileImageUpload({
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        disabled={busy}
         aria-label={ariaLabel}
         className={className}
       >
-        {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : children}
+        {children}
       </button>
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={onPick} />
       {coverFile && <CoverCropDialog file={coverFile} onCancel={() => setCoverFile(null)} onConfirm={applyCover} />}
+      {avatarFile && <AvatarEditor file={avatarFile} onCancel={() => setAvatarFile(null)} onConfirm={applyAvatar} />}
       {error && (
         <button
           type="button"

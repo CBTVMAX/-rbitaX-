@@ -16,6 +16,11 @@ import {
   ShareProfileButton,
 } from "@/components/profile-client";
 import { presenceOf } from "@/lib/presence";
+import { AvatarImage } from "@/components/avatar";
+import { PersonalStories } from "@/components/personal-stories";
+import { AvatarMenuButton } from "@/components/avatar-menu-button";
+import { avatarAspect, isRectangularAvatar } from "@/lib/avatar-aspect";
+import { avatarFrameMode } from "@/lib/avatar-frame-mode";
 import { relationshipLabel } from "@/lib/profile-options";
 import { CoinIcon, formatCoins } from "@/components/coins";
 import { MyRpgsCard } from "@/components/my-rpgs-card";
@@ -92,6 +97,7 @@ function ProfileAvatar({
   accent,
   frame,
   className,
+  username,
 }: {
   name: string;
   url: string | null;
@@ -101,33 +107,36 @@ function ProfileAvatar({
   accent: boolean;
   frame: AvatarFrame | null;
   className: string;
+  username: string;
 }) {
-  const photo = (
-    <div className="flex h-full w-full items-end justify-center overflow-hidden rounded-full bg-space-card">
-      {url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt={name} className="h-full w-full object-cover" />
-      ) : (
-        <Silhouette className="h-[78%] w-[78%] text-orbit-blue/55" />
-      )}
-    </div>
-  );
+  const aspect = avatarAspect(url);
+  const mode = avatarFrameMode(url);
+  const rect = isRectangularAvatar(url);
+  const photo = <AvatarImage url={url} name={name} shape="auto" />;
+  // "fit" keeps the frame at its usual size with the photo settled inside it; "follow" lets the
+  // chrome take the photo's own ratio; "none" shows the photo alone. No mode ever crops or
+  // stretches the image — that choice lives in the editor.
+  const showArt = mode === "fit" && !!frame && !rect;
+  const chrome = mode === "none";
 
   return (
-    <div className={`relative shrink-0 ${className}`}>
-      {frame ? (
+    <div className={`relative shrink-0 ${className}`} style={rect && mode === "follow" ? { aspectRatio: String(aspect) } : undefined}>
+      {showArt ? (
         <>
-          <div aria-hidden className="pointer-events-none absolute -inset-[30%]" style={frameBackdropStyle(frame)} />
+          <div aria-hidden className="pointer-events-none absolute -inset-[30%]" style={frameBackdropStyle(frame!)} />
           <div className="relative h-full w-full">{photo}</div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={frameSrc(frame.id)}
+            src={frameSrc(frame!.id)}
             alt=""
             aria-hidden
             className="pointer-events-none absolute -inset-[30%] h-[160%] w-[160%] max-w-none select-none"
           />
         </>
+      ) : chrome ? (
+        <div className="h-full w-full">{photo}</div>
       ) : (
+        // The frame artwork has a circular hole, so other ratios wear a tier ring instead of it.
         <div
           className={`h-full w-full rounded-full p-[4px] ${
             accent
@@ -135,21 +144,14 @@ function ProfileAvatar({
               : "bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] shadow-[0_0_32px_rgba(139,92,246,0.45)]"
           }`}
         >
-          <div className="h-full w-full rounded-full border-4 border-space-bg">{photo}</div>
+          <div className={`h-full w-full border-4 border-space-bg ${rect && mode === "follow" ? "rounded-2xl" : "rounded-full"}`}>
+            {photo}
+          </div>
         </div>
       )}
       <OnlineDot userId={userId} initial={online ? "online" : "offline"} className="absolute right-[9%] top-[58%] z-10 h-3.5 w-3.5 rounded-full border-2 border-space-bg bg-emerald-400" />
       {isMe && (
-        <ProfileImageUpload
-          userId={userId}
-          field="avatarUrl"
-          ariaLabel="Alterar foto"
-          className={`absolute z-10 flex items-center justify-center rounded-full border-2 border-pa bg-space-bg/90 text-white shadow-glow transition hover:bg-space-card ${
-            frame ? "bottom-0 right-0 h-8 w-8 md:h-10 md:w-10" : "bottom-[3%] right-[3%] h-10 w-10 md:h-12 md:w-12"
-          }`}
-        >
-          <Camera className={frame ? "h-4 w-4 md:h-5 md:w-5" : "h-5 w-5"} />
-        </ProfileImageUpload>
+        <AvatarMenuButton userId={userId} avatarUrl={url} username={username} hasFrame={!!frame} />
       )}
     </div>
   );
@@ -879,9 +881,12 @@ export function ProfileView({
             )}
           </div>
 
+          {/* Personal stories, above the identity so they are the first thing seen. */}
+          {current?.authId && <PersonalStories viewerId={current.authId} highlight={user.id} />}
+
           {/* Desktop */}
           <div className="hidden gap-6 px-6 pb-5 md:flex">
-            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} isMe={isMe} online={online} accent={accent} frame={frame} className={`-mt-24 h-44 w-44 ${frame ? "mx-8 mb-8" : ""}`} />
+            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} username={user.username} isMe={isMe} online={online} accent={accent} frame={frame} className={`-mt-24 h-44 ${isRectangularAvatar(user.avatarUrl) ? "w-auto" : "w-44"} ${frame ? "mx-8 mb-8" : ""}`} />
             <div className="min-w-0 flex-1 pt-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">{identity}</div>
@@ -904,7 +909,7 @@ export function ProfileView({
 
           {/* Mobile */}
           <div className="px-4 pb-4 md:hidden">
-            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} isMe={isMe} online={online} accent={accent} frame={frame} className={`-mt-12 h-28 w-28 ${frame ? "mb-6 ml-5" : ""}`} />
+            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} username={user.username} isMe={isMe} online={online} accent={accent} frame={frame} className={`-mt-12 h-28 ${isRectangularAvatar(user.avatarUrl) ? "w-auto" : "w-28"} ${frame ? "mb-6 ml-5" : ""}`} />
             <div className="mt-3">{identity}</div>
             {bioAndMeta}
             <div className="mt-4 flex items-center gap-2">

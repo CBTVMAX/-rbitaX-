@@ -6,6 +6,10 @@ import { clsx } from "clsx";
 import { verifyUpload } from "@/lib/upload-guard";
 import { createClient } from "@/lib/supabase/client";
 import { saveCover } from "@/lib/cover-upload";
+import { saveAvatar } from "@/lib/avatar-upload";
+import { AvatarEditor } from "@/components/avatar-editor";
+import { isRectangularAvatar } from "@/lib/avatar-aspect";
+import { avatarFrameMode } from "@/lib/avatar-frame-mode";
 import { CoverCropDialog } from "@/components/cover-crop-dialog";
 import { normalizeUsername, usernameError } from "@/lib/username";
 import { zodiacFor } from "@/lib/zodiac";
@@ -207,6 +211,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
   const [coverUrl, setCoverUrl] = useState(initial.coverUrl);
   const [uploading, setUploading] = useState<"avatar" | "cover" | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -250,37 +255,21 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
     if (!file.type.startsWith("image/")) return setError("Escolha um arquivo de imagem.");
     const limitMb = kind === "cover" ? 20 : 10;
     if (file.size > limitMb * 1024 * 1024) return setError(`A imagem precisa ter no máximo ${limitMb} MB.`);
-    if (kind === "cover") {
-      setError(null);
-      setCoverFile(file);
-      return;
-    }
-
-    setUploading(kind);
     setError(null);
-    let contentType: string;
     try {
-      contentType = await verifyUpload(file, ["image"]);
+      await verifyUpload(file, ["image"], file.name);
     } catch (e) {
-      setUploading(null);
       return setError(e instanceof Error ? e.message : "Imagem inválida.");
     }
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `${userId}/${kind}/${crypto.randomUUID()}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from("media").upload(path, file, { upsert: true, contentType });
-    if (uploadError) {
-      setUploading(null);
-      return setError("Não foi possível enviar a imagem.");
-    }
-    const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
-    const { error: updateError } = await supabase
-      .from("User")
-      .update(kind === "avatar" ? { avatarUrl: pub.publicUrl } : { coverUrl: pub.publicUrl })
-      .eq("id", userId);
-    setUploading(null);
-    if (updateError) return setError("Não foi possível salvar a imagem.");
-    if (kind === "avatar") setAvatarUrl(pub.publicUrl);
-    else setCoverUrl(pub.publicUrl);
+    // Both go through an editor, so the framing is the user's choice.
+    if (kind === "cover") setCoverFile(file);
+    else setAvatarFile(file);
+  }
+
+  async function applyAvatar(blob: Blob, ratio: number) {
+    const url = await saveAvatar(userId, blob, ratio, avatarFrameMode(avatarUrl));
+    setAvatarUrl(url);
+    setAvatarFile(null);
     router.refresh();
   }
 
@@ -407,8 +396,11 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
 
         <div className="flex items-end gap-4 px-4 pb-2 lg:-mt-20 lg:px-3 lg:pb-0">
           <div className="relative -mt-12 shrink-0 lg:mt-0">
-            <div className="h-28 w-28 rounded-full lg:h-36 lg:w-36 bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] p-[3px]">
-              <div className="flex h-full w-full items-end justify-center overflow-hidden rounded-full border-4 border-space-bg bg-space-card">
+            <div
+              className="h-28 w-28 lg:h-36 lg:w-36 bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] p-[3px]"
+              style={isRectangularAvatar(avatarUrl) ? { width: "auto", borderRadius: 20 } : undefined}
+            >
+              <div className="h-full w-full overflow-hidden border-4 border-space-bg bg-space-card" style={{ borderRadius: isRectangularAvatar(avatarUrl) ? 16 : 9999 }}>
                 {avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={avatarUrl} alt={name} className="h-full w-full object-cover" />
@@ -427,6 +419,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
               {uploading === "avatar" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
             </button>
             <input ref={avatarRef} type="file" accept="image/*" hidden onChange={(e) => uploadImage("avatar", e)} />
+            {avatarFile && <AvatarEditor file={avatarFile} onCancel={() => setAvatarFile(null)} onConfirm={applyAvatar} />}
           </div>
           <div className="pb-2 lg:hidden">
             <p className="text-sm font-medium text-white">Foto de perfil</p>

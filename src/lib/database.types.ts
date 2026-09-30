@@ -593,6 +593,7 @@ export type Database = {
       community_event_action: { Args: { p_event: string; p_action: string }; Returns: undefined };
       community_event_rsvp: { Args: { p_event: string; p_status: string | null }; Returns: Json };
       community_create_story: { Args: { p_community: string; p: Json }; Returns: string };
+      story_create: { Args: { p: Json }; Returns: string };
       story_view: { Args: { p_moment: string }; Returns: undefined };
       story_react: { Args: { p_moment: string; p_emoji: string | null }; Returns: undefined };
       story_vote: { Args: { p_moment: string; p_option: number }; Returns: Json };

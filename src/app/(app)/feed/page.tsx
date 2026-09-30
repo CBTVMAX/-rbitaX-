@@ -5,6 +5,7 @@ import { PostComposer } from "@/components/post-composer";
 import { PostCard, type FeedPost } from "@/components/post-card";
 import { loadSharedEmbeds } from "@/lib/shared-posts";
 import { sortMedia } from "@/lib/post-media";
+import { PersonalStories } from "@/components/personal-stories";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +62,8 @@ export default async function FeedPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
       <PostComposer userId={current.authId} name={current.profile.name} avatarUrl={current.profile.avatarUrl} />
+
+      <PersonalStories viewerId={current.authId} />
 
       {feed.length === 0 && (
         <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-sm text-white/40">
