@@ -54,21 +54,26 @@ function paintAvatar(
   ctx.imageSmoothingQuality = "high";
 
   const rad = (rot * Math.PI) / 180;
-  const s = outW / crop.w;
-  // Centre of the crop, in the rotated space the user was actually framing.
-  const cropCx = crop.x + crop.w / 2;
-  const cropCy = crop.y + crop.w / ratio / 2;
+  const cropH = crop.w / ratio;
+  // The crop is measured in source pixels and the canvas in device pixels, so each axis has to be
+  // scaled on its own. A single uniform scale cannot place them: the crop offset is in source units
+  // and would be scaled a second time, throwing the image off-canvas (a 4000x3000 photo landed at
+  // x = -960 on a 1200px canvas, entirely clipped away).
+  const sx = outW / crop.w;
+  const sy = outH / cropH;
 
   ctx.save();
   ctx.beginPath();
   ctx.rect(0, 0, outW, outH);
   ctx.clip();
-  // Map the crop onto the canvas: scale to fit, spin about the crop's own centre (so turning the
-  // photo does not drift the framing), then place that centre in the middle of the frame.
-  ctx.translate(outW / 2, outH / 2);
-  ctx.scale(s, s);
+  // The crop is a window in the ROTATED space, so the photo is first turned about its own centre
+  // and only then is that window placed on the canvas — rotating after placing would spin the
+  // framing instead of the photo.
+  ctx.scale(sx, sy);
+  ctx.translate(-crop.x, -crop.y);
+  ctx.translate(nat.w / 2, nat.h / 2);
   ctx.rotate(rad);
-  ctx.translate(-cropCx, -cropCy);
+  ctx.translate(-nat.w / 2, -nat.h / 2);
   ctx.drawImage(img, 0, 0, nat.w, nat.h);
   ctx.restore();
 }
