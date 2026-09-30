@@ -19,7 +19,6 @@ import { createClient } from "@/lib/supabase/client";
 import { verifyUpload } from "@/lib/upload-guard";
 import { saveAvatarUrl, uploadAvatarFile } from "@/lib/avatar-upload";
 import { aspectMarker } from "@/lib/avatar-aspect";
-import { avatarFrameMode, DEFAULT_FRAME_MODE, FRAME_MODE_LABELS, frameModeSuffix, type FrameMode } from "@/lib/avatar-frame-mode";
 import { AvatarEditor } from "@/components/avatar-editor";
 import { clsx } from "clsx";
 
@@ -48,7 +47,6 @@ export function AvatarFlow({
   const [file, setFile] = useState<File | null>(null);
   const [cropped, setCropped] = useState<Blob | null>(null);
   const [ratio, setRatio] = useState(1);
-  const [frameMode, setFrameMode] = useState<FrameMode>(avatarFrameMode(avatarUrl));
   const [asProfile, setAsProfile] = useState(true);
   const [asStory, setAsStory] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -97,7 +95,7 @@ export function AvatarFlow({
     const supabase = createClient();
     try {
       // Upload once, then point the avatar and/or the story at the same file.
-      const mediaUrl = await uploadAvatarFile(supabase, userId, cropped, ratio, frameMode);
+      const mediaUrl = await uploadAvatarFile(supabase, userId, cropped, ratio);
       if (asProfile) {
         await saveAvatarUrl(supabase, userId, mediaUrl);
       }
@@ -193,38 +191,6 @@ export function AvatarFlow({
 
         {step === "publish" && (
           <div className="space-y-4">
-            {asProfile && (
-              <div className="rounded-2xl border border-white/10 bg-space-bg/40 p-3">
-                <p className="mb-2 text-xs font-medium text-white/70">Moldura</p>
-                <div className="space-y-1">
-                {(["fit", "follow", "none"] as FrameMode[]).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setFrameMode(m)}
-                    className={clsx(
-                      "flex w-full items-start gap-3 rounded-xl px-2.5 py-2 text-left transition",
-                      frameMode === m ? "bg-orbit-purple/15" : "hover:bg-white/5"
-                    )}
-                  >
-                    <span
-                      className={clsx(
-                        "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
-                        frameMode === m ? "border-orbit-purple bg-orbit-purple" : "border-white/25"
-                      )}
-                    >
-                      {frameMode === m && <Check className="h-3 w-3 text-space-bg" />}
-                    </span>
-                    <span>
-                      <span className="block text-sm font-medium text-white/90">{FRAME_MODE_LABELS[m].title}</span>
-                      <span className="block text-xs text-white/45">{FRAME_MODE_LABELS[m].hint}</span>
-                    </span>
-                  </button>
-                ))}
-                </div>
-              </div>
-            )}
-
             <div className="rounded-2xl border border-white/10 bg-space-bg/40 p-3">
               <p className="mb-2 text-xs font-medium text-white/70">Onde publicar?</p>
               <label className="flex cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 hover:bg-white/5">

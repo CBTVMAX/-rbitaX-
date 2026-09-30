@@ -14,7 +14,6 @@ import { CoverCropDialog } from "@/components/cover-crop-dialog";
 import { saveAvatar } from "@/lib/avatar-upload";
 import { AvatarEditor } from "@/components/avatar-editor";
 import { verifyUpload } from "@/lib/upload-guard";
-import { avatarFrameMode } from "@/lib/avatar-frame-mode";
 import {
   Archive,
   BarChart3,
@@ -458,7 +457,7 @@ export function ProfileImageUpload({
   }
 
   async function applyAvatar(blob: Blob, ratio: number) {
-    await saveAvatar(userId, blob, ratio, avatarFrameMode(currentUrl));
+    await saveAvatar(userId, blob, ratio);
     setAvatarFile(null);
     router.refresh();
   }

@@ -1,6 +1,5 @@
 "use client";
 
-import { isRectangularAvatar } from "@/lib/avatar-aspect";
 import { User } from "lucide-react";
 
 /**
@@ -19,8 +18,9 @@ export function AvatarImage({
   className?: string;
   shape?: "circle" | "auto";
 }) {
-  const rect = shape === "auto" && isRectangularAvatar(url);
-  const radius = rect ? "rounded-2xl" : "rounded-full";
+  // Avatars are circular throughout the app; the editor already framed a square for the guide.
+  void shape;
+  const radius = "rounded-full";
   if (!url) {
     return (
       <div className={`flex h-full w-full items-center justify-center overflow-hidden ${radius} bg-space-card`}>

@@ -9,7 +9,6 @@ import { saveCover } from "@/lib/cover-upload";
 import { saveAvatar } from "@/lib/avatar-upload";
 import { AvatarEditor } from "@/components/avatar-editor";
 import { isRectangularAvatar } from "@/lib/avatar-aspect";
-import { avatarFrameMode } from "@/lib/avatar-frame-mode";
 import { CoverCropDialog } from "@/components/cover-crop-dialog";
 import { normalizeUsername, usernameError } from "@/lib/username";
 import { zodiacFor } from "@/lib/zodiac";
@@ -267,7 +266,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
   }
 
   async function applyAvatar(blob: Blob, ratio: number) {
-    const url = await saveAvatar(userId, blob, ratio, avatarFrameMode(avatarUrl));
+    const url = await saveAvatar(userId, blob, ratio);
     setAvatarUrl(url);
     setAvatarFile(null);
     router.refresh();
@@ -396,11 +395,8 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
 
         <div className="flex items-end gap-4 px-4 pb-2 lg:-mt-20 lg:px-3 lg:pb-0">
           <div className="relative -mt-12 shrink-0 lg:mt-0">
-            <div
-              className="h-28 w-28 lg:h-36 lg:w-36 bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] p-[3px]"
-              style={isRectangularAvatar(avatarUrl) ? { width: "auto", borderRadius: 20 } : undefined}
-            >
-              <div className="h-full w-full overflow-hidden border-4 border-space-bg bg-space-card" style={{ borderRadius: isRectangularAvatar(avatarUrl) ? 16 : 9999 }}>
+            <div className="h-28 w-28 rounded-full lg:h-36 lg:w-36 bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] p-[3px]">
+              <div className="flex h-full w-full items-end justify-center overflow-hidden rounded-full border-4 border-space-bg bg-space-card">
                 {avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={avatarUrl} alt={name} className="h-full w-full object-cover" />

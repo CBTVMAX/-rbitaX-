@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Loader2, Monitor, Move, RotateCw, Smartphone, X, ZoomIn, ZoomOut } from "lucide-react";
-import { avatarRatio } from "@/lib/avatar-aspect";
 
 /**
  * Avatar editor. The picture is saved in its own aspect ratio, so the profile shows exactly the
@@ -74,8 +73,14 @@ function paintAvatar(
   ctx.restore();
 }
 
-/** The avatar is saved at its own ratio, clamped to a sane band. */
-export function AvatarEditor({  file,
+/**
+ * Avatars are displayed in a circle, so the editor always frames a square: what the user picks
+ * inside the guide circle is exactly what shows in the profile, with no crop applied later.
+ */
+const AVATAR_RATIO = 1;
+
+export function AvatarEditor({
+  file,
   onCancel,
   onConfirm,
 }: {
@@ -105,7 +110,7 @@ export function AvatarEditor({  file,
       const n = { w: img.naturalWidth, h: img.naturalHeight };
       setNat(n);
       // After rotation the image may be portrait or landscape; the ratio follows what is shown.
-      const r = avatarRatio(n);
+      const r = AVATAR_RATIO;
       const rs = rotatedSize(n, 0);
       const w = baseWidth(rs, r);
       setCrop({ w, x: (rs.w - w) / 2, y: (rs.h - w / r) / 2 });
@@ -116,12 +121,12 @@ export function AvatarEditor({  file,
   }, [file]);
 
   // Ratio of the rotated image — a 90° turn turns a portrait into a landscape avatar.
-  const ratio = nat ? avatarRatio(rotatedSize(nat, rotation)) : 1;
+  const ratio = nat ? AVATAR_RATIO : 1;
 
   const applyZoom = useCallback(
     (next: number) => {
       if (!nat) return;
-      const r = avatarRatio(rotatedSize(nat, rotation));
+      const r = AVATAR_RATIO;
       const z = Math.min(Math.max(next, 1), MAX_ZOOM);
       setZoom(z);
       setCrop((c) => {
@@ -141,9 +146,9 @@ export function AvatarEditor({  file,
     // Keep the same visible center after the turn.
     setCrop((c) => {
       const rs = rotatedSize(nat, next);
-      const r = avatarRatio(rs);
+      const r = AVATAR_RATIO;
       const cx = c.x + c.w / 2;
-      const cy = c.y + c.w / avatarRatio(rotatedSize(nat, rotation)) / 2;
+      const cy = c.y + c.w / AVATAR_RATIO / 2;
       const w = Math.min(c.w, baseWidth(rs, r));
       return clampCrop({ w, x: cx - w / 2, y: cy - w / r / 2 }, rs, r);
     });
@@ -173,7 +178,7 @@ export function AvatarEditor({  file,
     const perPx = drag.current.crop.w / stageRef.current.clientWidth;
     const dx = (e.clientX - drag.current.px) * perPx;
     const dy = (e.clientY - drag.current.py) * perPx;
-    const r = avatarRatio(rotatedSize(nat, rotation));
+    const r = AVATAR_RATIO;
     setCrop(clampCrop({ w: drag.current.crop.w, x: drag.current.crop.x - dx, y: drag.current.crop.y - dy }, rotatedSize(nat, rotation), r));
   }
 

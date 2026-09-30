@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { aspectMarker } from "@/lib/avatar-aspect";
-import { frameModeSuffix, type FrameMode } from "@/lib/avatar-frame-mode";
 
 /**
  * Uploads an already-edited avatar (see AvatarEditor) and returns its public URL. The aspect ratio
@@ -13,11 +12,10 @@ export async function uploadAvatarFile(
   supabase: SupabaseClient,
   userId: string,
   blob: Blob,
-  ratio: number,
-  frameMode: FrameMode
+  ratio: number
 ): Promise<string> {
   const ext = blob.type === "image/webp" ? "webp" : "jpg";
-  const path = `${userId}/avatar/${crypto.randomUUID()}_${aspectMarker(ratio)}${frameModeSuffix(frameMode)}.${ext}`;
+  const path = `${userId}/avatar/${crypto.randomUUID()}_${aspectMarker(ratio)}.${ext}`;
   const { error: uploadError } = await supabase.storage
     .from("media")
     .upload(path, blob, { upsert: true, contentType: blob.type });
@@ -33,13 +31,8 @@ export async function saveAvatarUrl(supabase: SupabaseClient, userId: string, pu
 }
 
 /** Upload + save in one step, for the settings screens. */
-export async function saveAvatar(
-  userId: string,
-  blob: Blob,
-  ratio: number,
-  frameMode: FrameMode
-): Promise<string> {
+export async function saveAvatar(userId: string, blob: Blob, ratio: number): Promise<string> {
   const supabase = createClient();
-  const url = await uploadAvatarFile(supabase, userId, blob, ratio, frameMode);
+  const url = await uploadAvatarFile(supabase, userId, blob, ratio);
   return saveAvatarUrl(supabase, userId, url);
 }
