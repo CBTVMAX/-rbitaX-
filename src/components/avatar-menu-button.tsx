@@ -41,13 +41,17 @@ export function AvatarMenu({
           <Camera className={hasFrame ? "h-4 w-4 md:h-5 md:w-5" : "h-5 w-5"} />
         </span>
       </button>
-      <AvatarFlow
-        userId={userId}
-        avatarUrl={avatarUrl}
-        username={username}
-        open={open}
-        onClose={() => setOpen(false)}
-      />
+      {/* Mounted only while open: AvatarFlow seeds its step from `open` and discards pending
+          files when it unmounts, so it has to start fresh on every opening. */}
+      {open && (
+        <AvatarFlow
+          userId={userId}
+          avatarUrl={avatarUrl}
+          username={username}
+          open
+          onClose={() => setOpen(false)}
+        />
+      )}
     </>
   );
 }
