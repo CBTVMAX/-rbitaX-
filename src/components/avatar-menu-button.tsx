@@ -29,7 +29,7 @@ export function AvatarMenu({
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Opções da foto"
-        className="group relative block h-full w-full cursor-pointer"
+        className="group relative block h-full w-full cursor-pointer align-top"
       >
         {children}
         <span
