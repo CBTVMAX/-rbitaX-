@@ -18,7 +18,7 @@ import {
 import { presenceOf } from "@/lib/presence";
 import { AvatarImage } from "@/components/avatar";
 import { PersonalStories } from "@/components/personal-stories";
-import { AvatarMenuButton } from "@/components/avatar-menu-button";
+import { AvatarMenu } from "@/components/avatar-menu-button";
 import { avatarAspect, isRectangularAvatar } from "@/lib/avatar-aspect";
 import { avatarFrameMode } from "@/lib/avatar-frame-mode";
 import { relationshipLabel } from "@/lib/profile-options";
@@ -119,8 +119,8 @@ function ProfileAvatar({
   const showArt = mode === "fit" && !!frame && !rect;
   const chrome = mode === "none";
 
-  return (
-    <div className={`relative shrink-0 ${className}`} style={rect && mode === "follow" ? { aspectRatio: String(aspect) } : undefined}>
+  const picture = (
+    <>
       {showArt ? (
         <>
           <div aria-hidden className="pointer-events-none absolute -inset-[30%]" style={frameBackdropStyle(frame!)} />
@@ -149,10 +149,20 @@ function ProfileAvatar({
           </div>
         </div>
       )}
-      <OnlineDot userId={userId} initial={online ? "online" : "offline"} className="absolute right-[9%] top-[58%] z-10 h-3.5 w-3.5 rounded-full border-2 border-space-bg bg-emerald-400" />
-      {isMe && (
-        <AvatarMenuButton userId={userId} avatarUrl={url} username={username} hasFrame={!!frame} />
+    </>
+  );
+
+  return (
+    <div className={`relative shrink-0 ${className}`} style={rect && mode === "follow" ? { aspectRatio: String(aspect) } : undefined}>
+      {isMe ? (
+        // Tapping the picture itself opens the photo menu, as the spec asks.
+        <AvatarMenu userId={userId} avatarUrl={url} username={username} hasFrame={!!frame}>
+          <div className="h-full w-full">{picture}</div>
+        </AvatarMenu>
+      ) : (
+        picture
       )}
+      <OnlineDot userId={userId} initial={online ? "online" : "offline"} className="absolute right-[9%] top-[58%] z-10 h-3.5 w-3.5 rounded-full border-2 border-space-bg bg-emerald-400" />
     </div>
   );
 }
