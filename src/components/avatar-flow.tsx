@@ -76,6 +76,14 @@ export function AvatarFlow({
       setError(err instanceof Error ? err.message : "Imagem inválida.");
       return;
     }
+    // The upload guard allows formats the browser may not be able to decode (a phone's HEIC, for
+    // one). Probing here turns that into a clear message, instead of an editor that opens on an
+    // empty stage and leaves you adjusting a photo you cannot see.
+    try {
+      (await createImageBitmap(f)).close();
+    } catch {
+      return setError("Este navegador não consegue abrir esse formato de imagem. Converta a foto para JPG ou PNG e tente de novo.");
+    }
     setFile(f);
     setStep("edit");
   }
