@@ -11,8 +11,6 @@ import { Loader2, Monitor, Move, RotateCw, Smartphone, X, ZoomIn, ZoomOut } from
  */
 const OUTPUT_MAX_WIDTH = 1024;
 const MAX_ZOOM = 3;
-/** Intrinsic size the preview canvases are painted at; CSS scales them to their box. */
-const PREVIEW_SIZE = 720;
 
 type Crop = { x: number; y: number; w: number };
 type Rotation = 0 | 90 | 180 | 270;
@@ -230,20 +228,38 @@ export function AvatarEditor({
   }
 
   // Live preview: the editor canvas and the two thumbnails, drawn from the exact same state as the
-  // exported file. Painted at a fixed intrinsic size and scaled by CSS (`h-full w-full`) instead of
-  // being sized from a layout measurement — a measurement taken mid-layout can come back collapsed
-  // and leave a 1px canvas that CSS then stretches into a flat black square.
+  // exported file, so what is previewed is literally what gets saved. Each canvas is sized from the
+  // box it has to fill rather than from an assumed size, which keeps the framing exact (the stage is
+  // square but clamped by `maxHeight`, so a fixed square canvas would be stretched). A box that is
+  // not laid out yet is skipped instead of collapsed to 1px, and a ResizeObserver repaints when the
+  // box changes — rotation to a landscape photo, window resize, device rotation.
   useEffect(() => {
     const img = imgRef.current;
     if (!img || !nat || !src) return;
-    for (const id of ["#editor-canvas", "#preview-desktop", "#preview-mobile"]) {
-      const c = document.getElementById(id) as HTMLCanvasElement | null;
-      if (!c) continue;
-      c.width = PREVIEW_SIZE;
-      c.height = Math.round(PREVIEW_SIZE / ratio);
-      const ctx = c.getContext("2d");
-      if (ctx) paintAvatar(ctx, img, nat, crop, ratio, rotation, c.width, c.height);
+    const ids = ["#editor-canvas", "#preview-desktop", "#preview-mobile"];
+    const paint = () => {
+      for (const id of ids) {
+        const c = document.getElementById(id) as HTMLCanvasElement | null;
+        if (!c) continue;
+        const box = c.parentElement?.getBoundingClientRect();
+        const w = Math.round(box?.width ?? 0);
+        const h = Math.round(box?.height ?? 0);
+        // Not laid out (width 0 mid-layout): skip, and let the ResizeObserver paint it once it is.
+        if (w < 1 || h < 1) continue;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        c.width = Math.round(w * dpr);
+        c.height = Math.round(h * dpr);
+        const ctx = c.getContext("2d");
+        if (ctx) paintAvatar(ctx, img, nat, crop, ratio, rotation, c.width, c.height);
+      }
+    };
+    paint();
+    const ro = new ResizeObserver(paint);
+    for (const id of ids) {
+      const parent = document.getElementById(id)?.parentElement;
+      if (parent) ro.observe(parent);
     }
+    return () => ro.disconnect();
   }, [src, nat, crop, ratio, rotation]);
 
   const lowRes = nat && crop.w < 700;
