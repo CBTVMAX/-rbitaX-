@@ -56,22 +56,21 @@ function sidebarItems(username: string): NavItem[] {
     { href: `/perfil/${username}`, label: "Perfil", icon: UserRound },
     { href: "/feed", label: "Feed", icon: Newspaper },
     { href: "/mensagens", label: "Messenger", icon: MessageCircle, badge: "messages" },
-    { href: null, label: "Chamadas", icon: Phone },
     { href: "/amigos", label: "Amigos", icon: Users, badge: "friendRequests" },
     { href: "/comunidades", label: "Comunidades", icon: Users },
-    { href: null, label: "Fotos", icon: ImageIcon },
     { href: "/musica", label: "Música", icon: Music2 },
     { href: "/videos", label: "Vídeos", icon: Video },
-    { href: null, label: "Clipes", icon: Clapperboard },
-    { href: null, label: "Jogos", icon: Gamepad2 },
-    { href: "/diamantes", label: "Diamantes", icon: Gem },
-    { href: "/loja/adesivos", label: "Adesivos", icon: Smile },
-    { href: "/loja", label: "Mercado", icon: Store },
-    { href: null, label: "Serviços", icon: Grid2x2 },
-    { href: null, label: "Eventos", icon: CalendarDays },
-    { href: null, label: "Votos", icon: Vote },
   ];
 }
+
+const MORE_ITEMS: { href: string | null; label: string; icon: Icon; badge?: keyof LiveCounts }[] = [
+  { href: "/diamantes", label: "Diamantes", icon: Gem },
+  { href: "/loja", label: "Mercado", icon: Store },
+  { href: "/loja/adesivos", label: "Adesivos", icon: Smile },
+  { href: "/videos", label: "Clipes", icon: Clapperboard },
+  { href: null, label: "Jogos", icon: Gamepad2 },
+  { href: null, label: "Eventos", icon: CalendarDays },
+];
 
 const TOP_NAV: { href: string; label: string; icon: Icon; badge?: keyof LiveCounts }[] = [
   { href: "/feed", label: "Início", icon: Home },
@@ -250,15 +249,24 @@ export function AppSidebar({ username }: { username: string; name: string; avata
         </button>
         {moreOpen && (
           <div className="space-y-0.5 pl-4">
+            {MORE_ITEMS.map(({ href, label, icon: Icon }) =>
+              href ? (
+                <Link key={label} href={href} className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white">
+                  <Icon className="h-4 w-4" /> {label}
+                </Link>
+              ) : (
+                <span key={label} title="Em breve" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/40">
+                  <Icon className="h-4 w-4" /> {label}
+                </span>
+              )
+            )}
+            <div className="my-1 border-t border-white/10" />
             <Link href="/notificacoes" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white">
               <Bell className="h-4 w-4" /> Notificações
               <CountBadge count={counts.notifications} className="ml-auto" />
             </Link>
             <Link href="/configuracoes" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white">
               <Settings className="h-4 w-4" /> Configurações
-            </Link>
-            <Link href="/app" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white">
-              <Download className="h-4 w-4" /> Baixar o app
             </Link>
             <button
               type="button"

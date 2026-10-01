@@ -53,7 +53,7 @@ export function ProfileTabs({
             aria-selected={active === id}
             onClick={() => setActive(id)}
             className={clsx(
-              "relative shrink-0 px-4 py-3.5 text-sm transition md:px-5",
+              "relative shrink-0 px-3 py-2.5 text-xs transition md:px-4",
               active === id ? "font-semibold text-white" : "text-white/60 hover:text-white"
             )}
           >
