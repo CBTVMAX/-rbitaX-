@@ -10,6 +10,7 @@ import { PushPrompt } from "@/components/pwa";
 import { AppSidebar, AppTopBar, MobileHeader, MobileTabBar } from "@/components/app-sidebar";
 import { AccountSync } from "@/components/account-sync";
 import { ChatDock } from "@/components/chat-dock";
+import { PublishProvider } from "@/components/publish/publish-provider";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <LiveActivityProvider userId={current.authId} initialCounts={initialCounts}>
+      <PublishProvider me={{ id: current.authId, name: profile.name, avatarUrl: profile.avatarUrl }}>
       <div data-app-theme={theme} className="min-h-screen bg-space-bg bg-stars" style={accent as React.CSSProperties | undefined}>
         <AppThemeSync theme={theme} />
         <AppAccentSync vars={accent} />
@@ -50,6 +52,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <ChatDock me={{ id: current.authId, name: profile.name, username: profile.username, avatarUrl: profile.avatarUrl }} />
         <PushPrompt />
       </div>
+      </PublishProvider>
     </LiveActivityProvider>
   );
 }
