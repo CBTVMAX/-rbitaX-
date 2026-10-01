@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { aspectMarker } from "@/lib/avatar-aspect";
 
-const AVATAR_BUCKET = "chat";
+const AVATAR_BUCKET = "media";
 
 /**
  * Uploads an already-edited avatar (see AvatarEditor) and returns its public URL.
