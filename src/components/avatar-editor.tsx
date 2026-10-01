@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Loader2, Monitor, Move, RotateCw, Smartphone, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Loader2, Move, RotateCw, X, ZoomIn, ZoomOut } from "lucide-react";
 
 /**
  * Avatar editor. The picture is saved in its own aspect ratio, so the profile shows exactly the
@@ -442,41 +442,6 @@ export function AvatarEditor({
           <p className="mt-2 text-xs text-amber-300/90">
             A imagem ficou com pouca resolução nesse enquadramento. Para melhor qualidade, use uma imagem de pelo menos 1024 px de lado.
           </p>
-        )}
-
-        {src && nat && (
-          <div className="mt-5 grid gap-4 md:grid-cols-[minmax(0,1fr)_200px] md:items-end">
-            <div>
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-white/70">
-                <Monitor className="h-4 w-4" /> Computador
-              </p>
-              <div className="rounded-2xl border border-white/10 bg-space-bg/60 p-2">
-                <div className="flex items-end gap-3 px-3 pb-2 pt-4">
-                  <span className="relative block w-16 shrink-0 overflow-hidden rounded-2xl bg-space-card" style={{ height: 64 }}>
-                    <canvas id="preview-desktop" className="block h-full w-full" />
-                  </span>
-                  <div className="space-y-1.5 pb-1">
-                    <span className="block h-2.5 w-28 rounded bg-white/25" />
-                    <span className="block h-2 w-20 rounded bg-white/15" />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="mx-auto w-[200px]">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-white/70">
-                <Smartphone className="h-4 w-4" /> Celular
-              </p>
-              <div className="rounded-[1.6rem] border-4 border-white/15 bg-space-bg p-1.5">
-                <div className="px-2 pb-3 pt-4">
-                  <span className="relative block w-12 shrink-0 overflow-hidden rounded-xl bg-space-card" style={{ height: 48 }}>
-                    <canvas id="preview-mobile" className="block h-full w-full" />
-                  </span>
-                  <span className="mt-2 block h-2 w-24 rounded bg-white/25" />
-                  <span className="mt-1.5 block h-1.5 w-16 rounded bg-white/15" />
-                </div>
-              </div>
-            </div>
-          </div>
         )}
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
