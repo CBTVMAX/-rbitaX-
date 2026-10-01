@@ -337,16 +337,7 @@ export function ProfileMoments({
     setError(null);
     setBusy(true);
     try {
-      const mime = await verifyUpload(file, ["image", "video"], file.name);
-      const type = mime.startsWith("video") ? "video" : "image";
-      const supabase = createClient();
-      const ext = file.name.split(".").pop() || (type === "video" ? "mp4" : "jpg");
-      const path = `${viewerId}/moments/${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("media").upload(path, file, { contentType: mime });
-      if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
-      const { error: rpcErr } = await supabase.rpc("story_create", { p: { type, mediaUrl: pub.publicUrl, hours: 24 } });
-      if (rpcErr) throw rpcErr;
+      await createMomentFromFile(viewerId, file);
       await reload();
     } catch (err) {
       setError(err instanceof Error && err.message ? err.message : "Não foi possível publicar o momento.");
@@ -481,5 +472,169 @@ export function ProfileMoments({
       {errorToast}
       {viewer}
     </div>
+  );
+}
+
+/** Publica uma foto ou vídeo como momento/história de 24h (mesmo fluxo do perfil e do feed). */
+export async function createMomentFromFile(userId: string, file: File) {
+  const mime = await verifyUpload(file, ["image", "video"], file.name);
+  const type = mime.startsWith("video") ? "video" : "image";
+  const supabase = createClient();
+  const ext = file.name.split(".").pop() || (type === "video" ? "mp4" : "jpg");
+  const path = `${userId}/moments/${crypto.randomUUID()}.${ext}`;
+  const { error: upErr } = await supabase.storage.from("media").upload(path, file, { contentType: mime });
+  if (upErr) throw upErr;
+  const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
+  const { error: rpcErr } = await supabase.rpc("story_create", { p: { type, mediaUrl: pub.publicUrl, hours: 24 } });
+  if (rpcErr) throw rpcErr;
+}
+
+/**
+ * Histórias no topo do feed. Computador: cartões (com "Criar história" primeiro).
+ * Celular: círculos grandes com o nome embaixo. A sua aparece primeiro como "Seu story".
+ */
+export function FeedStories({ me }: { me: { id: string; name: string; avatarUrl: string | null } }) {
+  const [groups, setGroups] = useState<PersonalGroup[] | null>(null);
+  const [seen, setSeen] = useState<Set<string>>(new Set());
+  const [start, setStart] = useState<{ g: number; i: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const reload = useCallback(
+    () =>
+      loadPersonalStories()
+        .then((stories) => {
+          const all = groupPersonalStories(stories, new Set());
+          const mine = all.filter((g) => g.key === me.id);
+          setGroups([...mine, ...all.filter((g) => g.key !== me.id)]);
+        })
+        .catch(() => setGroups([])),
+    [me.id]
+  );
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  async function create(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setError(null);
+    setBusy(true);
+    try {
+      await createMomentFromFile(me.id, file);
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : "Não foi possível publicar a história.");
+    }
+    setBusy(false);
+  }
+
+  const list = groups ?? [];
+  const mine = list.find((g) => g.key === me.id);
+  const others = list.filter((g) => g.key !== me.id);
+  const isSeen = (g: PersonalGroup) => g.stories.every((s) => seen.has(s.id));
+  const indexOf = (g: PersonalGroup) => list.indexOf(g);
+  const cover = (g: PersonalGroup) => {
+    const last = g.stories[g.stories.length - 1];
+    return last?.type === "image" && last.mediaUrl ? last.mediaUrl : g.avatarUrl;
+  };
+  const ring = (g: PersonalGroup) =>
+    isSeen(g) ? "bg-white/20" : "bg-[conic-gradient(from_210deg,rgb(var(--app-accent-a,43_108_255)),rgb(var(--app-accent,139_92_246)),rgb(var(--app-accent-b,236_72_153)),#22d3ee,rgb(var(--app-accent-a,43_108_255)))]";
+  const avatarInner = (url: string | null, name: string) =>
+    url ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={url} alt="" className="h-full w-full object-cover" />
+    ) : (
+      <span className="flex h-full w-full items-center justify-center bg-space-card text-lg font-semibold text-white/60">{name.charAt(0).toUpperCase()}</span>
+    );
+  const openMine = () => (mine ? setStart({ g: indexOf(mine), i: 0 }) : inputRef.current?.click());
+
+  return (
+    <>
+      {/* ---------- Celular: círculos grandes ---------- */}
+      <div className="no-scrollbar flex gap-4 overflow-x-auto px-4 py-3 md:hidden">
+        <div className="flex w-[84px] shrink-0 flex-col items-center gap-1.5">
+          <button type="button" onClick={openMine} className="relative h-[84px] w-[84px]" aria-label={mine ? "Ver seu story" : "Criar história"}>
+            <span className={clsx("block h-full w-full rounded-full p-[3px]", mine ? ring(mine) : "bg-transparent")}>
+              <span className="block h-full w-full overflow-hidden rounded-full border-[3px] border-space-bg">{avatarInner(me.avatarUrl, me.name)}</span>
+            </span>
+            <span
+              role="button"
+              tabIndex={0}
+              aria-label="Criar história"
+              onClick={(e) => {
+                e.stopPropagation();
+                inputRef.current?.click();
+              }}
+              className="absolute bottom-0.5 right-0.5 flex h-7 w-7 items-center justify-center rounded-full border-[3px] border-space-bg bg-orbit-blue text-snow"
+            >
+              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-4 w-4" strokeWidth={3} />}
+            </span>
+          </button>
+          <span className="max-w-full truncate text-[13px] text-white/85">{mine ? "Seu story" : "História"}</span>
+        </div>
+        {others.map((g) => (
+          <button key={g.key} type="button" onClick={() => setStart({ g: indexOf(g), i: 0 })} className="flex w-[84px] shrink-0 flex-col items-center gap-1.5">
+            <span className={clsx("block h-[84px] w-[84px] rounded-full p-[3px]", ring(g))}>
+              <span className="block h-full w-full overflow-hidden rounded-full border-[3px] border-space-bg">{avatarInner(g.avatarUrl, g.name)}</span>
+            </span>
+            <span className="max-w-full truncate text-[13px] text-white/85">{g.name.split(" ")[0]}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ---------- Computador: cartões ---------- */}
+      <div className="ox-card hidden rounded-2xl border border-white/10 bg-space-surface p-2.5 md:block">
+        <div className="no-scrollbar flex gap-2 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={busy}
+            className="flex h-[124px] w-[92px] shrink-0 flex-col items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] text-white/60 transition hover:border-pa/50 hover:text-white disabled:opacity-60"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15">
+              {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
+            </span>
+            <span className="text-[11px]">Criar história</span>
+          </button>
+          {[...(mine ? [mine] : []), ...others].map((g) => (
+            <button
+              key={g.key}
+              type="button"
+              onClick={() => setStart({ g: indexOf(g), i: 0 })}
+              className="group relative flex h-[124px] w-[92px] shrink-0 flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent transition hover:border-pa/50"
+            >
+              <span className={clsx("block h-[60px] w-[60px] rounded-full p-[2.5px]", ring(g))}>
+                <span className="block h-full w-full overflow-hidden rounded-full border-2 border-space-surface">{avatarInner(cover(g), g.name)}</span>
+              </span>
+              <span className="max-w-[84px] truncate px-1 text-[11px] text-white/85">{g.key === me.id ? "Seu story" : g.name.split(" ")[0]}</span>
+            </button>
+          ))}
+          {groups !== null && list.length === 0 && (
+            <p className="flex items-center px-3 text-xs text-white/45">Nenhuma história agora. Que tal criar a primeira?</p>
+          )}
+        </div>
+      </div>
+
+      <input ref={inputRef} type="file" accept="image/*,video/*" hidden onChange={create} />
+      {error && (
+        <button type="button" role="alert" onClick={() => setError(null)} className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-red-500/95 px-4 py-2.5 text-sm font-medium text-snow shadow-2xl md:bottom-6">
+          {error}
+        </button>
+      )}
+      {start && (
+        <PersonalStoryViewer
+          groups={list}
+          start={start}
+          viewerId={me.id}
+          onClose={() => setStart(null)}
+          onSeen={(id) => setSeen((prev) => new Set(prev).add(id))}
+          onDeleted={reload}
+        />
+      )}
+    </>
   );
 }

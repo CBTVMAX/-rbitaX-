@@ -159,14 +159,18 @@ export default async function ProfilePage(props: {
   const pinnedPostId = !showArchive && user.pinnedPostId && posts.some((p) => p.id === user.pinnedPostId) ? user.pinnedPostId : null;
 
   const postIds = posts.map((p) => p.id);
-  const [{ data: likeRows }, { data: myLikes }, { data: commentRows }, shared] = await Promise.all([
+  const [{ data: likeRows }, { data: myLikes }, { data: commentRows }, shared, { data: savedRows }] = await Promise.all([
     postIds.length ? supabase.from("Like").select("postId").in("postId", postIds) : Promise.resolve({ data: [] as { postId: string }[] }),
     postIds.length && current
       ? supabase.from("Like").select("postId").in("postId", postIds).eq("userId", current.authId)
       : Promise.resolve({ data: [] as { postId: string }[] }),
     postIds.length ? supabase.from("Comment").select("postId").in("postId", postIds) : Promise.resolve({ data: [] as { postId: string }[] }),
     loadSharedEmbeds(supabase, posts.map((p) => p.sharedPostId)),
+    postIds.length && current
+      ? supabase.from("Bookmark").select("postId").in("postId", postIds).eq("userId", current.authId)
+      : Promise.resolve({ data: [] as { postId: string }[] }),
   ]);
+  const savedPostIds = (savedRows ?? []).map((r) => r.postId);
 
   const likeCountByPost = new Map<string, number>();
   (likeRows ?? []).forEach((l) => likeCountByPost.set(l.postId, (likeCountByPost.get(l.postId) ?? 0) + 1));
@@ -270,6 +274,7 @@ export default async function ProfilePage(props: {
       coins={coins}
       pinnedPostId={pinnedPostId}
       showArchive={showArchive}
+      savedPostIds={savedPostIds}
       communities={communities}
       hiddenCommunityIds={hiddenCommunityIds}
       roleBadges={roleBadges}
