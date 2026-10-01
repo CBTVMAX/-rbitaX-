@@ -209,7 +209,7 @@ export function ProfileAboutContent({ d, onNavigate }: { d: AboutData; onNavigat
 }
 
 /** Botão "Saber mais" que abre o painel com todas as informações. */
-export function ProfileAboutButton({ d, className, children }: { d: AboutData; className?: string; children: React.ReactNode }) {
+export function ProfileAboutButton({ d, className, children, title = "Saber mais" }: { d: AboutData; className?: string; children: React.ReactNode; title?: string }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -234,7 +234,7 @@ export function ProfileAboutButton({ d, className, children }: { d: AboutData; c
           <div className="fixed inset-0 z-[96] flex items-end justify-center bg-black/60 backdrop-blur-[2px] md:items-center md:p-6" onClick={() => setOpen(false)} role="presentation">
             <div
               role="dialog"
-              aria-label="Saber mais"
+              aria-label={title}
               onClick={(e) => e.stopPropagation()}
               className={clsx("animate-pop-in flex max-h-[92dvh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-space-surface shadow-2xl md:max-h-[85vh] md:rounded-3xl")}
             >
@@ -242,7 +242,7 @@ export function ProfileAboutButton({ d, className, children }: { d: AboutData; c
                 <button type="button" onClick={() => setOpen(false)} aria-label="Fechar" className="-ml-1 flex h-10 w-10 items-center justify-center rounded-full text-white/80 hover:bg-white/5">
                   <X className="h-6 w-6" />
                 </button>
-                <h2 className="text-xl font-semibold text-white">Saber mais</h2>
+                <h2 className="text-xl font-semibold text-white">{title}</h2>
               </header>
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
                 <ProfileAboutContent d={d} onNavigate={() => setOpen(false)} />

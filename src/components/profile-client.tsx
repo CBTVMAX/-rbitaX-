@@ -15,11 +15,15 @@ import { saveAvatar } from "@/lib/avatar-upload";
 import { AvatarEditor } from "@/components/avatar-editor";
 import { verifyUpload } from "@/lib/upload-guard";
 import { useRelationshipActions } from "@/components/block-user";
+import { useCalls } from "@/components/calls/call-provider";
 import { runFriendAction } from "@/components/friend-button";
 import type { FriendState } from "@/lib/friends";
 import {
   Ban,
+  ChevronDown,
   Clock,
+  Phone,
+  UserCheck,
   ShieldOff,
   UserMinus,
   Archive,
@@ -117,7 +121,10 @@ export function ProfileMoreMenu({
   name = "",
   friendState = "none",
   blockedByMe = false,
+  isFollowing = false,
 }: {
+  /** Visitante: segue a pessoa (item Seguir/Deixar de seguir no menu "Mais"). */
+  isFollowing?: boolean;
   username: string;
   userId: string;
   isMe: boolean;
@@ -126,8 +133,8 @@ export function ProfileMoreMenu({
   friendState?: FriendState;
   blockedByMe?: boolean;
   compact?: boolean;
-  /** "glass": botão redondo e claro, para ficar por cima da capa. */
-  variant?: "default" | "glass";
+  /** "glass": botão redondo e claro, para ficar por cima da capa. "label": botão "Mais ▾" (computador, como no VK). */
+  variant?: "default" | "glass" | "label";
 }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -141,6 +148,25 @@ export function ProfileMoreMenu({
     await endPresenceForSignOut();
     await supabase.auth.signOut();
     window.location.href = "/";
+  }
+
+  const [following, setFollowing] = useState(isFollowing);
+  async function toggleFollow() {
+    const supabase = createClient();
+    const { data: auth } = await supabase.auth.getUser();
+    const me = auth.user?.id;
+    if (!me) return;
+    setOpen(false);
+    if (following) {
+      setFollowing(false);
+      const { error } = await supabase.from("Follow").delete().eq("followerId", me).eq("followingId", userId);
+      if (error) setFollowing(true);
+    } else {
+      setFollowing(true);
+      const { error } = await supabase.from("Follow").insert({ id: crypto.randomUUID(), followerId: me, followingId: userId });
+      if (error && error.code !== "23505") setFollowing(false);
+    }
+    router.refresh();
   }
 
   async function friendAction(action: "send" | "cancel") {
@@ -166,10 +192,20 @@ export function ProfileMoreMenu({
           "flex items-center justify-center transition",
           variant === "glass"
             ? "h-10 w-10 rounded-full bg-black/35 text-snow backdrop-blur-md hover:bg-black/50"
-            : clsx("rounded-xl border border-white/15 bg-space-bg/40 text-white hover:bg-white/5", compact ? "h-11 w-14" : "h-[42px] w-11")
+            : variant === "label"
+              ? "h-10 gap-1.5 rounded-xl bg-white/[0.07] px-4 text-sm font-medium text-white hover:bg-white/[0.12]"
+              : clsx("rounded-xl border border-white/15 bg-space-bg/40 text-white hover:bg-white/5", compact ? "h-11 w-14" : "h-[42px] w-11")
         )}
       >
-        {variant === "glass" ? <MoreVertical className="h-5 w-5" /> : <MoreHorizontal className="h-5 w-5" />}
+        {variant === "glass" ? (
+          <MoreVertical className="h-5 w-5" />
+        ) : variant === "label" ? (
+          <>
+            Mais <ChevronDown className={clsx("h-4 w-4 transition", open && "rotate-180")} />
+          </>
+        ) : (
+          <MoreHorizontal className="h-5 w-5" />
+        )}
       </button>
       {open && (
         <div className="absolute right-0 top-12 z-30 text-left max-h-[70vh] w-60 overflow-y-auto rounded-xl border border-white/10 bg-space-surface py-1 shadow-2xl">
@@ -212,6 +248,11 @@ export function ProfileMoreMenu({
           {!isMe && (
             <>
               {divider}
+              {!blockedByMe && friendState !== "friends" && (
+                <button type="button" onClick={toggleFollow} className={item}>
+                  {following ? <UserCheck className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />} {following ? "Deixar de seguir" : "Seguir"}
+                </button>
+              )}
               {!blockedByMe && friendState === "none" && (
                 <button type="button" disabled={friendBusy} onClick={() => friendAction("send")} className={item}>
                   {friendBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />} Adicionar amigo
@@ -706,5 +747,24 @@ export function CoverMenu({
         </button>
       )}
     </>
+  );
+}
+
+
+/** Ligar (voz) direto do perfil, como no VK: abre a conversa privada e chama. Só entre amigos. */
+export function ProfileCallButton({ user, className }: { user: { id: string; name: string; username: string; avatarUrl: string | null }; className?: string }) {
+  const { startCall } = useCalls();
+  const [busy, setBusy] = useState(false);
+  async function call() {
+    setBusy(true);
+    const supabase = createClient();
+    const { data: conversationId } = await supabase.rpc("get_or_create_dm", { other_user_id: user.id });
+    setBusy(false);
+    if (conversationId) startCall({ conversationId: conversationId as string, peer: user, kind: "voice" });
+  }
+  return (
+    <button type="button" onClick={call} disabled={busy} aria-label={`Ligar para ${user.name}`} title="Chamada de voz" className={className}>
+      {busy ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <Phone className="h-[18px] w-[18px]" />}
+    </button>
   );
 }
