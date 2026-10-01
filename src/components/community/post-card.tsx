@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
 import {
@@ -11,7 +11,6 @@ import {
   Eye,
   FileText,
   Flag,
-  Heart,
   Link2,
   Loader2,
   MessageCircle,
@@ -29,11 +28,14 @@ import {
   ShieldX,
   Sparkles,
   Trash2,
+  X,
 } from "lucide-react";
 import { Avatar } from "@/components/post-card";
+import { ReactionButton, ReactorsSheet } from "@/components/reactions";
+import { CommentItem, firstName, threadComments, useCommentLikes } from "@/components/comments/comment-kit";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { ago as timeAgo } from "@/lib/communities";
-import { can, communityError, compactNumber, downloadCommunityMedia, isEditorOrAdmin, rank, reactionOf, REACTIONS, TAG_LABEL, type CommunityPost, type ReactionKey } from "@/lib/communities";
+import { can, communityError, compactNumber, downloadCommunityMedia, isEditorOrAdmin, rank, TAG_LABEL, type CommunityPost, type ReactionKey } from "@/lib/communities";
 import { useCommunity } from "./context";
 import { Confirm, Sheet } from "./ui";
 import { RichText } from "./rich-text";
@@ -42,74 +44,6 @@ import { ReportSheet, type ReportTarget } from "./report-sheet";
 
 type CommentRow = { id: string; content: string; createdAt: string; status: string; userId: string; parentId: string | null; user: { name: string; username: string; avatarUrl: string | null } };
 const COMMENT_COLUMNS = "id, content, createdAt, status, userId, parentId, user:User!Comment_userId_fkey(name, username, avatarUrl)";
-type Reactor = { reaction: ReactionKey; user: { id: string; name: string; username: string; avatarUrl: string | null } };
-
-/** Tap = ❤️ (or remove); press and hold / hover = pick one of the 7 reactions. */
-function ReactionButton({ mine, count, top, onPick, onShowList }: { mine: ReactionKey | null; count: number; top: ReactionKey[]; onPick: (r: ReactionKey | null) => void; onShowList: () => void }) {
-  const [open, setOpen] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const long = useRef(false);
-  const clear = () => timer.current && clearTimeout(timer.current);
-  const current = mine ? reactionOf(mine) : null;
-  return (
-    <span className="relative flex items-center" onMouseLeave={() => (clear(), setOpen(false))}>
-      {open && (
-        <span role="menu" className="animate-pop-in absolute bottom-full left-0 z-20 mb-2 flex gap-0.5 rounded-full border border-white/10 bg-space-surface/95 p-1 shadow-[0_12px_30px_rgba(0,0,0,0.5)] backdrop-blur-xl">
-          {REACTIONS.map((r) => (
-            <button
-              key={r.key}
-              type="button"
-              role="menuitem"
-              aria-label={r.label}
-              title={r.label}
-              onClick={() => (setOpen(false), onPick(mine === r.key ? null : r.key))}
-              className={clsx("flex h-10 w-10 items-center justify-center rounded-full text-[22px] transition hover:-translate-y-1 hover:scale-125", mine === r.key && "bg-white/15")}
-            >
-              {r.emoji}
-            </button>
-          ))}
-        </span>
-      )}
-      <button
-        type="button"
-        aria-pressed={!!mine}
-        aria-label={mine ? `Sua reação: ${current?.label}. Toque para remover` : "Curtir (segure para mais reações)"}
-        onMouseEnter={() => {
-          clear();
-          timer.current = setTimeout(() => setOpen(true), 450);
-        }}
-        onTouchStart={() => {
-          long.current = false;
-          clear();
-          timer.current = setTimeout(() => ((long.current = true), setOpen(true)), 420);
-        }}
-        onTouchEnd={(e) => {
-          clear();
-          if (long.current) e.preventDefault();
-        }}
-        onContextMenu={(e) => e.preventDefault()}
-        onClick={() => {
-          if (long.current) return (long.current = false);
-          setOpen(false);
-          onPick(mine ? null : "like");
-        }}
-        className={clsx("flex min-h-[40px] select-none items-center gap-1.5 rounded-full px-3 transition hover:bg-white/5", mine && (mine === "like" ? "text-orbit-pink" : "text-white"))}
-      >
-        {current && mine !== "like" ? <span className="text-[18px] leading-none">{current.emoji}</span> : <Heart className={clsx("h-[18px] w-[18px]", mine && "fill-orbit-pink")} />}
-      </button>
-      <button type="button" onClick={onShowList} disabled={!count} className="-ml-1.5 flex min-h-[40px] items-center gap-1 rounded-full pr-2 disabled:cursor-default">
-        {count > 0 && top.length > 0 && (
-          <span className="flex -space-x-1 text-[13px] leading-none">
-            {top.map((t) => (
-              <span key={t}>{reactionOf(t).emoji}</span>
-            ))}
-          </span>
-        )}
-        {compactNumber(count)}
-      </button>
-    </span>
-  );
-}
 
 function MediaGrid({ post, onOpen }: { post: CommunityPost; onOpen: (i: number) => void }) {
   const images = post.media.filter((m) => m.type === "image");
@@ -202,15 +136,13 @@ export function CommunityPostCard({
   const [reaction, setReaction] = useState<ReactionKey | null>(initial.myReaction ?? (initial.likedByMe ? "like" : null));
   const [likes, setLikes] = useState(initial.likeCount);
   const [top, setTop] = useState<ReactionKey[]>(initial.topReactions ?? []);
-  const [reactors, setReactors] = useState<Reactor[] | null>(null);
   const [showReactors, setShowReactors] = useState(false);
-  const [reactorTab, setReactorTab] = useState<ReactionKey | "all">("all");
   const [replyTo, setReplyTo] = useState<CommentRow | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [repostText, setRepostText] = useState("");
   const [reposting, setReposting] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const commentInput = useRef<HTMLInputElement>(null);
+  const commentInput = useRef<HTMLTextAreaElement>(null);
   const [saved, setSaved] = useState(false);
   const [menu, setMenu] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -224,6 +156,9 @@ export function CommunityPostCard({
   const [commentText, setCommentText] = useState("");
   const [sending, setSending] = useState(false);
   const ref = useRef<HTMLElement>(null);
+  const commentIds = useMemo(() => (comments ?? []).map((c) => c.id), [comments]);
+  const { enabled: likesEnabled, likes: commentLikes, toggle: toggleCommentLike } = useCommentLikes(commentIds, viewer?.id, initial.author.id);
+  const commentNames = useMemo(() => new Set((comments ?? []).map((c) => firstName(c.user.name))), [comments]);
 
   useEffect(() => setPost(initial), [initial]);
   const update = (patch: Partial<CommunityPost>) => {
@@ -279,7 +214,6 @@ export function CommunityPostCard({
     setReaction(next);
     setLikes((c) => c + (next && !prev ? 1 : !next && prev ? -1 : 0));
     if (next && !top.includes(next)) setTop((t) => [...t, next].slice(-3));
-    setReactors(null);
     const { error } = !next
       ? await supabase.from("Like").delete().eq("postId", post.id).eq("userId", viewer.id)
       : prev
@@ -292,16 +226,8 @@ export function CommunityPostCard({
     }
   }
 
-  async function openReactors() {
+  function openReactors() {
     setShowReactors(true);
-    setReactorTab("all");
-    const { data } = await supabase
-      .from("Like")
-      .select("reaction, user:User!Like_userId_fkey(id, name, username, avatarUrl)")
-      .eq("postId", post.id)
-      .order("createdAt", { ascending: false })
-      .limit(300);
-    setReactors(((data ?? []) as unknown as Reactor[]).filter((r) => r.user));
   }
 
   async function repost() {
@@ -466,32 +392,33 @@ export function CommunityPostCard({
     </button>
   );
 
+  const replyToComment = (c: CommentRow) => {
+    setReplyTo(c);
+    const name = firstName(c.user.name);
+    setCommentText((t) => (t.startsWith(`${name},`) ? t : `${name}, ${t.replace(/^[^,\n]{1,40},\s?/, "")}`));
+    requestAnimationFrame(() => {
+      const el = commentInput.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    });
+  };
+
   const renderComment = (c: CommentRow, isReply: boolean) => (
-    <div className="flex items-start gap-2">
-      <Avatar name={c.user.name} url={c.user.avatarUrl} size={isReply ? 26 : 30} />
-      <div className="min-w-0 flex-1">
-        <div className={clsx("inline-block max-w-full rounded-2xl px-3 py-2", c.status === "pending" ? "border border-dashed border-amber-400/40 bg-amber-400/[0.05]" : "bg-white/[0.05]")}>
-          <Link href={`/perfil/${c.user.username}`} className="text-xs font-semibold text-white hover:underline">
-            {c.user.name}
-          </Link>
-          <RichText text={c.content} className="whitespace-pre-wrap break-words text-[13px] text-white/80" />
-        </div>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 px-2 text-[11px] text-white/40">
-          <span>{timeAgo(c.createdAt)}</span>
+    <CommentItem
+      key={c.id}
+      c={c}
+      isReply={isReply}
+      isAuthor={post.authorType === "user" && c.userId === post.author.id}
+      names={commentNames}
+      like={commentLikes[c.id]}
+      likesEnabled={likesEnabled && c.status === "visible"}
+      postAuthor={post.authorType === "user" ? post.author : null}
+      onLike={viewer ? () => toggleCommentLike(c.id) : undefined}
+      onReply={canComment && c.status === "visible" ? () => replyToComment(c) : undefined}
+      extra={
+        <>
           {c.status === "pending" && <span className="text-amber-400">aguardando aprovação</span>}
-          {canComment && c.status === "visible" && (
-            <button
-              type="button"
-              onClick={() => {
-                setReplyTo(c);
-                setCommentText((t) => (t.startsWith(`@${c.user.username}`) ? t : `@${c.user.username} ${t}`));
-                commentInput.current?.focus();
-              }}
-              className="flex items-center gap-1 font-semibold text-white/60 hover:text-white"
-            >
-              <Reply className="h-3 w-3" /> Responder
-            </button>
-          )}
           {staff && c.status === "pending" && (
             <button type="button" onClick={() => commentAction(c, "approve")} className="font-semibold text-emerald-400 hover:underline">
               Aprovar
@@ -503,7 +430,7 @@ export function CommunityPostCard({
             </button>
           )}
           {c.userId === viewer?.id && (
-            <button type="button" onClick={() => commentAction(c, "delete")} className="hover:text-white">
+            <button type="button" onClick={() => commentAction(c, "delete")} className="hover:text-red-300">
               Excluir
             </button>
           )}
@@ -512,9 +439,9 @@ export function CommunityPostCard({
               Denunciar
             </button>
           )}
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    />
   );
 
   return (
@@ -718,39 +645,46 @@ export function CommunityPostCard({
           ) : comments.length === 0 ? (
             <p className="px-1 text-xs text-white/40">{post.commentsEnabled ? "Seja a primeira pessoa a comentar." : "Comentários desativados."}</p>
           ) : (
-            comments
-              .filter((c) => !c.parentId || !comments.some((p) => p.id === c.parentId))
-              .map((c) => (
-                <div key={c.id} className="space-y-2">
-                  {renderComment(c, false)}
-                  {comments
-                    .filter((r) => r.parentId === c.id)
-                    .map((r) => (
-                      <div key={r.id} className="ml-9 border-l border-white/[0.08] pl-3">
-                        {renderComment(r, true)}
-                      </div>
-                    ))}
+            <div className="-mx-2">
+              {threadComments(comments, "old", (id) => commentLikes[id]?.count ?? 0).map(({ root, replies }) => (
+                <div key={root.id}>
+                  {renderComment(root, false)}
+                  {replies.map((r) => renderComment(r, true))}
                 </div>
-              ))
+              ))}
+            </div>
           )}
           {canComment ? (
             <form onSubmit={sendComment} className="pt-1">
               {replyTo && (
-                <p className="mb-1.5 flex items-center gap-2 px-2 text-[11px] text-white/55">
-                  <Reply className="h-3 w-3" /> Respondendo a <strong className="text-white/80">{replyTo.user.name}</strong>
-                  <button type="button" onClick={() => (setReplyTo(null), setCommentText(""))} className="ml-auto font-semibold text-white/50 hover:text-white">
-                    Cancelar
+                <p className="mb-1.5 flex items-center gap-2 px-2 text-[12px] text-white/50">
+                  <span className="min-w-0 flex-1 truncate">
+                    Resposta a <strong className="font-semibold text-white/85">{replyTo.user.name}</strong>
+                  </span>
+                  <button type="button" onClick={() => (setReplyTo(null), setCommentText((t) => t.replace(/^[^,\n]{1,40},\s?/, "")))} aria-label="Cancelar resposta" className="rounded-full p-1 text-white/50 hover:text-white">
+                    <X className="h-3.5 w-3.5" />
                   </button>
                 </p>
               )}
-              <div className="flex items-center gap-2">
-              <input
+              <div className="flex items-end gap-2">
+              <textarea
                 ref={commentInput}
                 value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
+                rows={1}
+                onChange={(e) => {
+                  setCommentText(e.target.value);
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && window.matchMedia("(min-width: 768px)").matches) {
+                    e.preventDefault();
+                    e.currentTarget.form?.requestSubmit();
+                  }
+                }}
                 maxLength={2000}
-                placeholder="Escreva um comentário…"
-                className="min-h-[44px] min-w-0 flex-1 rounded-full border border-white/10 bg-white/[0.04] px-4 text-sm text-white outline-none placeholder:text-white/35 focus:border-orbit-purple/60"
+                placeholder="Comentário"
+                className="max-h-[120px] min-h-[44px] min-w-0 flex-1 resize-none rounded-3xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/35 focus:border-orbit-purple/60"
               />
               <button type="submit" disabled={sending || !commentText.trim()} aria-label="Enviar comentário" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orbit-gradient text-snow disabled:opacity-40">
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -816,37 +750,7 @@ export function CommunityPostCard({
         </div>
       </Sheet>
 
-      <Sheet open={showReactors} onClose={() => setShowReactors(false)} title={`Reações · ${likes}`}>
-        {reactors === null ? (
-          <div className="flex justify-center py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-white/40" />
-          </div>
-        ) : (
-          <>
-            <div className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 [scrollbar-width:none]">
-              <button type="button" onClick={() => setReactorTab("all")} className={clsx("shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold", reactorTab === "all" ? "bg-orbit-gradient text-snow" : "border border-white/10 text-white/65")}>
-                Todas {reactors.length}
-              </button>
-              {REACTIONS.filter((r) => reactors.some((x) => x.reaction === r.key)).map((r) => (
-                <button key={r.key} type="button" onClick={() => setReactorTab(r.key)} className={clsx("shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold", reactorTab === r.key ? "bg-orbit-gradient text-snow" : "border border-white/10 text-white/65")}>
-                  {r.emoji} {reactors.filter((x) => x.reaction === r.key).length}
-                </button>
-              ))}
-            </div>
-            <div className="space-y-0.5">
-              {reactors
-                .filter((r) => reactorTab === "all" || r.reaction === reactorTab)
-                .map((r) => (
-                  <Link key={r.user.id} href={`/perfil/${r.user.username}`} className="flex min-h-[52px] items-center gap-3 rounded-2xl px-2 hover:bg-white/[0.04]">
-                    <Avatar name={r.user.name} url={r.user.avatarUrl} size={38} />
-                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{r.user.name}</span>
-                    <span className="text-xl">{reactionOf(r.reaction).emoji}</span>
-                  </Link>
-                ))}
-            </div>
-          </>
-        )}
-      </Sheet>
+      <ReactorsSheet open={showReactors} onClose={() => setShowReactors(false)} postId={post.id} total={likes} />
 
       <Confirm
         open={confirmDelete}

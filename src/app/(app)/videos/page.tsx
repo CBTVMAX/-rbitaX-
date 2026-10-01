@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { VideoComposer } from "@/components/video-composer";
+import { summarizeReactions } from "@/lib/post-reactions";
 import { PostCard, type FeedPost } from "@/components/post-card";
 
 export const dynamic = "force-dynamic";
@@ -23,13 +24,12 @@ export default async function VideosPage() {
 
   const postIds = (posts ?? []).map((p) => p.id);
   const [{ data: likeRows }, { data: myLikes }, { data: commentRows }] = await Promise.all([
-    postIds.length ? supabase.from("Like").select("postId").in("postId", postIds) : Promise.resolve({ data: [] as { postId: string }[] }),
+    postIds.length ? supabase.from("Like").select("postId, userId, reaction").in("postId", postIds) : Promise.resolve({ data: [] as { postId: string }[] }),
     postIds.length ? supabase.from("Like").select("postId").in("postId", postIds).eq("userId", current.authId) : Promise.resolve({ data: [] as { postId: string }[] }),
     postIds.length ? supabase.from("Comment").select("postId").in("postId", postIds) : Promise.resolve({ data: [] as { postId: string }[] }),
   ]);
 
-  const likeCountByPost = new Map<string, number>();
-  (likeRows ?? []).forEach((l) => likeCountByPost.set(l.postId, (likeCountByPost.get(l.postId) ?? 0) + 1));
+  const reactions = summarizeReactions((likeRows ?? []) as { postId: string; userId?: string; reaction: string | null }[], current.authId);
   const likedSet = new Set((myLikes ?? []).map((l) => l.postId));
   const commentCountByPost = new Map<string, number>();
   (commentRows ?? []).forEach((c) => commentCountByPost.set(c.postId, (commentCountByPost.get(c.postId) ?? 0) + 1));
@@ -41,9 +41,11 @@ export default async function VideosPage() {
     kind: p.kind,
     author: p.author as unknown as FeedPost["author"],
     media: (p.media as unknown as FeedPost["media"]) ?? [],
-    likeCount: likeCountByPost.get(p.id) ?? 0,
+    likeCount: reactions.count(p.id),
     commentCount: commentCountByPost.get(p.id) ?? 0,
     likedByMe: likedSet.has(p.id),
+    myReaction: reactions.mine(p.id),
+    topReactions: reactions.top(p.id),
   }));
 
   return (

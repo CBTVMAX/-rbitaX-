@@ -9,6 +9,7 @@ import { sortMedia } from "@/lib/post-media";
 import { FeedStories } from "@/components/personal-stories";
 import { FeedRail, type RailCommunity, type RailPerson } from "@/components/feed-rail";
 import { FEED_TABS, FEED_TYPES, type FeedTab, type FeedType } from "@/lib/feed";
+import { summarizeReactions } from "@/lib/post-reactions";
 import { ChevronDown, Check } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -64,15 +65,14 @@ export default async function FeedPage(props: { searchParams: Promise<{ aba?: st
   const postIds = (rows ?? []).map((p) => p.id);
   const none = Promise.resolve({ data: [] as { postId: string }[] });
   const [{ data: likeRows }, { data: myLikes }, { data: commentRows }, { data: savedRows }, shared] = await Promise.all([
-    postIds.length ? supabase.from("Like").select("postId").in("postId", postIds) : none,
+    postIds.length ? supabase.from("Like").select("postId, userId, reaction").in("postId", postIds) : none,
     postIds.length ? supabase.from("Like").select("postId").in("postId", postIds).eq("userId", me) : none,
     postIds.length ? supabase.from("Comment").select("postId").in("postId", postIds) : none,
     postIds.length ? supabase.from("Bookmark").select("postId").in("postId", postIds).eq("userId", me) : none,
     loadSharedEmbeds(supabase, (rows ?? []).map((p) => p.sharedPostId)),
   ]);
 
-  const likeCountByPost = new Map<string, number>();
-  (likeRows ?? []).forEach((l) => likeCountByPost.set(l.postId, (likeCountByPost.get(l.postId) ?? 0) + 1));
+  const reactions = summarizeReactions((likeRows ?? []) as { postId: string; userId?: string; reaction: string | null }[], me);
   const likedSet = new Set((myLikes ?? []).map((l) => l.postId));
   const savedSet = new Set((savedRows ?? []).map((l) => l.postId));
   const commentCountByPost = new Map<string, number>();
@@ -87,9 +87,11 @@ export default async function FeedPage(props: { searchParams: Promise<{ aba?: st
     location: p.location,
     author: p.author as unknown as FeedPost["author"],
     media: sortMedia(p.media),
-    likeCount: likeCountByPost.get(p.id) ?? 0,
+    likeCount: reactions.count(p.id),
     commentCount: commentCountByPost.get(p.id) ?? 0,
     likedByMe: likedSet.has(p.id),
+    myReaction: reactions.mine(p.id),
+    topReactions: reactions.top(p.id),
     visibility: p.visibility,
     ...(p.sharedPostId ? { shared: shared.get(p.sharedPostId) ?? null } : {}),
   }));

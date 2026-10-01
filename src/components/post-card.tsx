@@ -5,12 +5,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo, initials } from "@/lib/format";
-import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Repeat2, Pencil, Trash2, Link2, Check, X, Loader2, Archive, ArchiveRestore, Globe2, Users, Lock, ChevronRight, MapPin, CalendarClock } from "lucide-react";
+import { MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Repeat2, Pencil, Trash2, Link2, Check, X, Loader2, Archive, ArchiveRestore, Globe2, Users, Lock, ChevronRight, MapPin, CalendarClock } from "lucide-react";
 import type { SharedEmbed } from "@/lib/shared-posts";
 import { clsx } from "clsx";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { PostMedia } from "@/components/post-media";
 import { RichText } from "@/lib/rich-text";
+import { reactionOf, type ReactionKey } from "@/lib/communities";
+import { ReactionButton, ReactorsSheet } from "@/components/reactions";
+import { CommentsSheet } from "@/components/comments/comments-sheet";
 
 export type FeedPost = {
   id: string;
@@ -32,6 +35,9 @@ export type FeedPost = {
   location?: string | null;
   /** Agendada para esta data (só o autor vê até lá). */
   publishAt?: string | null;
+  /** Reação de quem está vendo (❤️ 😂 😮…) e as mais usadas no post. */
+  myReaction?: ReactionKey | null;
+  topReactions?: ReactionKey[];
 };
 
 const VISIBILITY: { id: string; label: string; hint: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -39,13 +45,6 @@ const VISIBILITY: { id: string; label: string; hint: string; icon: React.Compone
   { id: "followers", label: "Seguidores", hint: "Só quem segue você", icon: Users },
   { id: "private", label: "Somente eu", hint: "Só você vê", icon: Lock },
 ];
-
-type CommentRow = {
-  id: string;
-  content: string;
-  createdAt: string;
-  user: { name: string; username: string; avatarUrl: string | null };
-};
 
 /** Texto do post com "Ver mais": posts longos aparecem recolhidos até uma altura e expandem ao tocar. */
 function ExpandableText({ text }: { text: string }) {
@@ -181,13 +180,12 @@ export function PostCard({
       /* clipboard indisponível */
     }
   }
-  const [liked, setLiked] = useState(post.likedByMe);
+  const [reaction, setReaction] = useState<ReactionKey | null>(post.myReaction ?? (post.likedByMe ? "like" : null));
   const [likeCount, setLikeCount] = useState(post.likeCount);
+  const [top, setTop] = useState<ReactionKey[]>(post.topReactions ?? (post.likeCount > 0 ? ["like"] : []));
+  const [showReactors, setShowReactors] = useState(false);
   const [showComments, setShowComments] = useState(false);
-  const [comments, setComments] = useState<CommentRow[] | null>(null);
-  const [commentText, setCommentText] = useState("");
   const [commentCount, setCommentCount] = useState(post.commentCount);
-  const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(initiallySaved);
   const [follow, setFollow] = useState<"none" | "following" | "requested">("none");
   const [shareNote, setShareNote] = useState<string | null>(null);
@@ -232,50 +230,27 @@ export function PostCard({
     setTimeout(() => setShareNote(null), 2000);
   }
 
-  async function toggleLike() {
-    if (busy) return;
-    setBusy(true);
-    if (liked) {
-      setLiked(false);
-      setLikeCount((c) => c - 1);
-      await supabase.from("Like").delete().eq("postId", post.id).eq("userId", currentUserId);
-    } else {
-      setLiked(true);
-      setLikeCount((c) => c + 1);
-      await supabase.from("Like").insert({
-        id: crypto.randomUUID(),
-        postId: post.id,
-        userId: currentUserId,
-      });
+  /** Toque = ❤️; segurar (ou passar o mouse) abre as 7 reações. Mesma tabela de curtidas de sempre. */
+  async function react(next: ReactionKey | null) {
+    const prev = reaction;
+    if (prev === next) return;
+    const delta = next && !prev ? 1 : !next && prev ? -1 : 0;
+    setReaction(next);
+    setLikeCount((c) => c + delta);
+    if (next && !top.includes(next)) setTop((t) => [...t, next].slice(-3));
+    const { error } = !next
+      ? await supabase.from("Like").delete().eq("postId", post.id).eq("userId", currentUserId)
+      : prev
+        ? await supabase.from("Like").update({ reaction: next }).eq("postId", post.id).eq("userId", currentUserId)
+        : await supabase.from("Like").insert({ id: crypto.randomUUID(), postId: post.id, userId: currentUserId, reaction: next });
+    if (error) {
+      setReaction(prev);
+      setLikeCount((c) => c - delta);
     }
-    setBusy(false);
   }
 
-  async function loadComments() {
-    setShowComments((s) => !s);
-    if (comments) return;
-    const { data } = await supabase
-      .from("Comment")
-      .select("id, content, createdAt, user:User(name, username, avatarUrl)")
-      .eq("postId", post.id)
-      .order("createdAt", { ascending: true });
-    setComments(((data as unknown) as CommentRow[]) ?? []);
-  }
-
-  async function submitComment(e: React.FormEvent) {
-    e.preventDefault();
-    const text = commentText.trim();
-    if (!text) return;
-    setCommentText("");
-    const { data } = await supabase
-      .from("Comment")
-      .insert({ id: crypto.randomUUID(), postId: post.id, userId: currentUserId, content: text, updatedAt: new Date().toISOString() })
-      .select("id, content, createdAt, user:User(name, username, avatarUrl)")
-      .single();
-    if (data) {
-      setComments((c) => [...(c ?? []), (data as unknown) as CommentRow]);
-      setCommentCount((c) => c + 1);
-    }
+  function openComments() {
+    setShowComments(true);
   }
 
   if (removed) return null;
@@ -492,11 +467,8 @@ export function PostCard({
       {/* Celular: ícones com números (estilo app). Computador: resumo + ações com nome (mockup). */}
       <div className={clsx("mt-1", bleed && "px-4 md:px-0")}>
         <div className="flex items-center gap-1 pt-2 text-white/60 md:hidden">
-          <button type="button" onClick={toggleLike} aria-label="Curtir" className={clsx("flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm transition", liked ? "text-orbit-pink" : "hover:text-white")}>
-            <Heart className={clsx("h-[22px] w-[22px]", liked && "fill-orbit-pink")} />
-            {likeCount > 0 && likeCount}
-          </button>
-          <button type="button" onClick={loadComments} aria-label="Comentar" className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm transition hover:text-white">
+          <ReactionButton mine={reaction} count={likeCount} top={top} onPick={react} onShowList={() => setShowReactors(true)} />
+          <button type="button" onClick={openComments} aria-label="Comentar" className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm transition hover:text-white">
             <MessageCircle className="h-[22px] w-[22px]" />
             {commentCount > 0 && commentCount}
           </button>
@@ -513,26 +485,28 @@ export function PostCard({
             <div className="flex items-center justify-between py-2.5 text-[13px] text-white/50">
               <span className="flex items-center gap-1.5">
                 {likeCount > 0 && (
-                  <>
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orbit-pink text-snow">
-                      <Heart className="h-3 w-3 fill-current" />
+                  <button type="button" onClick={() => setShowReactors(true)} className="flex items-center gap-1.5 hover:underline">
+                    <span className="flex -space-x-1 text-[15px] leading-none">
+                      {(top.length ? top : (["like"] as ReactionKey[])).map((t) => (
+                        <span key={t}>{reactionOf(t).emoji}</span>
+                      ))}
                     </span>
                     {likeCount.toLocaleString("pt-BR")}
-                  </>
+                  </button>
                 )}
               </span>
               {commentCount > 0 && (
-                <button type="button" onClick={loadComments} className="hover:underline">
+                <button type="button" onClick={openComments} className="hover:underline">
                   {commentCount} {commentCount === 1 ? "comentário" : "comentários"}
                 </button>
               )}
             </div>
           )}
           <div className="grid grid-cols-4 border-t border-white/[0.07] pt-1.5 text-[13px] font-medium text-white/65">
-            <button type="button" onClick={toggleLike} className={clsx("flex items-center justify-center gap-2 rounded-lg py-2 transition hover:bg-white/[0.04]", liked ? "text-orbit-pink" : "hover:text-white")}>
-              <Heart className={clsx("h-[18px] w-[18px]", liked && "fill-orbit-pink")} /> Curtir
-            </button>
-            <button type="button" onClick={loadComments} className="flex items-center justify-center gap-2 rounded-lg py-2 transition hover:bg-white/[0.04] hover:text-white">
+            <span className="flex items-center justify-center [&>span>button:first-child]:rounded-lg">
+              <ReactionButton mine={reaction} count={0} top={[]} onPick={react} onShowList={() => setShowReactors(true)} label />
+            </span>
+            <button type="button" onClick={openComments} className="flex items-center justify-center gap-2 rounded-lg py-2 transition hover:bg-white/[0.04] hover:text-white">
               <MessageCircle className="h-[18px] w-[18px]" /> Comentar
             </button>
             <button type="button" onClick={share} className="flex items-center justify-center gap-2 rounded-lg py-2 transition hover:bg-white/[0.04] hover:text-white">
@@ -546,31 +520,22 @@ export function PostCard({
         {shareNote && <p className="pt-1 text-center text-xs text-emerald-400">{shareNote}</p>}
       </div>
 
-      {showComments && (
-        <div className={clsx("mt-3 space-y-3 border-t border-white/5 pt-3", bleed && "mx-4 md:mx-0")}>
-          {comments?.map((c) => (
-            <div key={c.id} className="flex items-start gap-2">
-              <Avatar name={c.user.name} url={c.user.avatarUrl} size={28} />
-              <div className="rounded-xl bg-white/5 px-3 py-1.5 text-xs">
-                <p className="font-medium text-white">{c.user.name}</p>
-                <p className="text-white/70"><RichText text={c.content} /></p>
-              </div>
-            </div>
-          ))}
-          {comments?.length === 0 && <p className="text-xs text-white/30">Seja o primeiro a comentar.</p>}
-          <form onSubmit={submitComment} className="flex gap-2">
-            <input
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Escreva um comentário..."
-              className="flex-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white outline-none focus:border-orbit-purple"
-            />
-            <button type="submit" className="rounded-full bg-orbit-gradient px-3 py-1.5 text-xs font-semibold text-snow">
-              Enviar
-            </button>
-          </form>
-        </div>
-      )}
+      <ReactorsSheet open={showReactors} onClose={() => setShowReactors(false)} postId={post.id} total={likeCount} />
+      <CommentsSheet
+        open={showComments}
+        onClose={() => setShowComments(false)}
+        postId={post.id}
+        postAuthor={post.author}
+        viewerId={currentUserId}
+        onCountChange={(d) => setCommentCount((c) => Math.max(0, c + d))}
+        summary={
+          <>
+            {likeCount > 0 ? `${likeCount.toLocaleString("pt-BR")} ${likeCount === 1 ? "reação" : "reações"}` : "Sem reações ainda"}
+            {" · "}
+            {commentCount} {commentCount === 1 ? "comentário" : "comentários"}
+          </>
+        }
+      />
     </article>
   );
 }
