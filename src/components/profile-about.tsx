@@ -151,6 +151,17 @@ export function ProfileAboutContent({ d, onNavigate }: { d: AboutData; onNavigat
         </div>
       </div>
 
+      {d.isMe && (
+        <a
+          href="#tab-familia"
+          onClick={onNavigate}
+          className="flex items-center justify-between rounded-xl border border-white/10 px-4 py-2.5 text-sm text-white/80 transition hover:bg-white/[0.04]"
+        >
+          {groups.length || partner ? "Gerenciar família e pedidos" : "Adicionar familiares (pais, irmãos, cônjuge…)"}
+          <span className="text-orbit-blue">›</span>
+        </a>
+      )}
+
       {groups.length > 0 && (
         <Section title="Família">
           <div className="space-y-3">

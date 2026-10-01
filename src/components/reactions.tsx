@@ -80,16 +80,20 @@ export function ReactionButton({
         {current && mine !== "like" ? <span className="text-[18px] leading-none">{current.emoji}</span> : <Heart className={clsx("h-[18px] w-[18px]", mine && "fill-orbit-pink")} />}
         {label && <span className="text-[13px] font-medium">{current ? current.label : "Curtir"}</span>}
       </button>
+      {/* Como no app do VK: um ícone só e o número ao lado; tocar no número mostra quem reagiu. */}
       {!label && (
-      <button type="button" onClick={onShowList} disabled={!count} className="-ml-1.5 flex min-h-[40px] items-center gap-1 rounded-full pr-2 disabled:cursor-default">
-        {count > 0 && top.length > 0 && (
-          <span className="flex -space-x-1 text-[13px] leading-none">
-            {top.map((t) => (
-              <span key={t}>{reactionOf(t).emoji}</span>
-            ))}
-          </span>
+      <button
+        type="button"
+        onClick={onShowList}
+        disabled={!count}
+        aria-label={count ? `Ver quem reagiu (${count})` : undefined}
+        title={count && top.length ? top.map((t) => reactionOf(t).emoji).join(" ") : undefined}
+        className={clsx(
+          "-ml-1.5 flex min-h-[40px] items-center rounded-full pr-2 text-[15px] tabular-nums disabled:cursor-default",
+          mine === "like" ? "text-orbit-pink" : mine ? "text-white" : ""
         )}
-        {compactNumber(count)}
+      >
+        {count > 0 && compactNumber(count)}
       </button>
       )}
     </span>

@@ -969,7 +969,7 @@ export function ProfileView({
         {/* ================= COMPUTADOR ================= */}
         {/* Sem overflow-hidden no cartão: o menu "Mais" pode passar da borda; a capa recorta os próprios cantos. */}
         <section className={`${cardClass} relative z-10 hidden md:block ${accent ? "border-pa/35 shadow-[0_0_40px_rgb(var(--pa)/0.12)]" : ""}`}>
-          <div className="relative aspect-[7/2] max-h-[220px] w-full overflow-hidden rounded-t-[inherit]">
+          <div className="relative aspect-[3/1] w-full overflow-hidden rounded-t-[inherit]">
             {coverImage}
             {isMe && (
               <CoverMenu
@@ -990,13 +990,13 @@ export function ProfileView({
               online={online}
               accent={accent}
               frame={frame}
-              className={`-mt-14 h-[124px] w-[124px] ${frame ? "mx-6 mb-6" : ""}`}
+              className={`-mt-20 h-[156px] w-[156px] shrink-0 ${frame ? "mx-6 mb-6" : ""}`}
             />
             {/* Como no VK: nome, uma linha de bio e uma linha com cidade · comunidade · Mais; ações à direita. */}
-            <div className="flex min-w-0 flex-1 items-start justify-between gap-4 pt-3">
-              <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-x-4 gap-y-3 pt-3">
+              <div className="min-w-0 flex-1 basis-[300px]">
                 <div className="flex items-center gap-2">
-                  <h1 className="min-w-0 truncate font-display text-[22px] font-bold leading-tight text-white">{user.name}</h1>
+                  <h1 className="min-w-0 break-words font-display text-[22px] font-bold leading-tight text-white">{user.name}</h1>
                   {user.isVerified && <VerifiedBadge className="h-5 w-5" />}
                   {user.isPremium && (
                     <span title="Órbita Premium" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orbit-purple text-snow">
@@ -1005,7 +1005,7 @@ export function ProfileView({
                   )}
                 </div>
                 {user.bio ? (
-                  <p className="mt-1 line-clamp-2 whitespace-pre-line text-[14px] leading-snug text-white/80">{user.bio}</p>
+                  <p className="mt-1 line-clamp-3 whitespace-pre-line text-[14px] leading-snug text-white/80">{user.bio}</p>
                 ) : (
                   isMe && (
                     <Link href="/configuracoes/conta" className="mt-1 block text-sm text-white/50 hover:text-white">
@@ -1106,7 +1106,7 @@ export function ProfileView({
 
         {/* ================= CELULAR ================= */}
         <section className="md:hidden">
-          <div className="relative aspect-[9/4] w-full overflow-hidden">
+          <div className="relative aspect-[16/9] w-full overflow-hidden">
             {coverImage}
             <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/45 to-transparent" />
             <NavBack fallback="/feed" className={`${glassButton} absolute left-3 top-3`} />
@@ -1123,7 +1123,7 @@ export function ProfileView({
             </div>
           </div>
 
-          <div className="ox-card relative -mt-7 rounded-t-[28px] bg-space-surface px-4 pb-5">
+          <div className="ox-card relative -mt-6 rounded-t-[28px] bg-space-surface px-4 pb-5">
             {/* Avatar à esquerda, sobrepondo só o canto da capa (no centro ele cobria a capa). */}
             <div className="flex justify-start">
               <ProfileAvatar
@@ -1135,7 +1135,7 @@ export function ProfileView({
                 online={online}
                 accent={accent}
                 frame={frame}
-                className={`-mt-12 h-[104px] w-[104px] ${frame ? "mb-5 ml-5" : ""}`}
+                className={`-mt-16 h-[124px] w-[124px] ${frame ? "mb-5 ml-5" : ""}`}
               />
             </div>
             <div className="mt-3">{identity()}</div>
