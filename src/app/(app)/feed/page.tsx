@@ -98,7 +98,7 @@ export default async function FeedPage(props: { searchParams: Promise<{ aba?: st
   if (tab === "para-voce") {
     const now = Date.now();
     const score = (p: FeedPost) => {
-      const hours = (now - new Date(p.createdAt).getTime()) / 3_600_000;
+      const hours = Math.max(0, (now - new Date(p.createdAt).getTime()) / 3_600_000);
       const close = friendIds.has(p.author.id) || followingIds.has(p.author.id) ? 6 : 0;
       return (1 + p.likeCount * 2 + p.commentCount * 3 + close) / Math.pow(hours + 2, 1.3);
     };

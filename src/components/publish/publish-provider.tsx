@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import {
   ArrowLeft,
+  CalendarClock,
   ChevronRight,
   CircleDot,
   Clapperboard,
@@ -160,9 +161,9 @@ export function PublishProvider({ me, children }: { me: Me; children: React.Reac
           me={me}
           start={editor}
           onClose={() => setEditor(null)}
-          onPublished={() => {
+          onPublished={(msg) => {
             setEditor(null);
-            flash("Publicado!");
+            flash(msg);
             router.refresh();
           }}
           onDraftSaved={() => {
@@ -189,6 +190,9 @@ export function PublishProvider({ me, children }: { me: Me; children: React.Reac
 }
 
 const MAX_FILES = 10;
+// "Quando publicar" depende da coluna Post.publishAt (migração 20261001020000_post_scheduling).
+// Fica desligado até a migração ser aplicada no banco.
+const SCHEDULING_ENABLED = false;
 const kindOf = (f: { type: string }): Item["kind"] => (f.type.startsWith("video") ? "video" : f.type.startsWith("audio") ? "audio" : "image");
 
 function PostEditor({
@@ -201,7 +205,7 @@ function PostEditor({
   me: Me;
   start: EditorStart;
   onClose: () => void;
-  onPublished: () => void;
+  onPublished: (message: string) => void;
   onDraftSaved: () => void;
 }) {
   const [step, setStep] = useState<"write" | "publish">("write");
@@ -214,6 +218,10 @@ function PostEditor({
   const [draftsOpen, setDraftsOpen] = useState(false);
   const [panel, setPanel] = useState<"location" | "visibility" | null>(null);
   const [busy, setBusy] = useState(false);
+  const [toStory, setToStory] = useState(false);
+  const [publishAt, setPublishAt] = useState<Date | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mediaInput = useRef<HTMLInputElement>(null);
   const audioInput = useRef<HTMLInputElement>(null);
@@ -261,13 +269,22 @@ function PostEditor({
     setBusy(true);
     setError(null);
     try {
-      await publishPost({ userId: me.id, content, files: items.map((i) => i.file), location, visibility });
+      await publishPost({ userId: me.id, content, files: items.map((i) => i.file), location, visibility, publishAt });
+      // "Publicar na história": a primeira foto/vídeo também vira história de 24h.
+      const firstVisual = items.find((i) => i.kind !== "audio");
+      if (toStory && firstVisual) await createMomentFromFile(me.id, firstVisual.file).catch(() => {});
       if (draftId) await deleteDraft(draftId);
-      onPublished();
+      onPublished(publishAt ? `Agendado: ${scheduleLabel(publishAt)}. Só você vê até lá.` : "Publicado!");
     } catch (err) {
       setError(err instanceof Error && err.message ? err.message : "Não foi possível publicar. Tente novamente.");
       setBusy(false);
     }
+  }
+
+  // Fechar com algo escrito ou escolhido pergunta se quer salvar o rascunho.
+  function requestClose() {
+    if (canNext) setConfirmClose(true);
+    else onClose();
   }
 
   async function keepDraft() {
@@ -348,7 +365,7 @@ function PostEditor({
         {step === "write" ? (
           <>
             <header className="flex h-16 shrink-0 items-center gap-4 px-4 pt-[env(safe-area-inset-top)]">
-              <button type="button" onClick={onClose} aria-label="Fechar" className="rounded-full p-1.5 text-white/85 hover:bg-white/5">
+              <button type="button" onClick={requestClose} aria-label="Fechar" className="rounded-full p-1.5 text-white/85 hover:bg-white/5">
                 <X className="h-6 w-6" />
               </button>
               <h2 className="flex-1 font-display text-xl font-bold text-white">Novo post</h2>
@@ -418,7 +435,23 @@ function PostEditor({
               <div className="border-t border-white/10" />
               {row(<MapPin className="h-6 w-6" />, "Local", location || null, () => setPanel("location"))}
               {row(<Music2 className="h-6 w-6" />, "Música", audio.length ? audio.map((a) => a.file.name).join(", ") : null, () => audioInput.current?.click())}
-              {row(<vis.icon className="h-6 w-6" />, "Quem pode ver", vis.label, () => setPanel("visibility"))}
+              <div className="mx-5 border-t border-white/10" />
+              {SCHEDULING_ENABLED &&
+                row(<CalendarClock className="h-6 w-6" />, "Quando publicar", publishAt ? scheduleLabel(publishAt) : "Agora", () => setScheduleOpen(true))}
+              {row(<vis.icon className="h-6 w-6" />, "Quem verá este post", vis.label, () => setPanel("visibility"))}
+              {visual.length > 0 && (
+                <>
+                  <div className="mx-5 border-t border-white/10" />
+                  <label className="flex cursor-pointer items-center gap-4 px-5 py-4">
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[16px] text-white">Publicar na história</span>
+                      <span className="block text-sm text-white/50">A primeira foto ou vídeo também fica 24h nas histórias</span>
+                    </span>
+                    <input type="checkbox" checked={toStory} onChange={(e) => setToStory(e.target.checked)} className="peer sr-only" />
+                    <span className="relative h-8 w-14 shrink-0 rounded-full bg-white/15 transition peer-checked:bg-orbit-blue peer-focus-visible:ring-2 peer-focus-visible:ring-orbit-blue/60 after:absolute after:left-1 after:top-1 after:h-6 after:w-6 after:rounded-full after:bg-snow after:transition peer-checked:after:translate-x-6" />
+                  </label>
+                </>
+              )}
               {error && <p className="mx-5 mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>}
             </div>
 
@@ -429,7 +462,7 @@ function PostEditor({
                 disabled={busy}
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-orbit-gradient text-[16px] font-semibold text-snow shadow-glow transition active:scale-[0.99] disabled:opacity-60"
               >
-                {busy && <Loader2 className="h-5 w-5 animate-spin" />} {busy ? "Publicando..." : "Publicar"}
+                {busy && <Loader2 className="h-5 w-5 animate-spin" />} {busy ? "Publicando..." : publishAt ? "Agendar publicação" : "Publicar"}
               </button>
               <button
                 type="button"
@@ -441,6 +474,37 @@ function PostEditor({
               </button>
             </footer>
           </>
+        )}
+
+        {scheduleOpen && (
+          <ScheduleDialog
+            value={publishAt}
+            onCancel={() => setScheduleOpen(false)}
+            onDone={(d) => {
+              setPublishAt(d);
+              setScheduleOpen(false);
+            }}
+          />
+        )}
+
+        {confirmClose && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 p-6" onMouseDown={(e) => e.target === e.currentTarget && setConfirmClose(false)}>
+            <div role="alertdialog" aria-label="Salvar o rascunho?" className="animate-pop-in w-full max-w-sm rounded-3xl border border-white/10 bg-space-surface p-6 shadow-2xl">
+              <p className="font-display text-xl font-bold text-white">Salvar o rascunho?</p>
+              <p className="mt-1 text-sm text-white/55">Você pode continuar depois pelos Rascunhos, neste aparelho.</p>
+              <div className="mt-5 flex flex-col items-end gap-1">
+                <button type="button" onClick={() => { setConfirmClose(false); keepDraft(); }} className="rounded-xl px-3 py-2.5 text-[16px] font-semibold text-white hover:bg-white/5">
+                  Salvar
+                </button>
+                <button type="button" onClick={onClose} className="rounded-xl px-3 py-2.5 text-[16px] font-semibold text-white hover:bg-white/5">
+                  Sair sem salvar
+                </button>
+                <button type="button" onClick={() => setConfirmClose(false)} className="rounded-xl px-3 py-2.5 text-[16px] font-semibold text-red-400 hover:bg-red-500/5">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Painéis: local, quem pode ver, rascunhos */}
@@ -549,6 +613,79 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
           </button>
         </div>
         {children}
+      </div>
+    </div>
+  );
+}
+
+/** "Hoje às 16:47", "Amanhã às 09:00" ou "12 out. às 20:30". */
+function scheduleLabel(d: Date) {
+  const time = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const day = new Date(d);
+  day.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = Math.round((day.getTime() - today.getTime()) / 86_400_000);
+  const name = diff === 0 ? "Hoje" : diff === 1 ? "Amanhã" : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  return `${name} às ${time}`;
+}
+
+/** Escolha de dia (hoje até 30 dias) e hora para agendar a publicação. */
+function ScheduleDialog({ value, onCancel, onDone }: { value: Date | null; onCancel: () => void; onDone: (d: Date | null) => void }) {
+  const base = value ?? new Date(Date.now() + 60 * 60 * 1000);
+  const days = Array.from({ length: 31 }, (_, i) => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+  const startOfBase = new Date(base);
+  startOfBase.setHours(0, 0, 0, 0);
+  const [dayIndex, setDayIndex] = useState(Math.max(0, days.findIndex((d) => d.getTime() === startOfBase.getTime())));
+  const [time, setTime] = useState(base.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false }));
+  const [error, setError] = useState<string | null>(null);
+
+  function done() {
+    const [h, m] = time.split(":").map(Number);
+    const d = new Date(days[dayIndex]);
+    d.setHours(h || 0, m || 0, 0, 0);
+    if (d.getTime() < Date.now() + 2 * 60 * 1000) return setError("Escolha um horário daqui a pelo menos alguns minutos.");
+    onDone(d);
+  }
+
+  const field = "w-full appearance-none rounded-xl border border-white/10 bg-space-bg/60 px-4 py-3.5 text-[16px] text-white outline-none focus:border-orbit-purple/60";
+  return (
+    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 p-6" onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
+      <div role="dialog" aria-label="Quando publicar" className="animate-pop-in w-full max-w-sm rounded-3xl border border-white/10 bg-space-surface p-6 shadow-2xl">
+        <p className="font-display text-xl font-bold text-white">Quando publicar</p>
+        <div className="mt-5 grid grid-cols-[1fr_auto] gap-3">
+          <select value={dayIndex} onChange={(e) => { setDayIndex(Number(e.target.value)); setError(null); }} className={field} aria-label="Dia">
+            {days.map((d, i) => (
+              <option key={i} value={i}>
+                {i === 0 ? "Hoje" : i === 1 ? "Amanhã" : d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" })}
+              </option>
+            ))}
+          </select>
+          <input type="time" value={time} onChange={(e) => { setTime(e.target.value); setError(null); }} className={`${field} w-[120px]`} aria-label="Hora" />
+        </div>
+        {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+        <div className="mt-6 flex items-center justify-between gap-2">
+          {value ? (
+            <button type="button" onClick={() => onDone(null)} className="rounded-xl px-3 py-2.5 text-[15px] font-medium text-white/60 hover:bg-white/5">
+              Publicar agora
+            </button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-1">
+            <button type="button" onClick={onCancel} className="rounded-xl px-3 py-2.5 text-[16px] font-semibold text-white hover:bg-white/5">
+              Cancelar
+            </button>
+            <button type="button" onClick={done} className="rounded-xl px-3 py-2.5 text-[16px] font-semibold text-orbit-blue hover:bg-white/5">
+              Pronto
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
