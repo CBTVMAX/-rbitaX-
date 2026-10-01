@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { GiftDialog, type GiftProduct, type GiftRecipient } from "@/components/gift-dialog";
 
 /** Botão "Presentear" no perfil de outra pessoa: envia um presente em Diamantes. */
-export function ProfileGiftButton({ recipient, compact }: { recipient: GiftRecipient; compact?: boolean }) {
+export function ProfileGiftButton({ recipient, compact, label = "Presentear" }: { recipient: GiftRecipient; compact?: boolean; label?: string }) {
   const supabase = useMemo(() => createClient(), []);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,7 @@ export function ProfileGiftButton({ recipient, compact }: { recipient: GiftRecip
         )}
       >
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4 text-orbit-cyan" />}
-        {!compact && "Presentear"}
+        {!compact && label}
       </button>
       {open && (
         <GiftDialog gifts={gifts} balance={balance} recipient={recipient} onClose={() => setOpen(false)} onSent={(nb) => setBalance(nb)} />
