@@ -176,7 +176,10 @@ export function StickerPanel({
   onTabChange,
   onClose,
   className,
+  tabs,
 }: {
+  /** Abas visíveis (ex.: comentários não têm GIF). Padrão: todas. */
+  tabs?: PanelTab[];
   onEmoji: (emoji: string) => void;
   onSticker: (id: string, info: StickerInfo) => void;
   onGifFile: (file: File) => void;
@@ -405,7 +408,7 @@ export function StickerPanel({
         ) : (
           <>
             <div className="flex min-w-0 flex-1 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-1" role="tablist">
-              {TABS.map((t) => (
+              {TABS.filter((t) => !tabs || tabs.includes(t.id)).map((t) => (
                 <button
                   key={t.id}
                   type="button"

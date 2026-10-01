@@ -5,7 +5,9 @@ import { createPortal } from "react-dom";
 import { clsx } from "clsx";
 import { Check, ChevronDown, Loader2, Send, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { CommentItem, firstName, SORT_LABEL, threadComments, useCommentLikes, type CommentSort, type CommentUser, type ThreadComment } from "./comment-kit";
+import { CommentStickerButton } from "./comment-sticker-picker";
+import type { StickerInfo } from "@/lib/messenger/types";
+import { CommentItem, encodeStickerComment, firstName, SORT_LABEL, threadComments, useCommentLikes, type CommentSort, type CommentUser, type ThreadComment } from "./comment-kit";
 
 const COLUMNS = "id, content, createdAt, userId, parentId, status, user:User!Comment_userId_fkey(id, name, username, avatarUrl)";
 
@@ -89,9 +91,7 @@ export function CommentsSheet({
     });
   }
 
-  async function send(e?: React.FormEvent) {
-    e?.preventDefault();
-    const content = text.trim();
+  async function post(content: string, clearText: () => void) {
     if (!content || sending) return;
     setSending(true);
     setError(null);
@@ -107,11 +107,34 @@ export function CommentsSheet({
     }
     const row = data as unknown as ThreadComment;
     setComments((c) => [...(c ?? []), row]);
-    setText("");
+    clearText();
     setReplyTo(null);
     setFresh(row.id);
     onCountChange?.(1);
     window.setTimeout(() => document.getElementById(`c-${row.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+  }
+
+  function send(e?: React.FormEvent) {
+    e?.preventDefault();
+    post(text.trim(), () => setText(""));
+  }
+
+  /** Adesivo sai na hora; numa resposta vai com o "Nome, " na frente, como no VK. */
+  function sendSticker(info: StickerInfo) {
+    const prefix = replyTo ? `${firstName(replyTo.user.name)}, ` : "";
+    post(encodeStickerComment(prefix, info), () => setText((t) => t.replace(/^[^,\n]{1,40},\s?/, "")));
+  }
+
+  function insertEmoji(emoji: string) {
+    const el = input.current;
+    const start = el?.selectionStart ?? text.length;
+    const end = el?.selectionEnd ?? text.length;
+    setText((t) => t.slice(0, start) + emoji + t.slice(end));
+    requestAnimationFrame(() => {
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(start + emoji.length, start + emoji.length);
+    });
   }
 
   async function remove(c: ThreadComment) {
@@ -212,7 +235,7 @@ export function CommentsSheet({
           )}
         </div>
 
-        <form onSubmit={send} className="shrink-0 border-t border-white/[0.07] bg-space-surface pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <form onSubmit={send} className="relative shrink-0 border-t border-white/[0.07] bg-space-surface pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           {replyTo && (
             <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-2 text-[13px] text-white/50">
               <span className="min-w-0 flex-1 truncate">
@@ -244,6 +267,7 @@ export function CommentsSheet({
               placeholder="Comentário"
               className="max-h-[120px] min-h-[44px] min-w-0 flex-1 resize-none rounded-3xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-[15px] text-white outline-none placeholder:text-white/35 focus:border-orbit-blue/60"
             />
+            <CommentStickerButton viewer={{ id: viewerId, name: "", username: "", avatarUrl: null }} onEmoji={insertEmoji} onSticker={sendSticker} />
             <button type="submit" disabled={!text.trim() || sending} aria-label="Enviar comentário" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-orbit-blue transition hover:bg-white/5 disabled:text-white/25">
               {sending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-[22px] w-[22px]" />}
             </button>
