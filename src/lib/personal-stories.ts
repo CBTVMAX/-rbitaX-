@@ -64,3 +64,46 @@ export function groupPersonalStories(
   }
   return Array.from(map.values()).sort((a, b) => Number(a.seen) - Number(b.seen));
 }
+
+/** Suas histórias que já saíram do ar (24h) — continuam guardadas e só você vê. */
+export async function loadMyArchivedStories(userId: string, limit = 60): Promise<PersonalStory[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("Moment")
+    .select(COLUMNS)
+    .is("communityId", null)
+    .eq("userId", userId)
+    .lte("expiresAt", new Date().toISOString())
+    .order("createdAt", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return ((data ?? []) as unknown as PersonalStory[]).filter((s) => s.user && s.mediaUrl);
+}
+
+/** Guarda a história como publicação permanente no perfil (mesmo arquivo, sem reenviar). */
+export async function saveStoryToProfile(story: PersonalStory, userId: string) {
+  if (!story.mediaUrl) throw new Error("Esta história não tem foto ou vídeo para salvar.");
+  const supabase = createClient();
+  const postId = crypto.randomUUID();
+  const kind = story.type === "video" ? "video" : "image";
+  const { error: postError } = await supabase.from("Post").insert({
+    id: postId,
+    authorId: userId,
+    content: story.text ?? "",
+    kind,
+    updatedAt: new Date().toISOString(),
+  });
+  if (postError) throw postError;
+  const { error: mediaError } = await supabase.from("Media").insert({
+    id: crypto.randomUUID(),
+    postId,
+    type: kind,
+    url: story.mediaUrl,
+    position: 0,
+  });
+  if (mediaError) {
+    await supabase.from("Post").delete().eq("id", postId);
+    throw mediaError;
+  }
+  return postId;
+}
