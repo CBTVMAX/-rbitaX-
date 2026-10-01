@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { FEED_TABS } from "@/lib/feed";
 import { DiamondIcon, formatDiamonds } from "@/components/diamonds";
 import { useCoinBalance } from "@/components/store/coin-balance";
 import { clsx } from "clsx";
@@ -76,7 +77,7 @@ function moreItems(username: string): NavItem[] {
     { href: "/loja", label: "Mercado", icon: Store },
     { href: "/diamantes", label: "Carteira · Diamantes", icon: Gem },
     { href: null, label: "Eventos", icon: CalendarDays },
-    { href: null, label: "Favoritos", icon: Bookmark },
+    { href: "/feed?aba=salvos", label: "Favoritos", icon: Bookmark },
     { href: `/perfil/${username}?arquivo=1`, label: "Arquivados", icon: Archive },
   ];
 }
@@ -342,9 +343,13 @@ export function MobileHeader({
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-space-bg/90 backdrop-blur md:hidden">
       <div className="flex h-14 items-center justify-between px-4">
-        <Link href="/feed">
-          <OrbitWordmarkThemed className="h-8 w-auto" />
-        </Link>
+        {pathname === "/feed" ? (
+          <FeedSwitcher username={username} name={name} avatarUrl={avatarUrl} />
+        ) : (
+          <Link href="/feed">
+            <OrbitWordmarkThemed className="h-8 w-auto" />
+          </Link>
+        )}
         <div className="flex items-center gap-4 text-white">
           <Link href="/explorar" aria-label="Pesquisar">
             <Search className="h-5 w-5" />
@@ -442,8 +447,8 @@ export function MobileHeader({
 }
 
 const CREATE_OPTIONS: { href: string; label: string; hint: string; icon: Icon }[] = [
-  { href: "/feed#composer", label: "Publicação", hint: "Texto, foto ou vídeo", icon: Newspaper },
-  { href: "/feed#composer", label: "Foto ou vídeo", hint: "Adicionar mídia", icon: ImageIcon },
+  { href: "/feed?novo=1#composer", label: "Publicação", hint: "Texto, foto ou vídeo", icon: Newspaper },
+  { href: "/feed?novo=1#composer", label: "Foto ou vídeo", hint: "Adicionar mídia", icon: ImageIcon },
   { href: "/comunidades", label: "Comunidade", hint: "Criar ou participar", icon: Users },
   { href: "/mensagens", label: "Mensagem", hint: "Nova conversa", icon: MessageCircle },
 ];
@@ -537,5 +542,44 @@ export function MobileTabBar({ username }: { username: string }) {
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * Topo do feed no celular (estilo app): sua foto e "Principal ▾", que troca entre as abas do
+ * feed (Para você, Seguindo, Recentes, Salvos).
+ */
+function FeedSwitcher({ username, name, avatarUrl }: { username: string; name: string; avatarUrl: string | null }) {
+  const params = useSearchParams();
+  const [open, setOpen] = useState(false);
+  const active = FEED_TABS.find((t) => t.id === params.get("aba")) ?? FEED_TABS[0];
+  useEffect(() => setOpen(false), [params]);
+  return (
+    <div className="relative flex min-w-0 items-center gap-3">
+      <Link href={`/perfil/${username}`} aria-label="Meu perfil">
+        <UserAvatar name={name} avatarUrl={avatarUrl} size={34} />
+      </Link>
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex items-center gap-1 font-display text-xl font-bold text-white">
+        {active.id === "para-voce" ? "Principal" : active.label}
+        <ChevronDown className={clsx("h-5 w-5 transition", open && "rotate-180")} />
+      </button>
+      {open && (
+        <>
+          <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
+          <div className="absolute left-10 top-11 z-20 w-56 overflow-hidden rounded-2xl border border-white/10 bg-space-surface py-1 shadow-2xl">
+            {FEED_TABS.map((t) => (
+              <Link
+                key={t.id}
+                href={t.id === "para-voce" ? "/feed" : `/feed?aba=${t.id}`}
+                className={clsx("flex items-center justify-between px-4 py-3 text-[15px] hover:bg-white/5", t.id === active.id ? "font-semibold text-white" : "text-white/75")}
+              >
+                {t.id === "para-voce" ? "Principal (Para você)" : t.label}
+                {t.id === active.id && <span className="h-2 w-2 rounded-full bg-orbit-blue" />}
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }

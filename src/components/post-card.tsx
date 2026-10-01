@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo, initials } from "@/lib/format";
-import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Repeat2, Pencil, Trash2, Link2, Check, X, Loader2, Archive, ArchiveRestore, Globe2, Users, Lock, ChevronRight } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Repeat2, Pencil, Trash2, Link2, Check, X, Loader2, Archive, ArchiveRestore, Globe2, Users, Lock, ChevronRight, MapPin } from "lucide-react";
 import type { SharedEmbed } from "@/lib/shared-posts";
 import { clsx } from "clsx";
 import { VerifiedBadge } from "@/components/verified-badge";
@@ -28,6 +28,8 @@ export type FeedPost = {
   /** "public" | "followers" | "private" — aplicado pelo banco (RLS) para quem está vendo. */
   visibility?: string;
   isArchived?: boolean;
+  /** Local marcado na publicação (opcional). */
+  location?: string | null;
 };
 
 const VISIBILITY: { id: string; label: string; hint: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -73,11 +75,19 @@ export function PostCard({
   currentUserId,
   pinned = false,
   canPin = false,
+  showFollow = false,
+  bleed = false,
+  initiallySaved = false,
 }: {
   post: FeedPost;
   currentUserId: string;
   pinned?: boolean;
   canPin?: boolean;
+  /** Mostra "Seguir" ao lado do autor (feed: quem você ainda não segue). */
+  showFollow?: boolean;
+  /** Celular: publicação de ponta a ponta, sem moldura (estilo app). */
+  bleed?: boolean;
+  initiallySaved?: boolean;
 }) {
   const supabase = createClient();
   const router = useRouter();
@@ -176,6 +186,49 @@ export function PostCard({
   const [commentText, setCommentText] = useState("");
   const [commentCount, setCommentCount] = useState(post.commentCount);
   const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(initiallySaved);
+  const [follow, setFollow] = useState<"none" | "following" | "requested">("none");
+  const [shareNote, setShareNote] = useState<string | null>(null);
+
+  async function toggleSave() {
+    const next = !saved;
+    setSaved(next);
+    const { error } = next
+      ? await supabase.from("Bookmark").insert({ id: crypto.randomUUID(), postId: post.id, userId: currentUserId })
+      : await supabase.from("Bookmark").delete().eq("postId", post.id).eq("userId", currentUserId);
+    if (error && error.code !== "23505") setSaved(!next); // 23505 = já estava salvo
+  }
+
+  async function followAuthor() {
+    if (follow !== "none") return;
+    setFollow("following");
+    const { data, error } = await supabase
+      .from("Follow")
+      .insert({ id: crypto.randomUUID(), followerId: currentUserId, followingId: post.author.id })
+      .select("status")
+      .maybeSingle();
+    if (error && error.code !== "23505") setFollow("none");
+    else if (data?.status === "pending") setFollow("requested");
+  }
+
+  async function share() {
+    const url = `${window.location.origin}/perfil/${post.author.username}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `${post.author.name} no ÓrbitaX`, text: content.slice(0, 120), url });
+        return;
+      } catch {
+        // cancelado: copia o link
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareNote("Link copiado!");
+    } catch {
+      setShareNote("Não foi possível copiar o link.");
+    }
+    setTimeout(() => setShareNote(null), 2000);
+  }
 
   async function toggleLike() {
     if (busy) return;
@@ -226,13 +279,18 @@ export function PostCard({
   if (removed) return null;
 
   return (
-    <article className="ox-card ox-post rounded-2xl border border-white/10 bg-space-card p-4 md:p-5">
+    <article
+      className={clsx(
+        "ox-card ox-post border-white/10 bg-space-card",
+        bleed ? "border-y px-0 py-3 md:rounded-2xl md:border md:p-5" : "rounded-2xl border p-4 md:p-5"
+      )}
+    >
       {pinned && (
-        <p className="mb-2 flex items-center gap-1 text-[11px] font-medium text-white/50">
+        <p className={clsx("mb-2 flex items-center gap-1 text-[11px] font-medium text-white/50", bleed && "px-4 md:px-0")}>
           <Pin className="h-3 w-3 text-orbit-cyan" /> Fixado
         </p>
       )}
-      <div className="mb-3 flex items-center gap-3">
+      <div className={clsx("mb-3 flex items-center gap-3", bleed && "px-4 md:px-0")}>
         <Link href={`/perfil/${post.author.username}`}>
           <Avatar name={post.author.name} url={post.author.avatarUrl} />
         </Link>
@@ -241,18 +299,33 @@ export function PostCard({
             {post.author.name}
             {post.author.isVerified && <VerifiedBadge />}
           </Link>
-          <p className="text-xs text-white/40">
-            @{post.author.username} · {timeAgo(post.createdAt)}
-            {edited && " · editada"}
-            {isAuthor && visibility !== "public" && (
-              <span title={visibility === "followers" ? "Visível para seguidores" : "Visível só para você"}>
-                {" · "}
-                {visibility === "followers" ? <Users className="inline h-3 w-3 align-[-2px]" /> : <Lock className="inline h-3 w-3 align-[-2px]" />}
+          <p className="flex min-w-0 flex-wrap items-center gap-x-1 text-xs text-white/45">
+            <span className="hidden md:inline">@{post.author.username} ·</span>
+            <span>{timeAgo(post.createdAt)}</span>
+            {edited && <span>· editada</span>}
+            {post.location && (
+              <span className="flex min-w-0 items-center gap-0.5">
+                · <MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">{post.location}</span>
               </span>
             )}
+            <span className="flex items-center gap-0.5" title={visibility === "followers" ? "Visível para seguidores" : visibility === "private" ? "Visível só para você" : "Público"}>
+              ·{" "}
+              {visibility === "followers" ? <Users className="h-3 w-3" /> : visibility === "private" ? <Lock className="h-3 w-3" /> : <Globe2 className="h-3 w-3" />}
+              <span className="hidden sm:inline">{visibility === "followers" ? "Seguidores" : visibility === "private" ? "Somente eu" : "Público"}</span>
+            </span>
           </p>
         </div>
-        <div className="relative ml-auto">
+        {showFollow && !isAuthor && follow !== "following" && (
+          <button
+            type="button"
+            onClick={followAuthor}
+            disabled={follow !== "none"}
+            className="ml-auto shrink-0 rounded-xl bg-white/[0.08] px-4 py-1.5 text-[13px] font-semibold text-white transition hover:bg-white/[0.14] disabled:opacity-70"
+          >
+            {follow === "requested" ? "Solicitado" : "Seguir"}
+          </button>
+        )}
+        <div className={clsx("relative", !(showFollow && !isAuthor && follow !== "following") && "ml-auto")}>
           <button
             type="button"
             onClick={() => { setMenuOpen((v) => !v); setPrivacyOpen(false); }}
@@ -351,6 +424,7 @@ export function PostCard({
         </div>
       </div>
 
+      <div className={clsx(bleed && "px-4 md:px-0")}>
       {editing ? (
         <div className="mb-3">
           <textarea
@@ -373,6 +447,7 @@ export function PostCard({
       ) : (
         content && <ExpandableText text={content} />
       )}
+      </div>
 
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
@@ -393,32 +468,78 @@ export function PostCard({
         </div>
       )}
 
-      {post.shared !== undefined && <SharedCard shared={post.shared} />}
+      {post.shared !== undefined && (
+        <div className={clsx(bleed && "px-4 md:px-0")}>
+          <SharedCard shared={post.shared} />
+        </div>
+      )}
 
-      {post.media.length > 0 && <PostMedia media={post.media} />}
+      {post.media.length > 0 && (
+        // No celular (bleed) a foto vai de ponta a ponta, sem cantos arredondados.
+        <div className={clsx(bleed && "max-md:[&_.rounded-xl]:rounded-none max-md:[&_.rounded-lg]:rounded-none")}>
+          <PostMedia media={post.media} />
+        </div>
+      )}
 
-      <div className="flex items-center gap-5 border-t border-white/5 pt-3 text-xs text-white/50">
-        <button
-          onClick={toggleLike}
-          className={clsx("flex items-center gap-1.5 transition", liked ? "text-orbit-pink" : "hover:text-white")}
-        >
-          <Heart className={clsx("h-4 w-4", liked && "fill-orbit-pink")} />
-          {likeCount}
-        </button>
-        <button onClick={loadComments} className="flex items-center gap-1.5 transition hover:text-white">
-          <MessageCircle className="h-4 w-4" />
-          {commentCount}
-        </button>
-        <button className="flex items-center gap-1.5 transition hover:text-white">
-          <Share2 className="h-4 w-4" />
-        </button>
-        <button className="ml-auto transition hover:text-white">
-          <Bookmark className="h-4 w-4" />
-        </button>
+      {/* Celular: ícones com números (estilo app). Computador: resumo + ações com nome (mockup). */}
+      <div className={clsx("mt-1", bleed && "px-4 md:px-0")}>
+        <div className="flex items-center gap-1 pt-2 text-white/60 md:hidden">
+          <button type="button" onClick={toggleLike} aria-label="Curtir" className={clsx("flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm transition", liked ? "text-orbit-pink" : "hover:text-white")}>
+            <Heart className={clsx("h-[22px] w-[22px]", liked && "fill-orbit-pink")} />
+            {likeCount > 0 && likeCount}
+          </button>
+          <button type="button" onClick={loadComments} aria-label="Comentar" className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm transition hover:text-white">
+            <MessageCircle className="h-[22px] w-[22px]" />
+            {commentCount > 0 && commentCount}
+          </button>
+          <button type="button" onClick={share} aria-label="Compartilhar" className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm transition hover:text-white">
+            <Share2 className="h-[22px] w-[22px]" />
+          </button>
+          <button type="button" onClick={toggleSave} aria-label={saved ? "Remover dos salvos" : "Salvar"} className={clsx("ml-auto rounded-full px-2.5 py-1.5 transition", saved ? "text-orbit-blue" : "hover:text-white")}>
+            <Bookmark className={clsx("h-[22px] w-[22px]", saved && "fill-current")} />
+          </button>
+        </div>
+
+        <div className="hidden md:block">
+          {(likeCount > 0 || commentCount > 0) && (
+            <div className="flex items-center justify-between py-2.5 text-[13px] text-white/50">
+              <span className="flex items-center gap-1.5">
+                {likeCount > 0 && (
+                  <>
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orbit-pink text-snow">
+                      <Heart className="h-3 w-3 fill-current" />
+                    </span>
+                    {likeCount.toLocaleString("pt-BR")}
+                  </>
+                )}
+              </span>
+              {commentCount > 0 && (
+                <button type="button" onClick={loadComments} className="hover:underline">
+                  {commentCount} {commentCount === 1 ? "comentário" : "comentários"}
+                </button>
+              )}
+            </div>
+          )}
+          <div className="grid grid-cols-4 border-t border-white/[0.07] pt-1.5 text-[13px] font-medium text-white/65">
+            <button type="button" onClick={toggleLike} className={clsx("flex items-center justify-center gap-2 rounded-lg py-2 transition hover:bg-white/[0.04]", liked ? "text-orbit-pink" : "hover:text-white")}>
+              <Heart className={clsx("h-[18px] w-[18px]", liked && "fill-orbit-pink")} /> Curtir
+            </button>
+            <button type="button" onClick={loadComments} className="flex items-center justify-center gap-2 rounded-lg py-2 transition hover:bg-white/[0.04] hover:text-white">
+              <MessageCircle className="h-[18px] w-[18px]" /> Comentar
+            </button>
+            <button type="button" onClick={share} className="flex items-center justify-center gap-2 rounded-lg py-2 transition hover:bg-white/[0.04] hover:text-white">
+              <Share2 className="h-[18px] w-[18px]" /> Compartilhar
+            </button>
+            <button type="button" onClick={toggleSave} className={clsx("flex items-center justify-center gap-2 rounded-lg py-2 transition hover:bg-white/[0.04]", saved ? "text-orbit-blue" : "hover:text-white")}>
+              <Bookmark className={clsx("h-[18px] w-[18px]", saved && "fill-current")} /> {saved ? "Salvo" : "Salvar"}
+            </button>
+          </div>
+        </div>
+        {shareNote && <p className="pt-1 text-center text-xs text-emerald-400">{shareNote}</p>}
       </div>
 
       {showComments && (
-        <div className="mt-3 space-y-3 border-t border-white/5 pt-3">
+        <div className={clsx("mt-3 space-y-3 border-t border-white/5 pt-3", bleed && "mx-4 md:mx-0")}>
           {comments?.map((c) => (
             <div key={c.id} className="flex items-start gap-2">
               <Avatar name={c.user.name} url={c.user.avatarUrl} size={28} />

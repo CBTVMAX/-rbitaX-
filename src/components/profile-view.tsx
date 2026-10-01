@@ -187,6 +187,8 @@ export type ProfileViewProps = {
   pinnedPostId: string | null;
   /** Só o dono: o perfil está mostrando "Publicações arquivadas". */
   showArchive?: boolean;
+  /** Publicações deste perfil que quem está vendo já salvou. */
+  savedPostIds?: string[];
   communities: ProfileCommunity[];
   /** Só o dono: comunidades que ele escolheu esconder do perfil (aparecem marcadas para ele). */
   hiddenCommunityIds?: string[];
@@ -256,6 +258,7 @@ export function ProfileView({
   feed,
   pinnedPostId,
   showArchive = false,
+  savedPostIds = [],
   communities,
   hiddenCommunityIds = [],
   roleBadges = {},
@@ -503,6 +506,7 @@ export function ProfileView({
           currentUserId={current?.authId ?? ""}
           pinned={post.id === pinnedPostId}
           canPin={isMe}
+          initiallySaved={savedPostIds.includes(post.id)}
         />
       ))}
     </div>
@@ -861,7 +865,7 @@ export function ProfileView({
           </section>
         )}
         {audioPosts.map((post) => (
-          <PostCard key={post.id} post={post} currentUserId={current?.authId ?? ""} pinned={post.id === pinnedPostId} canPin={isMe} />
+          <PostCard key={post.id} post={post} currentUserId={current?.authId ?? ""} pinned={post.id === pinnedPostId} canPin={isMe} initiallySaved={savedPostIds.includes(post.id)} />
         ))}
       </div>
     ) : undefined;

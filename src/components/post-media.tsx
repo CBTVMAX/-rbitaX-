@@ -24,7 +24,19 @@ export function PostMedia({ media }: { media: PostMediaItem[] }) {
       {visual.length === 1 ? (
         <Single item={visual[0]} onOpen={() => setViewer(0)} />
       ) : visual.length > 1 ? (
-        <Carousel items={visual} onOpen={setViewer} />
+        visual.every((m) => m.type !== "video") ? (
+          <>
+            {/* Celular: carrossel; computador: grade (1 grande + menores, "+N"). Tocar mostra a foto inteira. */}
+            <div className="md:hidden">
+              <Carousel items={visual} onOpen={setViewer} />
+            </div>
+            <div className="hidden md:block">
+              <Grid items={visual} onOpen={setViewer} />
+            </div>
+          </>
+        ) : (
+          <Carousel items={visual} onOpen={setViewer} />
+        )
       ) : null}
 
       {audio.map((m) => (
@@ -57,9 +69,9 @@ function Single({ item, onOpen }: { item: PostMediaItem; onOpen: () => void }) {
     );
   }
   return (
-    <button type="button" onClick={onOpen} className="flex w-full justify-center overflow-hidden rounded-xl bg-black/20" aria-label="Abrir foto">
+    <button type="button" onClick={onOpen} className="flex w-full justify-center overflow-hidden rounded-xl bg-space-card" aria-label="Abrir foto">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={item.url} alt="" className="mx-auto max-h-[600px] w-auto max-w-full object-contain transition hover:opacity-95" />
+      <img src={item.url} alt="" className="max-h-[600px] w-full object-contain transition hover:opacity-95" />
     </button>
   );
 }
@@ -67,6 +79,16 @@ function Single({ item, onOpen }: { item: PostMediaItem; onOpen: () => void }) {
 /** Carrossel: mesmo comportamento no celular (deslize) e no computador (setas). */
 function Carousel({ items, onOpen }: { items: PostMediaItem[]; onOpen: (i: number) => void }) {
   const [index, setIndex] = useState(0);
+  // Altura segue a proporção da primeira foto (entre 4:5 e 1.91:1), sem faixas vazias enormes.
+  const [ratio, setRatio] = useState(1);
+  const firstRef = useRef<HTMLImageElement>(null);
+  const measure = (img: HTMLImageElement | null) => {
+    if (img?.naturalWidth && img.naturalHeight) setRatio(Math.min(1.91, Math.max(0.8, img.naturalWidth / img.naturalHeight)));
+  };
+  // A foto pode já ter carregado antes da página ficar interativa (o onLoad não dispara de novo).
+  useEffect(() => {
+    if (firstRef.current?.complete) measure(firstRef.current);
+  }, []);
   const ref = useRef<HTMLDivElement>(null);
 
   function onScroll() {
@@ -87,7 +109,8 @@ function Carousel({ items, onOpen }: { items: PostMediaItem[]; onOpen: (i: numbe
       <div
         ref={ref}
         onScroll={onScroll}
-        className="flex h-[min(70vh,540px)] snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{ aspectRatio: String(ratio) }}
+        className="flex max-h-[70vh] snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {items.map((m, i) => (
           <div key={m.id} className="flex h-full w-full shrink-0 snap-center items-center justify-center">
@@ -97,7 +120,13 @@ function Carousel({ items, onOpen }: { items: PostMediaItem[]; onOpen: (i: numbe
             ) : (
               <button type="button" onClick={() => onOpen(i)} className="flex h-full w-full items-center justify-center" aria-label={`Abrir foto ${i + 1}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={m.url} alt="" className="h-full w-full object-contain" />
+                <img
+                  src={m.url}
+                  alt=""
+                  className="h-full w-full object-contain"
+                  ref={i === 0 ? firstRef : undefined}
+                  onLoad={i === 0 ? (e) => measure(e.currentTarget) : undefined}
+                />
               </button>
             )}
           </div>
@@ -203,6 +232,42 @@ function Lightbox({ items, index, setIndex, onClose }: { items: PostMediaItem[];
           <ChevronRight className="h-6 w-6" />
         </button>
       )}
+    </div>
+  );
+}
+
+/** Grade do computador (como no mockup): 1 grande à esquerda e as demais à direita, com "+N". */
+function Grid({ items, onOpen }: { items: PostMediaItem[]; onOpen: (i: number) => void }) {
+  const tile = (i: number, className: string, more = 0) => {
+    const m = items[i];
+    return (
+      <button key={m.id} type="button" onClick={() => onOpen(i)} aria-label={`Abrir foto ${i + 1}`} className={clsx("relative block overflow-hidden rounded-lg bg-space-card", className)}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={m.url} alt="" className="h-full w-full object-cover transition duration-300 hover:scale-[1.03]" />
+        {more > 0 && (
+          <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-2xl font-bold text-snow">+{more}</span>
+        )}
+      </button>
+    );
+  };
+  if (items.length === 2) {
+    return <div className="grid h-[340px] grid-cols-2 gap-1.5">{[tile(0, "h-full"), tile(1, "h-full")]}</div>;
+  }
+  const extra = items.length - 4;
+  return (
+    <div className="grid h-[360px] grid-cols-[3fr_2fr] gap-1.5">
+      {tile(0, "h-full")}
+      <div className="grid min-h-0 grid-rows-2 gap-1.5">
+        {tile(1, "h-full")}
+        {items.length === 3 ? (
+          tile(2, "h-full")
+        ) : (
+          <div className="grid min-h-0 grid-cols-2 gap-1.5">
+            {tile(2, "h-full")}
+            {tile(3, "h-full", extra)}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
