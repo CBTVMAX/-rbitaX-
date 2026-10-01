@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Clock, MessageCircle, UserPlus, Users } from "lucide-react";
+import { Ban, Clock, MessageCircle, UserPlus, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { Avatar } from "@/components/post-card";
 import { FriendButton, FriendRequestActions } from "@/components/friend-button";
+import { FriendRowMenu, UnblockButton } from "@/components/block-user";
 import { PresenceDot } from "@/components/presence-picker";
 import { timeAgo } from "@/lib/format";
 
@@ -43,19 +44,22 @@ export default async function AmigosPage() {
   // Seen: the Amigos counter clears (pending requests stay listed until answered).
   await supabase.rpc("mark_friend_requests_seen");
 
-  const { data: rows } = await supabase
-    .from("Friendship")
-    .select("requesterId, addresseeId, status, createdAt")
-    .or(`requesterId.eq.${me},addresseeId.eq.${me}`)
-    .order("createdAt", { ascending: false })
-    .limit(500);
+  const [{ data: rows }, { data: blockRows }] = await Promise.all([
+    supabase
+      .from("Friendship")
+      .select("requesterId, addresseeId, status, createdAt")
+      .or(`requesterId.eq.${me},addresseeId.eq.${me}`)
+      .order("createdAt", { ascending: false })
+      .limit(500),
+    supabase.from("Block").select("blockedId, createdAt").eq("blockerId", me).order("createdAt", { ascending: false }).limit(500),
+  ]);
 
   const incoming = (rows ?? []).filter((r) => r.status === "pending" && r.addresseeId === me);
   const outgoing = (rows ?? []).filter((r) => r.status === "pending" && r.requesterId === me);
   const accepted = (rows ?? []).filter((r) => r.status === "accepted");
   const other = (r: { requesterId: string; addresseeId: string }) => (r.requesterId === me ? r.addresseeId : r.requesterId);
 
-  const ids = Array.from(new Set((rows ?? []).map(other)));
+  const ids = Array.from(new Set([...(rows ?? []).map(other), ...(blockRows ?? []).map((b) => b.blockedId)]));
   const { data: people } = ids.length
     ? await supabase.from("User").select("id, name, username, avatarUrl, presence").in("id", ids)
     : { data: [] as Person[] };
@@ -65,6 +69,8 @@ export default async function AmigosPage() {
     .map((r) => byId.get(other(r)))
     .filter((p): p is Person => !!p)
     .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+
+  const blocked = (blockRows ?? []).map((b) => ({ person: byId.get(b.blockedId), at: b.createdAt })).filter((b): b is { person: Person; at: string } => !!b.person);
 
   const personLink = (p: Person, sub: React.ReactNode) => (
     <Link href={`/perfil/${p.username}`} className="flex min-w-[10rem] flex-1 items-center gap-3">
@@ -127,6 +133,7 @@ export default async function AmigosPage() {
                 >
                   <MessageCircle className="h-4 w-4" />
                 </Link>
+                <FriendRowMenu userId={p.id} name={p.name} />
               </div>
             ))}
           </div>
@@ -146,6 +153,26 @@ export default async function AmigosPage() {
                 </div>
               );
             })}
+          </div>
+        </Section>
+      )}
+
+      {blocked.length > 0 && (
+        <Section icon={Ban} title="Bloqueados" count={blocked.length}>
+          <p className="-mt-1 mb-3 text-xs text-white/50">Quem está aqui não vê seu perfil nem consegue falar com você. A pessoa não é avisada.</p>
+          <div className="space-y-2">
+            {blocked.map(({ person: p, at }) => (
+              <div key={p.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-space-bg/40 p-3">
+                <span className="flex min-w-[10rem] flex-1 items-center gap-3">
+                  <Avatar name={p.name} url={p.avatarUrl} size={44} />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-white">{p.name}</span>
+                    <span className="block truncate text-xs text-white/50">Bloqueado {timeAgo(at)}</span>
+                  </span>
+                </span>
+                <UnblockButton userId={p.id} name={p.name} />
+              </div>
+            ))}
           </div>
         </Section>
       )}

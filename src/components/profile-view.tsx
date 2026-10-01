@@ -4,6 +4,7 @@ import { PostComposer } from "@/components/post-composer";
 import { ProfileTabs } from "@/components/profile-tabs";
 import { FollowButton } from "@/components/follow-button";
 import { FriendButton, FriendRequestActions } from "@/components/friend-button";
+import { BlockedProfileNotice } from "@/components/block-user";
 import { ProfileGiftButton } from "@/components/profile-gift-button";
 import { ProfileFamily, type FamilyMember, type FamilyRequest } from "@/components/profile-family";
 import { ProfileTestimonials, type Testimonial, type PendingTestimonial } from "@/components/profile-testimonials";
@@ -198,6 +199,8 @@ export type ProfileViewProps = {
   friends: ProfileFriend[];
   friendState?: FriendState;
   friendRequests?: ProfileFriend[];
+  /** Você bloqueou esta pessoa: o perfil mostra só o aviso com "Desbloquear". */
+  blockedByMe?: boolean;
   family?: FamilyMember[];
   familyRequests?: FamilyRequest[];
   testimonials?: Testimonial[];
@@ -266,6 +269,7 @@ export function ProfileView({
   friends,
   friendState = "none",
   friendRequests = [],
+  blockedByMe = false,
   followerPreview = [],
   family = [],
   familyRequests = [],
@@ -430,7 +434,7 @@ export function ProfileView({
     );
 
   const visitorActions = (compact: boolean) =>
-    current && (
+    current && !blockedByMe && (
       <>
         <FriendButton targetUserId={user.id} initialState={friendState} className={compact ? "min-w-0 flex-1" : ""} />
         <FollowButton targetUserId={user.id} initiallyFollowing={isFollowing} variant="outline" compact={compact} />
@@ -1003,7 +1007,7 @@ export function ProfileView({
                   ) : (
                     visitorActions(false)
                   )}
-                  <ProfileMoreMenu username={user.username} userId={user.id} isMe={isMe} />
+                  <ProfileMoreMenu username={user.username} userId={user.id} isMe={isMe} name={user.name} friendState={friendState} blockedByMe={blockedByMe} />
                 </div>
               </div>
               {bioAndMeta()}
@@ -1028,7 +1032,7 @@ export function ProfileView({
                   className={glassButton}
                 />
               )}
-              <ProfileMoreMenu username={user.username} userId={user.id} isMe={isMe} variant="glass" />
+              <ProfileMoreMenu username={user.username} userId={user.id} isMe={isMe} name={user.name} friendState={friendState} blockedByMe={blockedByMe} variant="glass" />
             </div>
           </div>
 
@@ -1085,6 +1089,7 @@ export function ProfileView({
               </div>
             </div>
 
+            {(isMe || !blockedByMe) && (
             <div className={`${cardClass} flex items-center gap-2 p-2.5`}>
               {isMe ? (
                 <>
@@ -1108,6 +1113,7 @@ export function ProfileView({
                 visitorActions(true)
               )}
             </div>
+            )}
           </div>
         </section>
 
@@ -1116,6 +1122,9 @@ export function ProfileView({
           {onboarding}
           {archiveBanner}
 
+          {blockedByMe ? (
+            <BlockedProfileNotice userId={user.id} name={user.name} />
+          ) : (
           <ProfileTabs
             accent={accent}
             slots={{
@@ -1157,6 +1166,7 @@ export function ProfileView({
               conquistas: <AchievementsGrid achievements={achievements} isMe={isMe} name={user.name} />,
             }}
           />
+          )}
         </div>
       </div>
 

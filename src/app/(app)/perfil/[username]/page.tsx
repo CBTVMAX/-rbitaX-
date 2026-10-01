@@ -61,6 +61,7 @@ export default async function ProfilePage(props: {
     { data: friendshipRows },
     { data: friendStateRaw },
     { data: incomingRows },
+    { data: blockRow },
   ] = await Promise.all([
     supabase.from("Follow").select("followerId").eq("followingId", user.id),
     supabase.from("Follow").select("followingId").eq("followerId", user.id),
@@ -94,6 +95,10 @@ export default async function ProfilePage(props: {
           .order("createdAt", { ascending: false })
           .limit(50)
       : Promise.resolve({ data: [] as { requesterId: string; createdAt: string }[] }),
+    // Só enxergo os meus próprios bloqueios (RLS): serve para mostrar "Desbloquear".
+    current && current.authId !== user.id
+      ? supabase.from("Block").select("id").eq("blockerId", current.authId).eq("blockedId", user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   const followerIds = new Set((followerRows ?? []).map((f) => f.followerId));
@@ -283,6 +288,7 @@ export default async function ProfilePage(props: {
       friends={friendRows ?? []}
       friendState={parseFriendState(friendStateRaw as string | null)}
       friendRequests={friendRequests}
+      blockedByMe={!!blockRow}
     />
   );
 }

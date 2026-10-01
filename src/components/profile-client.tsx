@@ -14,7 +14,14 @@ import { COVER_RECOMMENDED, CoverCropDialog } from "@/components/cover-crop-dial
 import { saveAvatar } from "@/lib/avatar-upload";
 import { AvatarEditor } from "@/components/avatar-editor";
 import { verifyUpload } from "@/lib/upload-guard";
+import { useRelationshipActions } from "@/components/block-user";
+import { runFriendAction } from "@/components/friend-button";
+import type { FriendState } from "@/lib/friends";
 import {
+  Ban,
+  Clock,
+  ShieldOff,
+  UserMinus,
   Archive,
   BarChart3,
   Camera,
@@ -107,16 +114,26 @@ export function ProfileMoreMenu({
   isMe,
   compact = false,
   variant = "default",
+  name = "",
+  friendState = "none",
+  blockedByMe = false,
 }: {
   username: string;
   userId: string;
   isMe: boolean;
+  /** Para quem visita: nome da pessoa, amizade e bloqueio (itens Amizade/Bloquear do menu). */
+  name?: string;
+  friendState?: FriendState;
+  blockedByMe?: boolean;
   compact?: boolean;
   /** "glass": botão redondo e claro, para ficar por cima da capa. */
   variant?: "default" | "glass";
 }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [friendBusy, setFriendBusy] = useState(false);
+  const router = useRouter();
+  const { ask, dialog } = useRelationshipActions({ userId, name: name || username });
 
   async function signOut() {
     const supabase = createClient();
@@ -124,6 +141,14 @@ export function ProfileMoreMenu({
     await endPresenceForSignOut();
     await supabase.auth.signOut();
     window.location.href = "/";
+  }
+
+  async function friendAction(action: "send" | "cancel") {
+    setFriendBusy(true);
+    await runFriendAction(action, userId);
+    setFriendBusy(false);
+    setOpen(false);
+    router.refresh();
   }
 
   const item = "flex w-full items-center gap-2.5 px-4 py-2 text-left text-sm text-white/80 hover:bg-white/5";
@@ -184,6 +209,35 @@ export function ProfileMoreMenu({
               <Star className="h-4 w-4" /> Adicionar aos favoritos
             </span>
           )}
+          {!isMe && (
+            <>
+              {divider}
+              {!blockedByMe && friendState === "none" && (
+                <button type="button" disabled={friendBusy} onClick={() => friendAction("send")} className={item}>
+                  {friendBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />} Adicionar amigo
+                </button>
+              )}
+              {!blockedByMe && friendState === "outgoing" && (
+                <button type="button" disabled={friendBusy} onClick={() => friendAction("cancel")} className={item}>
+                  {friendBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clock className="h-4 w-4" />} Cancelar pedido de amizade
+                </button>
+              )}
+              {!blockedByMe && friendState === "friends" && (
+                <button type="button" onClick={() => (setOpen(false), ask("unfriend"))} className={item}>
+                  <UserMinus className="h-4 w-4" /> Desfazer amizade
+                </button>
+              )}
+              {blockedByMe ? (
+                <button type="button" onClick={() => (setOpen(false), ask("unblock"))} className={item}>
+                  <ShieldOff className="h-4 w-4" /> Desbloquear
+                </button>
+              ) : (
+                <button type="button" onClick={() => (setOpen(false), ask("block"))} className={item.replace("text-white/80", "text-red-400")}>
+                  <Ban className="h-4 w-4" /> Bloquear {name ? name.split(" ")[0] : ""}
+                </button>
+              )}
+            </>
+          )}
           {isMe && (
             <>
               {divider}
@@ -213,13 +267,14 @@ export function ProfileMoreMenu({
               <span title="Em breve" className={soon}>
                 <UserPlus className="h-4 w-4" /> Adicionar conta
               </span>
-              <button type="button" onClick={signOut} className={clsx(item, "text-red-400")}>
+              <button type="button" onClick={signOut} className={item.replace("text-white/80", "text-red-400")}>
                 <LogOut className="h-4 w-4" /> Sair
               </button>
             </>
           )}
         </div>
       )}
+      {!isMe && dialog}
     </div>
   );
 }
