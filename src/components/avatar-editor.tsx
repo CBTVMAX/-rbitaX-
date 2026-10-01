@@ -325,14 +325,13 @@ export function AvatarEditor({
           <span className="pointer-events-none absolute left-3 top-3 flex items-center gap-1.5 rounded-lg bg-space-bg/70 px-2.5 py-1 text-[11px] text-white/80 backdrop-blur">
             <Move className="h-3.5 w-3.5" /> Arraste para posicionar
           </span>
-          {/* The guide circle: what stays visible in the profile, so the user frames against it. */}
+          {/* The guide circle: dark overlay outside the circle, clear inside */}
           {src && nat && (
             <span
               aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-xl"
+              className="pointer-events-none absolute inset-0 rounded-full"
               style={{
-                boxShadow: "inset 0 0 0 2px rgba(255,255,255,0.6)",
-                borderRadius: "inherit",
+                background: "radial-gradient(circle at 50% 50%, transparent 0 48%, rgba(0,0,0,0.7) 48%)",
               }}
             />
           )}
