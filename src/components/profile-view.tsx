@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { PostCard, type FeedPost } from "@/components/post-card";
-import { PostComposer } from "@/components/post-composer";
 import { ProfileTabs } from "@/components/profile-tabs";
 import { FollowButton } from "@/components/follow-button";
 import { FriendButton, FriendRequestActions } from "@/components/friend-button";
@@ -404,9 +403,7 @@ export function ProfileView({
     <Link
       href="/configuracoes/conta"
       className={`flex items-center justify-center rounded-xl text-sm font-semibold transition ${
-        accent
-          ? "border border-pa bg-pa/15 text-white shadow-[0_0_22px_rgb(var(--pa)/0.35)] hover:bg-pa/25"
-          : "bg-orbit-gradient text-snow shadow-glow hover:opacity-90"
+        accent ? "border border-pa/60 bg-pa/10 text-white hover:bg-pa/20" : "border border-white/15 bg-space-bg/40 text-white hover:bg-white/5"
       } ${extra}`}
     >
       Editar perfil
@@ -491,12 +488,9 @@ export function ProfileView({
       <OrbitIcon className="mx-auto mb-5 h-16 w-24 drop-shadow-[0_0_18px_rgba(139,92,246,0.55)]" />
       <h3 className="font-display text-lg font-semibold text-white md:text-xl">Seu universo está esperando.</h3>
       <p className="mt-2 text-sm text-white/65">Comece compartilhando sua primeira publicação.</p>
-      <a
-        href="#composer"
-        className="mt-6 inline-block rounded-full bg-orbit-gradient px-12 py-3 text-sm font-semibold text-snow shadow-glow transition hover:opacity-90 md:px-14"
-      >
+      <PublishButton className="mt-6 inline-block rounded-full bg-orbit-gradient px-12 py-3 text-sm font-semibold text-snow shadow-glow transition hover:opacity-90 md:px-14">
         Criar publicação
-      </a>
+      </PublishButton>
     </div>
   ) : (
     <div className="rounded-2xl border border-white/10 bg-space-surface/80 p-10 text-center text-sm text-white/50">
@@ -1005,6 +999,13 @@ export function ProfileView({
                 <div className="flex shrink-0 items-center gap-2">
                   {isMe ? (
                     <>
+                      <PublishButton
+                        className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition hover:opacity-90 ${
+                          accent ? "bg-pa text-snow shadow-[0_0_22px_rgb(var(--pa)/0.35)]" : "bg-orbit-gradient text-snow shadow-glow"
+                        }`}
+                      >
+                        <PlusCircle className="h-4 w-4" /> Publicar
+                      </PublishButton>
                       {editButton("px-5 py-2.5")}
                       <ShareProfileButton username={user.username} compact />
                     </>
@@ -1134,9 +1135,6 @@ export function ProfileView({
             slots={{
               posts: (
                 <div className="space-y-3 md:space-y-4">
-                  {isMe && current && !showArchive && (
-                    <PostComposer userId={current.authId} name={current.profile.name} avatarUrl={current.profile.avatarUrl} variant="profile" />
-                  )}
                   {showArchive && feed.length === 0 ? (
                     <div className={`${cardClass} p-10 text-center text-sm text-white/50`}>Nenhuma publicação arquivada.</div>
                   ) : (

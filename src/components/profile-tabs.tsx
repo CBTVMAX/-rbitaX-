@@ -19,25 +19,29 @@ import {
 
 type Tab = { id: string; label: string; icon: LucideIcon };
 
-// Abas principais ficam sempre à vista; as complementares vão para "Mais" (nada foi removido).
+// Abas principais à vista (como no VK); complementares em "Mais". Amigos e Comunidades saíram
+// da barra (estão no "Saber mais"), mas continuam abrindo pelos links "#tab-amigos"/"#tab-comunidades".
 const PRIMARY = [
   { id: "posts", label: "Posts", icon: LayoutList },
-  { id: "sobre", label: "Sobre", icon: User },
   { id: "fotos", label: "Fotos", icon: ImageIcon },
   { id: "videos", label: "Vídeos", icon: PlaySquare },
   { id: "musica", label: "Música", icon: Music2 },
   { id: "momentos", label: "Momentos", icon: CircleDot },
-  { id: "comunidades", label: "Comunidades", icon: UsersRound },
-  { id: "amigos", label: "Amigos", icon: Users },
   { id: "depoimentos", label: "Depoimentos", icon: MessageSquareQuote },
 ] as const satisfies readonly Tab[];
 
 const SECONDARY = [
+  { id: "sobre", label: "Sobre", icon: User },
   { id: "familia", label: "Família", icon: Users },
   { id: "conquistas", label: "Conquistas", icon: Award },
 ] as const satisfies readonly Tab[];
 
-const ALL = [...PRIMARY, ...SECONDARY];
+const HIDDEN = [
+  { id: "amigos", label: "Amigos", icon: Users },
+  { id: "comunidades", label: "Comunidades", icon: UsersRound },
+] as const satisfies readonly Tab[];
+
+const ALL = [...PRIMARY, ...SECONDARY, ...HIDDEN];
 
 export type ProfileTabId = (typeof ALL)[number]["id"];
 
@@ -102,7 +106,7 @@ export function ProfileTabs({
       )}
     />
   );
-  const secondaryActive = SECONDARY.find((t) => t.id === active);
+  const secondaryActive = [...SECONDARY, ...HIDDEN].find((t) => t.id === active);
   const tabClass = (on: boolean) =>
     clsx(
       "relative flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm transition md:rounded-none md:px-2.5 md:py-3 md:text-[13px]",
