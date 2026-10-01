@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
 import {
   Award,
-  ChevronDown,
+  X,
   CircleDot,
   Image as ImageIcon,
   LayoutList,
@@ -28,20 +28,19 @@ const PRIMARY = [
   { id: "musica", label: "Música", icon: Music2 },
   { id: "momentos", label: "Momentos", icon: CircleDot },
   { id: "depoimentos", label: "Depoimentos", icon: MessageSquareQuote },
-] as const satisfies readonly Tab[];
-
-const SECONDARY = [
-  { id: "sobre", label: "Sobre", icon: User },
-  { id: "familia", label: "Família", icon: Users },
   { id: "conquistas", label: "Conquistas", icon: Award },
 ] as const satisfies readonly Tab[];
 
+// Sobre, Família, Amigos e Comunidades estão no "Saber mais" / na lateral: fora da barra, mas
+// continuam abrindo pelos links "#tab-…" (ex.: "Gerenciar família", "Ver todas").
 const HIDDEN = [
+  { id: "sobre", label: "Sobre", icon: User },
+  { id: "familia", label: "Família", icon: Users },
   { id: "amigos", label: "Amigos", icon: Users },
   { id: "comunidades", label: "Comunidades", icon: UsersRound },
 ] as const satisfies readonly Tab[];
 
-const ALL = [...PRIMARY, ...SECONDARY, ...HIDDEN];
+const ALL = [...PRIMARY, ...HIDDEN];
 
 export type ProfileTabId = (typeof ALL)[number]["id"];
 
@@ -75,7 +74,6 @@ export function ProfileTabs({
   accent?: boolean;
 }) {
   const [active, setActive] = useState<ProfileTabId>("posts");
-  const [moreOpen, setMoreOpen] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -95,7 +93,6 @@ export function ProfileTabs({
 
   function select(id: ProfileTabId) {
     setActive(id);
-    setMoreOpen(false);
   }
 
   const underline = (
@@ -106,7 +103,7 @@ export function ProfileTabs({
       )}
     />
   );
-  const secondaryActive = [...SECONDARY, ...HIDDEN].find((t) => t.id === active);
+  const secondaryActive = HIDDEN.find((t) => t.id === active);
   const tabClass = (on: boolean) =>
     clsx(
       "relative flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm transition md:rounded-none md:px-2.5 md:py-3 md:text-[13px]",
@@ -128,39 +125,20 @@ export function ProfileTabs({
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            aria-haspopup="menu"
-            aria-expanded={moreOpen}
-            onClick={() => setMoreOpen((v) => !v)}
-            className={clsx(tabClass(!!secondaryActive), "mr-1.5 border-l border-white/10 md:mr-2 md:rounded-none md:pl-3")}
-          >
-            {secondaryActive ? secondaryActive.label : "Mais"}
-            <ChevronDown className={clsx("h-3.5 w-3.5 transition", moreOpen && "rotate-180")} />
-            {secondaryActive && underline}
-          </button>
+          {/* Seção aberta por link (Família, Amigos…): aparece como aba ativa, com "x" para voltar aos Posts. */}
+          {secondaryActive && (
+            <button
+              type="button"
+              onClick={() => select("posts")}
+              aria-label={`Fechar ${secondaryActive.label}`}
+              className={clsx(tabClass(true), "mr-1.5 border-l border-white/10 md:mr-2 md:rounded-none md:pl-3")}
+            >
+              {secondaryActive.label}
+              <X className="h-3.5 w-3.5 text-white/50" />
+              {underline}
+            </button>
+          )}
         </div>
-        {moreOpen && (
-          <>
-            <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-10 cursor-default" onClick={() => setMoreOpen(false)} />
-            <div role="menu" className="absolute right-2 top-12 z-20 w-48 overflow-hidden rounded-xl border border-white/10 bg-space-surface py-1 shadow-2xl">
-              {SECONDARY.map(({ id, label, icon: Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="menuitem"
-                  onClick={() => select(id)}
-                  className={clsx(
-                    "flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm hover:bg-white/5",
-                    active === id ? "font-semibold text-white" : "text-white/75"
-                  )}
-                >
-                  <Icon className="h-4 w-4 text-white/50" /> {label}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
       </div>
 
       <div role="tabpanel">
