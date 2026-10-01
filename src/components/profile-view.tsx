@@ -14,6 +14,7 @@ import {
   OrbitIcon,
   ProfileImageUpload,
   ProfileMoreMenu,
+  ProfileCallButton,
   ShareProfileButton,
 } from "@/components/profile-client";
 import { presenceOf } from "@/lib/presence";
@@ -32,6 +33,7 @@ import { frameBackdropStyle, frameSrc, getFrame, type AvatarFrame } from "@/lib/
 import { hasCustomAccent, profileAccentStyle } from "@/lib/profile-colors";
 import { OnlineDot, PresenceDot, PresenceStatus } from "@/components/presence-picker";
 import {
+  UsersRound,
   Archive,
   Cake,
   Info,
@@ -518,11 +520,28 @@ export function ProfileView({
     emptyFeed
   );
 
-  const aboutRows: { icon: React.ComponentType<{ className?: string }>; text: string | null; prompt: string }[] = [
+  // Relacionamento "com Fulano": o parceiro vem da Família (Cônjuge / Companheiro(a)).
+  const partner = family.find((m) => m.relation === "Cônjuge" || m.relation === "Companheiro(a)") ?? null;
+  const relationshipNode: React.ReactNode =
+    relationship || partner ? (
+      <>
+        {relationship ?? "Em um relacionamento"}
+        {partner && (
+          <>
+            {" com "}
+            <Link href={`/perfil/${partner.username}`} className="text-orbit-blue hover:underline">
+              {partner.name}
+            </Link>
+          </>
+        )}
+      </>
+    ) : null;
+
+  const aboutRows: { icon: React.ComponentType<{ className?: string }>; text: React.ReactNode | null; prompt: string }[] = [
     { icon: MapPin, text: location, prompt: "Adicionar cidade" },
     { icon: Cake, text: age !== null ? `${age} anos` : null, prompt: "Data de nascimento" },
     { icon: Sparkles, text: sign, prompt: "Seu signo" },
-    { icon: Heart, text: relationship, prompt: "Relacionamento" },
+    { icon: Heart, text: relationshipNode, prompt: "Relacionamento" },
     { icon: Gem, text: interests.length ? interests.join(", ") : null, prompt: "Seus interesses" },
     { icon: Link2, text: website, prompt: "Site ou link" },
   ];
@@ -605,7 +624,6 @@ export function ProfileView({
   const videos = allMedia.filter((m) => m.type === "video");
   const audioPosts = feed.filter((p) => p.media.some((m) => m.type === "audio"));
   const photoTotal = stats.photos ?? photos.length;
-  const videoTotal = stats.videos ?? videos.length;
 
   const cardClass = "ox-card rounded-2xl border border-white/10 bg-space-surface";
 
@@ -638,7 +656,9 @@ export function ProfileView({
                 Editar
               </Link>
             ) : (
-              seeAll("sobre", "Ver mais")
+              <ProfileAboutButton d={aboutData} title="Informação detalhada" className="text-xs font-medium text-pa hover:underline">
+                Ver mais
+              </ProfileAboutButton>
             )
           }
         >
@@ -910,37 +930,6 @@ export function ProfileView({
     </div>
   ) : null;
 
-  // ---------- Números (computador): faixa com 6 caixas, como no mockup ----------
-  const statItems: { value: number; label: string; tab?: string }[] = [
-    { value: stats.friends, label: "Amigos", tab: "amigos" },
-    { value: stats.followers, label: "Seguidores" },
-    { value: stats.following, label: "Seguindo" },
-    { value: photoTotal, label: "Fotos", tab: "fotos" },
-    { value: videoTotal, label: "Vídeos", tab: "videos" },
-    { value: stats.communities, label: "Comunidades", tab: "comunidades" },
-  ];
-  const statsStrip = (
-    <div className="grid grid-cols-6 divide-x divide-white/10 overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
-      {statItems.map(({ value, label, tab }) => {
-        const content = (
-          <>
-            <span className="block text-lg font-bold leading-tight text-white">{compact.format(value)}</span>
-            <span className="mt-0.5 block text-xs text-white/55">{label}</span>
-          </>
-        );
-        return tab ? (
-          <a key={label} href={`#tab-${tab}`} className="px-2 py-3 text-center transition hover:bg-white/[0.04]">
-            {content}
-          </a>
-        ) : (
-          <span key={label} className="px-2 py-3 text-center">
-            {content}
-          </span>
-        );
-      })}
-    </div>
-  );
-
   const coverImage = user.coverUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img src={user.coverUrl} alt="" className="h-full w-full object-cover" />
@@ -969,8 +958,9 @@ export function ProfileView({
     >
       <div className="min-w-0 space-y-3 md:space-y-4">
         {/* ================= COMPUTADOR ================= */}
-        <section className={`${cardClass} hidden overflow-hidden md:block ${accent ? "border-pa/35 shadow-[0_0_40px_rgb(var(--pa)/0.12)]" : ""}`}>
-          <div className="relative aspect-[7/2] max-h-[240px] w-full overflow-hidden">
+        {/* Sem overflow-hidden no cartão: o menu "Mais" pode passar da borda; a capa recorta os próprios cantos. */}
+        <section className={`${cardClass} relative z-10 hidden md:block ${accent ? "border-pa/35 shadow-[0_0_40px_rgb(var(--pa)/0.12)]" : ""}`}>
+          <div className="relative aspect-[7/2] max-h-[220px] w-full overflow-hidden rounded-t-[inherit]">
             {coverImage}
             {isMe && (
               <CoverMenu
@@ -991,34 +981,116 @@ export function ProfileView({
               online={online}
               accent={accent}
               frame={frame}
-              className={`-mt-16 h-[136px] w-[136px] ${frame ? "mx-6 mb-6" : ""}`}
+              className={`-mt-14 h-[124px] w-[124px] ${frame ? "mx-6 mb-6" : ""}`}
             />
-            <div className="min-w-0 flex-1 pt-3">
-              <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-                <div className="min-w-0 flex-1 basis-[280px]">{identity()}</div>
-                <div className="flex shrink-0 items-center gap-2">
-                  {isMe ? (
-                    <>
-                      <PublishButton
-                        className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition hover:opacity-90 ${
-                          accent ? "bg-pa text-snow shadow-[0_0_22px_rgb(var(--pa)/0.35)]" : "bg-orbit-gradient text-snow shadow-glow"
-                        }`}
-                      >
-                        <PlusCircle className="h-4 w-4" /> Publicar
-                      </PublishButton>
-                      {editButton("px-5 py-2.5")}
-                      <ShareProfileButton username={user.username} compact />
-                    </>
-                  ) : (
-                    visitorActions(false)
+            {/* Como no VK: nome, uma linha de bio e uma linha com cidade · comunidade · Mais; ações à direita. */}
+            <div className="flex min-w-0 flex-1 items-start justify-between gap-4 pt-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h1 className="min-w-0 truncate font-display text-[22px] font-bold leading-tight text-white">{user.name}</h1>
+                  {user.isVerified && <VerifiedBadge className="h-5 w-5" />}
+                  {user.isPremium && (
+                    <span title="Órbita Premium" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orbit-purple text-snow">
+                      <Crown className="h-3 w-3" />
+                    </span>
                   )}
-                  <ProfileMoreMenu username={user.username} userId={user.id} isMe={isMe} name={user.name} friendState={friendState} blockedByMe={blockedByMe} />
+                </div>
+                {user.bio ? (
+                  <p className="mt-1 line-clamp-2 whitespace-pre-line text-[14px] leading-snug text-white/80">{user.bio}</p>
+                ) : (
+                  isMe && (
+                    <Link href="/configuracoes/conta" className="mt-1 block text-sm text-white/50 hover:text-white">
+                      Conte um pouco sobre você...
+                    </Link>
+                  )
+                )}
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-white/55">
+                  {location && (
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="h-4 w-4 text-white/40" /> {location}
+                    </span>
+                  )}
+                  {aboutData.communities[0] && (
+                    <Link href={`/comunidades/${aboutData.communities[0].slug}`} className="flex min-w-0 items-center gap-1.5 hover:text-white">
+                      <span className="flex h-4 w-4 shrink-0 items-center justify-center overflow-hidden rounded-full bg-space-card">
+                        {aboutData.communities[0].avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={aboutData.communities[0].avatarUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <UsersRound className="h-3 w-3" />
+                        )}
+                      </span>
+                      <span className="max-w-[14rem] truncate">{aboutData.communities[0].name}</span>
+                    </Link>
+                  )}
+                  <span className="flex items-center gap-1.5">
+                    <PresenceStatus userId={user.id} initial={user.presence} editable={isMe} />
+                  </span>
+                  <span
+                    title={`Nível ${level.level} · ${level.xpIntoLevel.toLocaleString("pt-BR")} / ${level.xpForNext.toLocaleString("pt-BR")} XP`}
+                    className="rounded-full border border-pa/30 bg-pa/10 px-2 py-0.5 text-[11px] font-semibold text-pa"
+                  >
+                    Nível {level.level}
+                  </span>
+                  <ProfileAboutButton d={aboutData} title="Informação detalhada" className="flex items-center gap-1.5 text-white/70 hover:text-white">
+                    <Info className="h-4 w-4" /> Mais
+                  </ProfileAboutButton>
                 </div>
               </div>
-              {bioAndMeta()}
+
+              <div className="flex shrink-0 items-center gap-2">
+                {isMe ? (
+                  <>
+                    <PublishButton
+                      className={`flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-semibold transition hover:opacity-90 ${
+                        accent ? "bg-pa text-snow shadow-[0_0_22px_rgb(var(--pa)/0.35)]" : "bg-orbit-gradient text-snow shadow-glow"
+                      }`}
+                    >
+                      <PlusCircle className="h-4 w-4" /> Publicar
+                    </PublishButton>
+                    {editButton("h-10 px-4")}
+                    <ProfileMoreMenu username={user.username} userId={user.id} isMe variant="label" />
+                  </>
+                ) : (
+                  <>
+                    {!blockedByMe &&
+                      current &&
+                      (isFriend ? (
+                        <>
+                          <Link
+                            href={`/mensagens?com=${encodeURIComponent(user.username)}`}
+                            className={`flex h-10 items-center justify-center rounded-xl px-5 text-sm font-semibold transition hover:opacity-90 ${
+                              accent ? "bg-pa text-snow" : "bg-orbit-gradient text-snow shadow-glow"
+                            }`}
+                          >
+                            Mensagem
+                          </Link>
+                          <ProfileCallButton
+                            user={{ id: user.id, name: user.name, username: user.username, avatarUrl: user.avatarUrl }}
+                            className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.07] text-white transition hover:bg-white/[0.12] disabled:opacity-60"
+                          />
+                        </>
+                      ) : (
+                        <FriendButton targetUserId={user.id} initialState={friendState} />
+                      ))}
+                    {!blockedByMe && current && (
+                      <ProfileGiftButton recipient={{ id: user.id, name: user.name, username: user.username, avatarUrl: user.avatarUrl }} compact />
+                    )}
+                    <ProfileMoreMenu
+                      username={user.username}
+                      userId={user.id}
+                      isMe={false}
+                      name={user.name}
+                      friendState={friendState}
+                      blockedByMe={blockedByMe}
+                      isFollowing={isFollowing}
+                      variant="label"
+                    />
+                  </>
+                )}
+              </div>
             </div>
           </div>
-          <div className="px-6 pb-5">{statsStrip}</div>
           {moments}
         </section>
 
