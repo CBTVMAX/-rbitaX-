@@ -122,7 +122,11 @@ export function ChatHeader({
   onMute,
   onArchive,
   onDelete,
+  compact = false,
+  extra,
 }: {
+  compact?: boolean;
+  extra?: React.ReactNode;
   c: Conversation;
   members: Member[];
   showBack: boolean;
@@ -153,7 +157,12 @@ export function ChatHeader({
   };
 
   return (
-    <header className="relative z-20 flex h-16 shrink-0 items-center gap-1 border-b border-white/10 bg-space-surface/75 px-2 pt-[env(safe-area-inset-top)] backdrop-blur-xl md:gap-2 md:px-4">
+    <header
+      className={clsx(
+        "relative z-20 flex shrink-0 items-center gap-1 border-b border-white/10 bg-space-surface/75 backdrop-blur-xl",
+        compact ? "h-14 px-1.5" : "h-16 px-2 pt-[env(safe-area-inset-top)] md:gap-2 md:px-4"
+      )}
+    >
       {showBack && (
         <IconButton label="Voltar para conversas" onClick={onBack}>
           <ArrowLeft className="h-5 w-5" />
@@ -169,7 +178,7 @@ export function ChatHeader({
             onClick={onToggleInfo}
             className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-1.5 py-1 text-left transition hover:bg-white/[0.04]"
           >
-            <ConversationAvatar c={c} size={42} />
+            <ConversationAvatar c={c} size={compact ? 36 : 42} />
             <span className="min-w-0">
               <span className="block truncate text-[15px] font-semibold text-white">Salvos</span>
               <span className="block truncate text-xs text-white/50">Seu espaço pessoal</span>
@@ -179,9 +188,12 @@ export function ChatHeader({
             <IconButton label="Buscar nos Salvos" onClick={onToggleSearch}>
               <Search className="h-[19px] w-[19px]" />
             </IconButton>
-            <IconButton label={infoOpen ? "Fechar mídia e arquivos" : "Mídia e arquivos salvos"} onClick={onToggleInfo} active={infoOpen}>
-              {infoOpen ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
-            </IconButton>
+            {!compact && (
+              <IconButton label={infoOpen ? "Fechar mídia e arquivos" : "Mídia e arquivos salvos"} onClick={onToggleInfo} active={infoOpen}>
+                {infoOpen ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
+              </IconButton>
+            )}
+            {extra}
           </div>
         </>
       ) : (
@@ -191,7 +203,7 @@ export function ChatHeader({
             onClick={c.isGroup ? onToggleInfo : onOpenProfile}
             className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-1.5 py-1 text-left transition hover:bg-white/[0.04]"
           >
-            <ConversationAvatar c={c} size={42} ringClass="border-space-surface" />
+            <ConversationAvatar c={c} size={compact ? 36 : 42} ringClass="border-space-surface" />
             <span className="min-w-0">
               <span className="flex items-center gap-1.5">
                 <span className="truncate text-[15px] font-semibold text-white">{conversationTitle(c)}</span>
@@ -234,10 +246,12 @@ export function ChatHeader({
                 </IconButton>
               </>
             )}
-            <IconButton label="Buscar na conversa" onClick={onToggleSearch}>
-              <Search className="h-[19px] w-[19px]" />
-            </IconButton>
-            <IconButton label={infoOpen ? "Fechar informações" : "Informações da conversa"} onClick={onToggleInfo} active={infoOpen} className="hidden lg:flex">
+            {!compact && (
+              <IconButton label="Buscar na conversa" onClick={onToggleSearch}>
+                <Search className="h-[19px] w-[19px]" />
+              </IconButton>
+            )}
+            <IconButton label={infoOpen ? "Fechar informações" : "Informações da conversa"} onClick={onToggleInfo} active={infoOpen} className={compact ? "hidden" : "hidden lg:flex"}>
               {infoOpen ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
             </IconButton>
             <div className="relative">
@@ -246,6 +260,7 @@ export function ChatHeader({
               </IconButton>
               <Popover open={menu} onClose={() => setMenu(false)} className="right-0 top-full mt-1 w-60">
                 {!c.isGroup && <MenuItem icon={UserRound} label="Ver perfil" onClick={() => { setMenu(false); onOpenProfile(); }} />}
+                {compact && <MenuItem icon={Search} label="Buscar na conversa" onClick={() => { setMenu(false); onToggleSearch(); }} />}
                 <MenuItem icon={PanelRightOpen} label="Informações da conversa" onClick={() => { setMenu(false); onToggleInfo(); }} />
                 <MenuItem icon={muted ? Bell : BellOff} label={muted ? "Reativar notificações" : "Silenciar"} onClick={() => { setMenu(false); onMute(); }} />
                 <MenuItem icon={Archive} label={c.archivedAt ? "Desarquivar" : "Arquivar"} onClick={() => { setMenu(false); onArchive(); }} />
@@ -253,6 +268,7 @@ export function ChatHeader({
                 <MenuItem icon={Trash2} label={c.isGroup ? "Sair do grupo" : "Excluir conversa"} danger onClick={() => { setMenu(false); onDelete(); }} />
               </Popover>
             </div>
+            {extra}
           </div>
         </>
       )}
