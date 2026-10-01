@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { ServiceWorkerRegister } from "@/components/pwa";
 import { PresenceHeartbeat } from "@/components/presence-heartbeat";
+import { CallProvider } from "@/components/calls/call-provider";
 import { Inter, Space_Grotesk, Caveat } from "next/font/google";
 import "./globals.css";
 
@@ -29,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR" className={`${inter.variable} ${spaceGrotesk.variable} ${caveat.variable}`}>
       <body className="min-h-screen bg-space-bg font-sans antialiased">
-        {children}
+        <CallProvider>{children}</CallProvider>
         <ServiceWorkerRegister />
         <PresenceHeartbeat />
       </body>

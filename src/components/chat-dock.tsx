@@ -25,6 +25,7 @@ import { conversationTitle, toMessage, MESSAGE_COLUMNS, type ChatMessage, type C
 import { messagePreview, formatTime } from "@/lib/messenger/format";
 import { chatFilePath, uploadChatFile, uploadMime, voiceWaveform, MAX_UPLOAD_BYTES } from "@/lib/messenger/media";
 import { saveFilesToSaved } from "@/lib/messenger/saved";
+import { useCalls } from "@/components/calls/call-provider";
 
 const PANEL_KEY = "orbitax:chat-panel-open";
 
@@ -357,7 +358,12 @@ function ChatPane({
     }
   }
 
-  const callSoon = (what: string) => () => flash(`Chamadas de ${what} chegam em breve ao ÓrbitaX.`);
+  const { startCall } = useCalls();
+  const call = (kind: "voice" | "video") => () => {
+    const other = c.otherUser;
+    if (c.isGroup || !other) return flash("Chamadas em grupo chegam em breve ao ÓrbitaX.");
+    startCall({ conversationId: c.id, peer: { id: other.id, name: other.name, username: other.username, avatarUrl: other.avatarUrl }, kind });
+  };
   const locked = c.sendStatus !== "ok";
   const iconBtn = "rounded-full p-1.5 text-white/55 transition hover:bg-white/10 hover:text-white";
   const attachItem = "flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm text-white/85 hover:bg-white/5";
@@ -370,10 +376,10 @@ function ChatPane({
         </button>
         <Avatar name={title} url={avatar} size={34} />
         <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{title}</span>
-        <button type="button" onClick={callSoon("voz")} aria-label="Chamada de voz (em breve)" title="Chamada de voz (em breve)" className={iconBtn}>
+        <button type="button" onClick={call("voice")} aria-label="Chamada de voz" title="Chamada de voz" className={iconBtn}>
           <Phone className="h-4 w-4" />
         </button>
-        <button type="button" onClick={callSoon("vídeo")} aria-label="Chamada de vídeo (em breve)" title="Chamada de vídeo (em breve)" className={iconBtn}>
+        <button type="button" onClick={call("video")} aria-label="Chamada de vídeo" title="Chamada de vídeo" className={iconBtn}>
           <Video className="h-4 w-4" />
         </button>
         <Link href={messengerHref} aria-label="Abrir no Messenger" title="Abrir no Messenger" className={iconBtn}>

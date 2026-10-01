@@ -26,6 +26,7 @@ import { conversationTitle, isMuted, MESSAGE_COLUMNS, toMessage, type ChatMessag
 import { useMessenger } from "./context";
 import { ConversationAvatar, IconButton, MenuItem, Popover } from "./ui";
 import { VerifiedBadge } from "@/components/verified-badge";
+import { useCalls } from "@/components/calls/call-provider";
 
 function ChatSearch({ c, onClose, onJump }: { c: Conversation; onClose: () => void; onJump: (m: ChatMessage) => void }) {
   const { supabase } = useMessenger();
@@ -140,7 +141,11 @@ export function ChatHeader({
   const presence = usePresenceText(c.isGroup ? null : other?.id, other?.presence);
   const onlineInGroup = useOnlineCount(c.isGroup ? members.filter((m) => m.id !== me.id).map((m) => m.id) : []);
   const muted = isMuted(c);
-  const soon = (what: string) => () => toast(`Chamadas de ${what} chegam em breve ao ÓrbitaX.`);
+  const { startCall } = useCalls();
+  const call = (kind: "voice" | "video") => () => {
+    if (c.isGroup || !other) return toast("Chamadas em grupo chegam em breve ao ÓrbitaX.");
+    startCall({ conversationId: c.id, peer: { id: other.id, name: other.name, username: other.username, avatarUrl: other.avatarUrl }, kind });
+  };
 
   return (
     <header className="relative z-20 flex h-16 shrink-0 items-center gap-1 border-b border-white/10 bg-space-surface/75 px-2 pt-[env(safe-area-inset-top)] backdrop-blur-xl md:gap-2 md:px-4">
@@ -209,12 +214,16 @@ export function ChatHeader({
           </button>
 
           <div className="flex shrink-0 items-center">
-            <IconButton label="Chamada de voz (em breve)" onClick={soon("voz")} className="hidden sm:flex">
-              <Phone className="h-[19px] w-[19px]" />
-            </IconButton>
-            <IconButton label="Chamada de vídeo (em breve)" onClick={soon("vídeo")} className="hidden sm:flex">
-              <Video className="h-5 w-5" />
-            </IconButton>
+            {!c.isGroup && (
+              <>
+                <IconButton label="Chamada de voz" onClick={call("voice")}>
+                  <Phone className="h-[19px] w-[19px]" />
+                </IconButton>
+                <IconButton label="Chamada de vídeo" onClick={call("video")}>
+                  <Video className="h-5 w-5" />
+                </IconButton>
+              </>
+            )}
             <IconButton label="Buscar na conversa" onClick={onToggleSearch}>
               <Search className="h-[19px] w-[19px]" />
             </IconButton>
@@ -228,10 +237,7 @@ export function ChatHeader({
               <Popover open={menu} onClose={() => setMenu(false)} className="right-0 top-full mt-1 w-60">
                 {!c.isGroup && <MenuItem icon={UserRound} label="Ver perfil" onClick={() => { setMenu(false); onOpenProfile(); }} />}
                 <MenuItem icon={PanelRightOpen} label="Informações da conversa" onClick={() => { setMenu(false); onToggleInfo(); }} />
-                <div className="sm:hidden">
-                  <MenuItem icon={Phone} label="Chamada de voz" hint="Em breve" onClick={() => { setMenu(false); soon("voz")(); }} />
-                  <MenuItem icon={Video} label="Chamada de vídeo" hint="Em breve" onClick={() => { setMenu(false); soon("vídeo")(); }} />
-                </div>
+                {c.isGroup && <MenuItem icon={Phone} label="Chamada em grupo" hint="Em breve" onClick={() => { setMenu(false); call("voice")(); }} />}
                 <MenuItem icon={muted ? Bell : BellOff} label={muted ? "Reativar notificações" : "Silenciar"} onClick={() => { setMenu(false); onMute(); }} />
                 <MenuItem icon={Archive} label={c.archivedAt ? "Desarquivar" : "Arquivar"} onClick={() => { setMenu(false); onArchive(); }} />
                 <div className="my-1 h-px bg-white/[0.07]" />

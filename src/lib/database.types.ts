@@ -95,6 +95,7 @@ type UserStickerPackRow = { userId: string; packId: string; acquiredAt: string; 
 type ReadOnly<R> = { Row: R; Insert: never; Update: never; Relationships: [] };
 type MessageUpdate = Partial<MessageInsert>;
 
+type CallRow = { id: string; conversationId: string; callerId: string; calleeId: string; kind: string; status: string; createdAt: string; answeredAt: string | null; endedAt: string | null };
 type MomentRow = { createdAt: string; expiresAt: string; id: string; mediaUrl: string | null; text: string | null; type: string; userId: string; communityId: string | null; asCommunity: boolean; meta: Json; thumbnailUrl: string | null; viewCount: number };
 type MomentInsert = { createdAt?: string; expiresAt: string; id: string; mediaUrl?: string | null; text?: string | null; type?: string; userId: string };
 type MomentUpdate = Partial<MomentInsert>;
@@ -289,6 +290,10 @@ export type Database = {
         { foreignKeyName: "VirtualGift_productId_fkey"; columns: ["productId"]; isOneToOne: false; referencedRelation: "StoreProduct"; referencedColumns: ["id"] },
         { foreignKeyName: "VirtualGift_senderId_fkey"; columns: ["senderId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
         { foreignKeyName: "VirtualGift_recipientId_fkey"; columns: ["recipientId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
+      ] };
+      Call: { Row: CallRow; Insert: Partial<CallRow>; Update: Partial<CallRow>; Relationships: [
+        { foreignKeyName: "Call_callerId_fkey"; columns: ["callerId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
+        { foreignKeyName: "Call_calleeId_fkey"; columns: ["calleeId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
       ] };
       Moment: { Row: MomentRow; Insert: MomentInsert; Update: MomentUpdate; Relationships: [
         { foreignKeyName: "Moment_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
@@ -545,6 +550,8 @@ export type Database = {
       community_roles_of: { Args: { p_user: string; p_community: string }; Returns: Json };
       community_member_badges: { Args: { p_user: string }; Returns: Json };
       profile_hidden_communities: { Args: { p_user: string }; Returns: string[] };
+      call_start: { Args: { p_conversation: string; p_kind: string }; Returns: string };
+      call_update: { Args: { p_call: string; p_action: string }; Returns: string };
       profile_visible_community_ids: { Args: { p_user: string }; Returns: string[] };
       community_eff_rank: { Args: { p_user: string; p_community: string }; Returns: number };
       community_save_role: { Args: { p_community: string; p: Json }; Returns: string };

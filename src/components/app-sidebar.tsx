@@ -58,8 +58,7 @@ function sidebarItems(username: string): NavItem[] {
     { href: `/perfil/${username}`, label: "Perfil", icon: UserRound },
     { href: "/feed", label: "Feed", icon: Newspaper },
     { href: "/mensagens", label: "Messenger", icon: MessageCircle, badge: "messages" },
-    // Chamadas de voz/vídeo ainda não estão no ar (o Messenger avisa "em breve").
-    { href: null, label: "Chamadas", icon: Phone },
+    { href: "/chamadas", label: "Chamadas", icon: Phone },
     { href: "/amigos", label: "Amigos", icon: Users, badge: "friendRequests" },
     { href: "/comunidades", label: "Comunidades", icon: UsersRound },
     { href: `/perfil/${username}#tab-fotos`, label: "Fotos", icon: ImageIcon },
