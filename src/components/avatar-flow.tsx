@@ -66,7 +66,7 @@ export function AvatarFlow({
   async function pick(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     e.target.value = "";
-    if (!f) return;
+    if (!f) { console.log("[avatar-flow] pick: no file selected"); return; }
     if (!f.type.startsWith("image/")) return setError("Escolha um arquivo de imagem.");
     if (f.size > 10 * 1024 * 1024) return setError("A imagem precisa ter no máximo 10 MB.");
     setError(null);
@@ -80,10 +80,14 @@ export function AvatarFlow({
     // one). Probing here turns that into a clear message, instead of an editor that opens on an
     // empty stage and leaves you adjusting a photo you cannot see.
     try {
-      (await createImageBitmap(f)).close();
-    } catch {
+      const bitmap = await createImageBitmap(f);
+      bitmap.close();
+      console.log("[avatar-flow] createImageBitmap succeeded, file:", f.name, "size:", f.size);
+    } catch (err) {
+      console.log("[avatar-flow] createImageBitmap failed:", err);
       return setError("Este navegador não consegue abrir esse formato de imagem. Converta a foto para JPG ou PNG e tente de novo.");
     }
+    console.log("[avatar-flow] Setting file and step to edit, file:", f.name);
     setFile(f);
     setStep("edit");
   }

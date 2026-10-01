@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Loader2, Move, RotateCw, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Loader2, Monitor, Move, RotateCw, Smartphone, X, ZoomIn, ZoomOut } from "lucide-react";
 
 /**
  * Avatar editor. The picture is saved in its own aspect ratio, so the profile shows exactly the
@@ -106,55 +106,39 @@ export function AvatarEditor({
   // Two-finger pinch on touch devices.
   const pinch = useRef<Map<number, { x: number; y: number }> | null>(null);
 
-  // State for the img element loaded via URL
-  const [imgLoaded, setImgLoaded] = useState(false);
-
   useEffect(() => {
-    let mounted = true;
-    let currentUrl: string | null = null;
+    console.log("[avatar-editor] useEffect started, file:", file.name, "size:", file.size);
+    const url = URL.createObjectURL(file);
+    console.log("[avatar-editor] created object URL:", url);
+    setSrc(url);
 
-    // Create URL when file changes
-    currentUrl = URL.createObjectURL(file);
-    setSrc(currentUrl);
-    setImgLoaded(false);
-    setCrop({ x: 0, y: 0, w: 1 });
-    setRotation(0);
-    setZoom(1);
-    setError(null);
-
-    // Preload image to get dimensions
     const img = new Image();
     img.onload = () => {
-      if (!mounted) return;
+      console.log("[avatar-editor] img.onload fired, naturalWidth:", img.naturalWidth, "naturalHeight:", img.naturalHeight);
       imgRef.current = img;
       const n = { w: img.naturalWidth, h: img.naturalHeight };
+      console.log("[avatar-editor] setting nat:", n);
       setNat(n);
-      // Initialize crop to center of image
+      // After rotation the image may be portrait or landscape; the ratio follows what is shown.
       const r = AVATAR_RATIO;
       const rs = rotatedSize(n, 0);
       const w = baseWidth(rs, r);
+      console.log("[avatar-editor] setting crop, baseWidth:", w);
       setCrop({ w, x: (rs.w - w) / 2, y: (rs.h - w / r) / 2 });
     };
-    img.onerror = () => {
-      if (!mounted) return;
+    img.onerror = (e) => {
+      console.log("[avatar-editor] img.onerror:", e);
       setError("Não foi possível abrir essa imagem. Use JPG, PNG ou WebP.");
     };
-    img.src = currentUrl;
-
+    console.log("[avatar-editor] setting img.src to:", url);
+    img.src = url;
+    console.log("[avatar-editor] img.complete after setting src:", img.complete, "img.naturalWidth:", img.naturalWidth);
     return () => {
-      mounted = false;
-      // Only revoke if loading is done (otherwise browser may complain)
-      if (img.complete && img.naturalWidth > 0) {
-        if (currentUrl) URL.revokeObjectURL(currentUrl);
-      }
-      // If still loading, revoke after a short delay
-      if (currentUrl) {
-        img.onload = null;
-        img.onerror = null;
-        setTimeout(() => {
-          try { URL.revokeObjectURL(currentUrl!); } catch { /* already revoked */ }
-        }, 100);
-      }
+      img.src = "";
+      img.onload = null;
+      img.onerror = null;
+      console.log("[avatar-editor] cleanup, img.complete:", img.complete, "naturalWidth:", img.naturalWidth);
+      if (!img.complete || img.naturalWidth === 0) URL.revokeObjectURL(url);
     };
   }, [file]);
 
@@ -247,7 +231,7 @@ export function AvatarEditor({
   }
 
   async function confirm() {
-    if (!nat || !crop?.w || crop.w < 10) return;
+    if (!nat) return;
     setSaving(true);
     setError(null);
     const outW = Math.round(Math.min(OUTPUT_MAX_WIDTH, crop.w));
@@ -271,37 +255,102 @@ export function AvatarEditor({
   // square but clamped by `maxHeight`, so a fixed square canvas would be stretched). A box that is
   // not laid out yet is skipped instead of collapsed to 1px, and a ResizeObserver repaints when the
   // box changes — rotation to a landscape photo, window resize, device rotation.
+  // Force repaint when imgRef is populated (image loaded)
   useEffect(() => {
-    const img = imgRef.current;
-    if (!img || !nat || !src) return;
-    const ids = ["#editor-canvas", "#preview-desktop", "#preview-mobile"];
-    const paint = () => {
+    if (imgRef.current && nat && src) {
+      console.log("[avatar-editor] imgRef now available, triggering paint");
+      const ids = ["#editor-canvas", "#preview-desktop", "#preview-mobile"];
       for (const id of ids) {
         const c = document.getElementById(id) as HTMLCanvasElement | null;
         if (!c) continue;
-        const box = c.parentElement?.getBoundingClientRect();
-        const w = Math.round(box?.width ?? 0);
-        const h = Math.round(box?.height ?? 0);
-        // Not laid out (width 0 mid-layout): skip, and let the ResizeObserver paint it once it is.
-        if (w < 1 || h < 1) continue;
+        const parent = c.parentElement;
+        if (!parent) continue;
+        const box = parent.getBoundingClientRect();
+        let w = Math.round(box.width);
+        let h = Math.round(box.height);
+        if (w === 0 || h === 0) {
+          const computed = window.getComputedStyle(parent);
+          w = parseFloat(computed.width) || 300;
+          h = parseFloat(computed.height) || 300;
+        }
+        if (w < 10 || h < 10) continue;
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
         c.width = Math.round(w * dpr);
         c.height = Math.round(h * dpr);
         const ctx = c.getContext("2d");
-        if (ctx) paintAvatar(ctx, img, nat, crop, ratio, rotation, c.width, c.height);
+        if (ctx) {
+          paintAvatar(ctx, imgRef.current, nat, crop, ratio, rotation, c.width, c.height);
+        }
+      }
+    }
+  }, [nat, src, crop, ratio, rotation]);
+
+  useEffect(() => {
+    console.log("[avatar-editor] paintEffect: imgRef.current:", imgRef.current ? "exists" : "null", "nat:", nat, "src:", src ? "set" : "null");
+    const img = imgRef.current;
+    if (!img || !nat || !src) {
+      console.log("[avatar-editor] paintEffect: skipping - missing", !img ? "img" : "", !nat ? "nat" : "", !src ? "src" : "");
+      return;
+    }
+    const ids = ["#editor-canvas", "#preview-desktop", "#preview-mobile"];
+    const paint = () => {
+      console.log("[avatar-editor] paint called");
+      for (const id of ids) {
+        const c = document.getElementById(id) as HTMLCanvasElement | null;
+        if (!c) { console.log("[avatar-editor] canvas not found:", id); continue; }
+        // Force layout measurement to ensure we have real dimensions
+        const parent = c.parentElement;
+        if (!parent) { console.log("[avatar-editor] no parent for:", id); continue; }
+        const box = parent.getBoundingClientRect();
+        let w = Math.round(box.width);
+        let h = Math.round(box.height);
+        console.log("[avatar-editor] canvas", id, "parent box:", w, "x", h, "parent class:", parent.className);
+        // If dimensions are 0, try to get explicit width/height from style, or use stageRef
+        if (w === 0 || h === 0) {
+          const computed = window.getComputedStyle(parent);
+          w = parseFloat(computed.width) || 300;
+          h = parseFloat(computed.height) || 300;
+          console.log("[avatar-editor] using computed size:", w, "x", h);
+        }
+        // Ensure minimum size
+        if (w < 10 || h < 10) {
+          console.log("[avatar-editor] canvas too small, skipping");
+          continue;
+        }
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        c.width = Math.round(w * dpr);
+        c.height = Math.round(h * dpr);
+        console.log("[avatar-editor] canvas size set to:", c.width, "x", c.height, "(dpr:", dpr, ")");
+        const ctx = c.getContext("2d");
+        if (ctx) {
+          paintAvatar(ctx, img, nat, crop, ratio, rotation, c.width, c.height);
+          console.log("[avatar-editor] paintAvatar called for", id);
+        } else {
+          console.log("[avatar-editor] no 2d context for", id);
+        }
       }
     };
+    // Paint immediately
     paint();
-    const ro = new ResizeObserver(paint);
+    // Also schedule a repaint after a short delay in case layout wasn't ready
+    const timer = setTimeout(paint, 100);
+    const ro = new ResizeObserver(() => {
+      console.log("[avatar-editor] ResizeObserver triggered");
+      paint();
+    });
     for (const id of ids) {
       const parent = document.getElementById(id)?.parentElement;
       if (parent) ro.observe(parent);
     }
-    return () => ro.disconnect();
+    return () => {
+      clearTimeout(timer);
+      ro.disconnect();
+    };
   }, [src, nat, crop, ratio, rotation]);
 
   const lowRes = nat && crop.w < 700;
 
+  console.log("[avatar-editor] render: src:", src ? "set" : "null", "nat:", nat, "error:", error);
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 backdrop-blur-sm md:items-center md:p-6" role="dialog" aria-modal="true" aria-label="Ajustar foto">
       <div className="max-h-[100dvh] w-full max-w-4xl overflow-y-auto rounded-t-3xl border border-white/10 bg-space-surface p-4 shadow-2xl md:rounded-3xl md:p-6">
@@ -326,54 +375,37 @@ export function AvatarEditor({
           onPointerUp={endPointer}
           onPointerCancel={endPointer}
           onWheel={onWheel}
-          className="relative w-full cursor-grab touch-none overflow-hidden rounded-2xl border border-white/15 bg-space-card active:cursor-grabbing"
-          style={{ aspectRatio: String(ratio), maxHeight: "58vh", marginInline: "auto" }}
+          className="relative flex w-full cursor-grab touch-none items-center justify-center overflow-hidden rounded-2xl border border-white/15 active:cursor-grabbing"
+          style={{ aspectRatio: String(ratio), maxHeight: "58vh", marginInline: "auto", background: "#1a1a2e" }}
         >
-          {src && nat ? (
+          {src ? (
             <>
-              {/* Image with CSS transform for position, scale, and rotation */}
               <img
+                id="editor-main-image"
                 src={src}
                 alt="Foto para ajustar"
-                className="pointer-events-none"
-                onLoad={(e) => {
-                  setImgLoaded(true);
-                  imgRef.current = e.currentTarget;
-                }}
-                onError={() => setError("Não foi possível abrir essa imagem.")}
-                style={{
-                  position: "absolute",
-                  // Center in container
-                  left: "50%",
-                  top: "50%",
-                  // Transform to position, scale, and rotate
-                  // Offset = (crop center - image center) * zoom
-                  // Positive offset moves image right/down, negative moves left/up
-                  transform: `translate(
-                    calc(-50% + ${(crop.x + crop.w / 2 - nat.w / 2) * zoom}px),
-                    calc(-50% + ${(crop.y + crop.w / 2 - nat.h / 2) * zoom}px)
-                  ) scale(${zoom}) rotate(${rotation}deg)`,
-                  maxWidth: "100%",
-                  maxHeight: "100%",
-                  objectFit: "contain",
-                }}
+                className="pointer-events-none max-h-[58vh] w-auto"
+                style={{ maxWidth: "100%", objectFit: "contain" }}
+                onLoad={() => console.log("[avatar-editor] MAIN img onLoad, natural:", (event.target as HTMLImageElement).naturalWidth)}
+                onError={() => console.log("[avatar-editor] MAIN img onError")}
               />
+              {/* Hidden canvas for the editor preview - painted by paintAvatar */}
               <canvas id="editor-canvas" className="hidden" />
             </>
           ) : (
-            !error && <Loader2 className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 animate-spin text-white/50" />
+            !error && <Loader2 className="h-6 w-6 animate-spin text-white/50" />
           )}
           <span className="pointer-events-none absolute left-3 top-3 flex items-center gap-1.5 rounded-lg bg-space-bg/70 px-2.5 py-1 text-[11px] text-white/80 backdrop-blur">
             <Move className="h-3.5 w-3.5" /> Arraste para posicionar
           </span>
           {/* The guide circle: what stays visible in the profile, so the user frames against it. */}
           {src && nat && (
-            <div
+            <span
               aria-hidden
               className="pointer-events-none absolute inset-0"
               style={{
-                // Scrim outside the circle
-                background: "radial-gradient(circle at center, transparent 35%, rgba(0,0,0,0.6) 35.5%, rgba(0,0,0,0.6) 100%)",
+                background: "radial-gradient(circle at 50% 50%, transparent 0 calc(50% - 1px), rgba(0,0,0,0.45) calc(50% - 1px) 50%, transparent 50%)",
+                borderRadius: "12.5%",
               }}
             />
           )}
@@ -410,6 +442,41 @@ export function AvatarEditor({
           <p className="mt-2 text-xs text-amber-300/90">
             A imagem ficou com pouca resolução nesse enquadramento. Para melhor qualidade, use uma imagem de pelo menos 1024 px de lado.
           </p>
+        )}
+
+        {src && nat && (
+          <div className="mt-5 grid gap-4 md:grid-cols-[minmax(0,1fr)_200px] md:items-end">
+            <div>
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-white/70">
+                <Monitor className="h-4 w-4" /> Computador
+              </p>
+              <div className="rounded-2xl border border-white/10 bg-space-bg/60 p-2">
+                <div className="flex items-end gap-3 px-3 pb-2 pt-4">
+                  <span className="relative block w-16 shrink-0 overflow-hidden rounded-2xl bg-space-card" style={{ height: 64 }}>
+                    <canvas id="preview-desktop" className="block h-full w-full" />
+                  </span>
+                  <div className="space-y-1.5 pb-1">
+                    <span className="block h-2.5 w-28 rounded bg-white/25" />
+                    <span className="block h-2 w-20 rounded bg-white/15" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="mx-auto w-[200px]">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-white/70">
+                <Smartphone className="h-4 w-4" /> Celular
+              </p>
+              <div className="rounded-[1.6rem] border-4 border-white/15 bg-space-bg p-1.5">
+                <div className="px-2 pb-3 pt-4">
+                  <span className="relative block w-12 shrink-0 overflow-hidden rounded-xl bg-space-card" style={{ height: 48 }}>
+                    <canvas id="preview-mobile" className="block h-full w-full" />
+                  </span>
+                  <span className="mt-2 block h-2 w-24 rounded bg-white/25" />
+                  <span className="mt-1.5 block h-1.5 w-16 rounded bg-white/15" />
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
