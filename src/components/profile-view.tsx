@@ -5,6 +5,7 @@ import { ProfileTabs } from "@/components/profile-tabs";
 import { FollowButton } from "@/components/follow-button";
 import { FriendButton, FriendRequestActions } from "@/components/friend-button";
 import { BlockedProfileNotice } from "@/components/block-user";
+import { ProfileAboutButton, ProfileAboutContent, type AboutData } from "@/components/profile-about";
 import { ProfileGiftButton } from "@/components/profile-gift-button";
 import { ProfileFamily, type FamilyMember, type FamilyRequest } from "@/components/profile-family";
 import { ProfileTestimonials, type Testimonial, type PendingTestimonial } from "@/components/profile-testimonials";
@@ -201,6 +202,8 @@ export type ProfileViewProps = {
   friendRequests?: ProfileFriend[];
   /** Você bloqueou esta pessoa: o perfil mostra só o aviso com "Desbloquear". */
   blockedByMe?: boolean;
+  /** Amigos em comum com quem visita (total e até 3 para a prévia). */
+  mutual?: { count: number; preview: ProfileFriend[] };
   family?: FamilyMember[];
   familyRequests?: FamilyRequest[];
   testimonials?: Testimonial[];
@@ -270,6 +273,7 @@ export function ProfileView({
   friendState = "none",
   friendRequests = [],
   blockedByMe = false,
+  mutual = { count: 0, preview: [] },
   followerPreview = [],
   family = [],
   familyRequests = [],
@@ -530,24 +534,6 @@ export function ProfileView({
   ];
   const visibleAbout = aboutRows.filter((r) => r.text || isMe);
 
-  const aboutList =
-    user.bio || visibleAbout.some((r) => r.text) || isMe ? (
-      <div className="space-y-2.5 text-sm">
-        {user.bio && <p className="text-white/80">{user.bio}</p>}
-        {visibleAbout.map(({ icon: Icon, text, prompt }) =>
-          text ? (
-            <p key={prompt} className="flex items-start gap-2.5 text-white/80">
-              <Icon className="mt-0.5 h-4 w-4 shrink-0 text-white/45" /> <span className="min-w-0 break-words">{text}</span>
-            </p>
-          ) : (
-            <Link key={prompt} href="/configuracoes/conta" className="flex items-center gap-2.5 text-white/45 hover:text-white/75">
-              <Icon className="h-4 w-4 shrink-0" /> {prompt}
-            </Link>
-          )
-        )}
-      </div>
-    ) : null;
-
   const onboardingSteps = [
     { done: !!user.avatarUrl, label: "Adicione uma foto de perfil", field: "avatarUrl" as const, icon: Camera },
     { done: !!user.coverUrl, label: "Adicione uma capa", field: "coverUrl" as const, icon: ImagePlus },
@@ -601,6 +587,24 @@ export function ProfileView({
   const isStaff = (role: string) => role === "owner" || role === "admin" || role === "moderator";
   const sortedCommunities = [...communities].sort((a, b) => Number(isStaff(b.role)) - Number(isStaff(a.role)));
   const hiddenSet = new Set(hiddenCommunityIds);
+  const aboutData: AboutData = {
+    name: user.name,
+    username: user.username,
+    bio: user.bio,
+    location,
+    age,
+    sign,
+    relationship,
+    interests,
+    website,
+    followers: stats.followers,
+    following: stats.following,
+    friends: stats.friends,
+    mutual: mutual.count,
+    family,
+    communities: sortedCommunities.filter((c) => isMe || !hiddenSet.has(c.id)),
+    isMe,
+  };
 
   const allMedia = feed.flatMap((p) => p.media);
   const photos = allMedia.filter((m) => m.type === "image");
@@ -1053,18 +1057,16 @@ export function ProfileView({
             </div>
             <div className="mt-3">{identity()}</div>
             {bioAndMeta(false, true)}
-            {(location || aboutFilled.length > 0) && (
-              <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-white/55">
-                {location && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3.5 w-3.5" /> {location}
-                  </span>
-                )}
-                <a href="#tab-sobre" className="flex items-center gap-1 text-white/70 hover:text-white">
-                  <Info className="h-3.5 w-3.5" /> Saber mais
-                </a>
-              </div>
-            )}
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-white/55">
+              {location && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5" /> {location}
+                </span>
+              )}
+              <ProfileAboutButton d={aboutData} className="flex items-center gap-1 text-white/70 hover:text-white">
+                <Info className="h-3.5 w-3.5" /> Saber mais
+              </ProfileAboutButton>
+            </div>
           </div>
 
           <div className="space-y-2.5 bg-space-bg px-3 pt-2.5">
@@ -1076,9 +1078,11 @@ export function ProfileView({
               <a href="#tab-amigos" className="flex items-center justify-between gap-2 px-4 py-3.5 text-left">
                 <span>
                   <span className="block text-xl font-bold leading-none text-white">{compact.format(stats.friends)}</span>
-                  <span className="mt-1 block text-[13px] text-white/55">amigos</span>
+                  <span className="mt-1 block text-[13px] text-white/55">
+                    {!isMe && mutual.count > 0 ? `${mutual.count} em comum` : "amigos"}
+                  </span>
                 </span>
-                {avatarStack(friends)}
+                {avatarStack(!isMe && mutual.preview.length ? mutual.preview : friends)}
               </a>
               <div className="flex items-center justify-between gap-2 px-4 py-3.5">
                 <span>
@@ -1140,7 +1144,11 @@ export function ProfileView({
                   )}
                 </div>
               ),
-              sobre: aboutList ? <div className={`${cardClass} p-5`}>{aboutList}</div> : undefined,
+              sobre: (
+                <div className={`${cardClass} p-5`}>
+                  <ProfileAboutContent d={aboutData} />
+                </div>
+              ),
               fotos: photosTab,
               videos: videosTab,
               musica: musicTab,
