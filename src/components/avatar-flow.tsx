@@ -33,18 +33,23 @@ export function AvatarFlow({
   userId,
   avatarUrl,
   username,
+  name,
   open,
+  initialFile,
   onClose,
 }: {
   userId: string;
   avatarUrl: string | null;
   username: string;
+  name?: string;
   open: boolean;
+  /** Foto já escolhida (ex.: "Alterar foto" no menu Mais): começa direto no recorte. */
+  initialFile?: File | null;
   onClose: () => void;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState<Step>(open ? "menu" : null);
-  const [file, setFile] = useState<File | null>(null);
+  const [step, setStep] = useState<Step>(open ? (initialFile ? "edit" : "menu") : null);
+  const [file, setFile] = useState<File | null>(initialFile ?? null);
   const [cropped, setCropped] = useState<Blob | null>(null);
   const [ratio, setRatio] = useState(1);
   const [asProfile, setAsProfile] = useState(true);
@@ -68,7 +73,7 @@ export function AvatarFlow({
   async function pick(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     e.target.value = "";
-    if (!f) { console.log("[avatar-flow] pick: no file selected"); return; }
+    if (!f) return;
     if (!f.type.startsWith("image/")) return setError("Escolha um arquivo de imagem.");
     if (f.size > 10 * 1024 * 1024) return setError("A imagem precisa ter no máximo 10 MB.");
     setError(null);
@@ -84,12 +89,9 @@ export function AvatarFlow({
     try {
       const bitmap = await createImageBitmap(f);
       bitmap.close();
-      console.log("[avatar-flow] createImageBitmap succeeded, file:", f.name, "size:", f.size);
     } catch (err) {
-      console.log("[avatar-flow] createImageBitmap failed:", err);
       return setError("Este navegador não consegue abrir esse formato de imagem. Converta a foto para JPG ou PNG e tente de novo.");
     }
-    console.log("[avatar-flow] Setting file and step to edit, file:", f.name);
     setFile(f);
     setStep("edit");
   }
@@ -169,6 +171,26 @@ export function AvatarFlow({
 
   if (!step) return null;
 
+  // Recorte e escolha de publicação são telas cheias próprias (como no VK), sem a janelinha do menu.
+  if (step === "edit" && file) return <AvatarEditor file={file} name={name} onCancel={close} onConfirm={onEditDone} />;
+  if (step === "publish")
+    return createPortal(
+      <PublishChoice
+        blob={cropped}
+        storyOnly={!asProfile}
+        asPost={asPost}
+        asStory={asStory}
+        setAsPost={setAsPost}
+        setAsStory={setAsStory}
+        busy={busy}
+        error={error}
+        onBack={() => setStep("edit")}
+        onCancel={close}
+        onContinue={publish}
+      />,
+      document.body
+    );
+
   const title =
     step === "menu" ? "Foto do perfil" : step === "source" ? "Alterar foto" : step === "edit" ? "Ajustar foto" : "Onde publicar?";
   const item = "flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-medium text-white/85 transition hover:bg-white/5";
@@ -226,22 +248,7 @@ export function AvatarFlow({
           </div>
         )}
 
-        {step === "edit" && file && <AvatarEditor file={file} onCancel={close} onConfirm={onEditDone} />}
 
-        {step === "publish" && (
-          <PublishChoice
-            blob={cropped}
-            storyOnly={!asProfile}
-            asPost={asPost}
-            asStory={asStory}
-            setAsPost={setAsPost}
-            setAsStory={setAsStory}
-            busy={busy}
-            error={error}
-            onBack={close}
-            onContinue={publish}
-          />
-        )}
       </div>
     </div>,
     document.body
@@ -259,6 +266,7 @@ function PublishChoice({
   busy,
   error,
   onBack,
+  onCancel,
   onContinue,
 }: {
   blob: Blob | null;
@@ -270,6 +278,7 @@ function PublishChoice({
   busy: boolean;
   error: string | null;
   onBack: () => void;
+  onCancel: () => void;
   onContinue: () => void;
 }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -292,11 +301,17 @@ function PublishChoice({
   );
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-black px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] text-snow md:items-center md:justify-center md:bg-black/90">
+    <div className="fixed inset-0 z-[70] flex flex-col bg-black px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] text-snow md:items-center md:justify-center md:bg-black/90">
       <div className="flex w-full max-w-md flex-1 flex-col md:flex-none md:rounded-3xl md:bg-[#0b0e1c] md:p-6">
-        <button type="button" onClick={onBack} aria-label="Cancelar" className="self-start rounded-full p-1.5 text-snow/70 hover:bg-snow/10">
-          <X className="h-6 w-6" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={onBack} aria-label="Voltar ao recorte" className="rounded-full p-1.5 text-snow/70 hover:bg-snow/10">
+            <ChevronRight className="h-6 w-6 rotate-180" />
+          </button>
+          <h2 className="flex-1 text-[17px] font-semibold">Está quase</h2>
+          <button type="button" onClick={onCancel} aria-label="Cancelar" className="rounded-full p-1.5 text-snow/70 hover:bg-snow/10">
+            <X className="h-6 w-6" />
+          </button>
+        </div>
         <div className="flex flex-1 flex-col items-center justify-center py-6">
           <span className="block aspect-square w-[min(68vw,300px)] overflow-hidden rounded-full bg-snow/10">
             {/* eslint-disable-next-line @next/next/no-img-element */}

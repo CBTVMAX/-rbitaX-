@@ -11,8 +11,7 @@ import { disablePush } from "@/lib/push-client";
 import { endPresenceForSignOut } from "@/components/presence-heartbeat";
 import { saveCover } from "@/lib/cover-upload";
 import { COVER_RECOMMENDED, CoverCropDialog } from "@/components/cover-crop-dialog";
-import { saveAvatar } from "@/lib/avatar-upload";
-import { AvatarEditor } from "@/components/avatar-editor";
+import { AvatarFlow } from "@/components/avatar-flow";
 import { verifyUpload } from "@/lib/upload-guard";
 import { useRelationshipActions } from "@/components/block-user";
 import { useCalls } from "@/components/calls/call-provider";
@@ -217,7 +216,7 @@ export function ProfileMoreMenu({
               <Link href="/configuracoes/personalizar" className={item}>
                 <Palette className="h-4 w-4" /> Personalizar perfil
               </Link>
-              <ProfileImageUpload userId={userId} field="avatarUrl" ariaLabel="Alterar foto" className={item}>
+              <ProfileImageUpload userId={userId} field="avatarUrl" ariaLabel="Alterar foto" name={name} className={item}>
                 <Camera className="h-4 w-4" /> Alterar foto
               </ProfileImageUpload>
               <ProfileImageUpload userId={userId} field="coverUrl" ariaLabel="Alterar capa" className={item}>
@@ -549,10 +548,13 @@ export function ProfileImageUpload({
   className,
   ariaLabel,
   currentUrl,
+  name,
   children,
 }: {
   userId: string;
   field: "avatarUrl" | "coverUrl";
+  /** Nome mostrado no "exemplo de avatar" do recorte. */
+  name?: string;
   className: string;
   ariaLabel: string;
   /** Only for avatarUrl: keeps the user's current frame mode when the photo is replaced. */
@@ -568,12 +570,6 @@ export function ProfileImageUpload({
   async function applyCover(blob: Blob) {
     await saveCover(userId, blob);
     setCoverFile(null);
-    router.refresh();
-  }
-
-  async function applyAvatar(blob: Blob, ratio: number) {
-    await saveAvatar(userId, blob, ratio);
-    setAvatarFile(null);
     router.refresh();
   }
 
@@ -615,7 +611,8 @@ export function ProfileImageUpload({
       </button>
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={onPick} />
       {coverFile && <CoverCropDialog file={coverFile} onCancel={() => setCoverFile(null)} onConfirm={applyCover} />}
-      {avatarFile && <AvatarEditor file={avatarFile} onCancel={() => setAvatarFile(null)} onConfirm={applyAvatar} />}
+      {/* Mesmo caminho da foto do perfil: recorte no círculo e depois "Publicar post / história". */}
+      {avatarFile && <AvatarFlow userId={userId} avatarUrl={currentUrl ?? null} username="" name={name} open initialFile={avatarFile} onClose={() => setAvatarFile(null)} />}
       {error && (
         <button
           type="button"
