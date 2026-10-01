@@ -298,27 +298,14 @@ function CoinBadge() {
 function CoinsCard() {
   const balance = useCoinBalance();
   return (
-    <div className="m-3 rounded-2xl border border-white/10 bg-space-surface/80 p-4">
-      <Link href="/diamantes" className="flex items-center justify-between">
-        <span className="flex items-center gap-2 text-sm font-semibold text-white">
-          <DiamondIcon className="h-5 w-5" /> Diamantes
-        </span>
-        <span className="flex items-center gap-1.5 text-sm font-semibold tabular-nums text-sky-300">
-          {balance === null ? "…" : formatDiamonds(balance)}
-        </span>
+    <div className="m-3 flex items-center justify-between rounded-xl border border-white/10 bg-space-surface/50 px-4 py-3">
+      <Link href="/diamantes" className="flex items-center gap-2 text-sm text-white/80 hover:text-white">
+        <DiamondIcon className="h-4 w-4 text-sky-400" />
+        <span>Diamantes</span>
       </Link>
-      <Link
-        href="/diamantes"
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-orbit-gradient py-2 text-sm font-semibold text-snow shadow-glow transition hover:opacity-95"
-      >
-        <DiamondIcon className="h-4 w-4" /> Comprar Diamantes
-      </Link>
-      <Link
-        href="/loja"
-        className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-white/12 py-2 text-sm font-semibold text-white/85 transition hover:bg-white/5"
-      >
-        <ShoppingBag className="h-4 w-4" /> Órbita X Store
-      </Link>
+      <span className="flex items-center gap-1.5 text-sm font-semibold tabular-nums text-sky-300">
+        {balance === null ? "…" : formatDiamonds(balance)}
+      </span>
     </div>
   );
 }
