@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { ServiceWorkerRegister } from "@/components/pwa";
+import { OfflineStatus } from "@/components/offline-status";
 import { PresenceHeartbeat } from "@/components/presence-heartbeat";
 import { CallProvider } from "@/components/calls/call-provider";
 import { Inter, Space_Grotesk, Caveat } from "next/font/google";
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-space-bg font-sans antialiased">
         <CallProvider>{children}</CallProvider>
         <ServiceWorkerRegister />
+        <OfflineStatus />
         <PresenceHeartbeat />
       </body>
     </html>

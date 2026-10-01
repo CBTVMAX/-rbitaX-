@@ -3,10 +3,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Loader2, Plus, X } from "lucide-react";
+import { BookmarkPlus, Check, Download, Eye, Loader2, MoreVertical, Plus, Send, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { verifyUpload } from "@/lib/upload-guard";
-import { deletePersonalStory, groupPersonalStories, loadMyArchivedStories, loadPersonalStories, markStorySeen, saveStoryToProfile, type PersonalStory } from "@/lib/personal-stories";
+import {
+  deletePersonalStory,
+  groupPersonalStories,
+  loadMyArchivedStories,
+  loadMyStoryReaction,
+  loadPersonalStories,
+  loadStoryViewers,
+  markStorySeen,
+  reactToStory,
+  replyToStory,
+  saveStoryToProfile,
+  STORY_REACTIONS,
+  type PersonalStory,
+  type StoryViewer,
+} from "@/lib/personal-stories";
+import { ago } from "@/lib/communities";
+import { Sheet } from "@/components/community/ui";
 import { avatarAspect } from "@/lib/avatar-aspect";
 import { clsx } from "clsx";
 
@@ -22,9 +38,8 @@ export type PersonalGroup = {
 };
 
 /**
- * Full-screen viewer for profile stories. Deliberately simpler than the community StoryViewer:
- * no reactions, polls or replies — just the picture, the author, progress and the ability to
- * delete your own.
+ * Full-screen viewer for profile stories. Friends react with an emoji or answer in the Messenger;
+ * the author sees who watched (and each reaction), saves it to the profile or deletes it.
  */
 export function PersonalStoryViewer({
   groups,
@@ -46,11 +61,21 @@ export function PersonalStoryViewer({
   const [paused, setPaused] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [menu, setMenu] = useState(false);
+  const [viewersOpen, setViewersOpen] = useState(false);
+  const [viewers, setViewers] = useState<StoryViewer[] | null>(null);
+  const [myReaction, setMyReaction] = useState<Record<string, string | null>>({});
+  const [reply, setReply] = useState("");
+  const [typing, setTyping] = useState(false);
+  const [sending, setSending] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
 
   const group = groups[pos.g];
   const story = group?.stories[pos.i];
   const mine = !!story && story.userId === viewerId;
+  // Anything on top of the story (menu, list, keyboard) holds the timer, like VK and Instagram.
+  const hold = paused || busy || menu || viewersOpen || typing || reply.length > 0;
 
   const posRef = useRef(pos);
   posRef.current = pos;
@@ -87,7 +112,11 @@ export function PersonalStoryViewer({
   useEffect(() => {
     setProgress(0);
     if (!story) return;
-    if (!mine) markStorySeen(story.id).then(() => {});
+    setError(null);
+    if (!mine) {
+      markStorySeen(story.id).then(() => {});
+      if (!(story.id in myReaction)) loadMyStoryReaction(story.id, viewerId).then((e) => setMyReaction((r) => ({ ...r, [story.id]: e })));
+    }
     onSeen?.(story.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [story?.id]);
@@ -97,7 +126,7 @@ export function PersonalStoryViewer({
     elapsed.current = 0;
   }, [story?.id]);
   useEffect(() => {
-    if (!story || story.type === "video" || paused || busy) return;
+    if (!story || story.type === "video" || hold) return;
     let last = performance.now();
     let raf = 0;
     const duration = story.type === "text" ? IMAGE_MS + 2000 : IMAGE_MS;
@@ -114,16 +143,74 @@ export function PersonalStoryViewer({
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [story?.id, paused, busy, next]);
+  }, [story?.id, hold, next]);
+
+  useEffect(() => {
+    const el = video.current;
+    if (!el) return;
+    if (hold) el.pause();
+    else el.play().catch(() => {});
+  }, [hold, story?.id]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const t = window.setTimeout(() => setNotice(null), 2200);
+    return () => window.clearTimeout(t);
+  }, [notice]);
+
+  async function openViewers() {
+    if (!story) return;
+    setMenu(false);
+    setViewers(null);
+    setViewersOpen(true);
+    try {
+      setViewers(await loadStoryViewers(story.id));
+    } catch {
+      setViewers([]);
+      setError("Não foi possível carregar as visualizações.");
+    }
+  }
+
+  async function react(emoji: string) {
+    if (!story) return;
+    const prevEmoji = myReaction[story.id] ?? null;
+    const nextEmoji = prevEmoji === emoji ? null : emoji;
+    setMyReaction((r) => ({ ...r, [story.id]: nextEmoji }));
+    try {
+      await reactToStory(story.id, nextEmoji);
+      if (nextEmoji) setNotice(`Você reagiu ${nextEmoji}`);
+    } catch {
+      setMyReaction((r) => ({ ...r, [story.id]: prevEmoji }));
+      setError("Não foi possível reagir agora.");
+    }
+  }
+
+  async function sendReply(e: React.FormEvent) {
+    e.preventDefault();
+    const text = reply.trim();
+    if (!text || !story || sending) return;
+    setSending(true);
+    try {
+      await replyToStory(story, viewerId, text);
+      setReply("");
+      setNotice("Resposta enviada no Messenger.");
+      (document.activeElement as HTMLElement | null)?.blur();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível enviar a resposta.");
+    }
+    setSending(false);
+  }
 
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   async function onSave() {
+    setMenu(false);
     if (!story || savedIds.has(story.id)) return;
     setBusy(true);
     setError(null);
     try {
       await saveStoryToProfile(story, viewerId);
       setSavedIds((prev) => new Set(prev).add(story.id));
+      setNotice(story.type === "video" ? "Salvo na aba Vídeos do perfil." : "Salvo nas Fotos do perfil.");
     } catch (err) {
       setError(err instanceof Error && err.message ? err.message : "Não foi possível salvar no perfil.");
     }
@@ -131,6 +218,7 @@ export function PersonalStoryViewer({
   }
 
   async function onDelete() {
+    setMenu(false);
     if (!story) return;
     setBusy(true);
     try {
@@ -151,16 +239,16 @@ export function PersonalStoryViewer({
   // A story published from the avatar keeps its own ratio, so it is never re-cropped here.
   const ratio = story.mediaUrl ? avatarAspect(story.mediaUrl) : 9 / 16;
 
+  const reactionCount = viewers?.filter((v) => v.emoji).length ?? 0;
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+  const menuItem = "flex min-h-[48px] w-full items-center gap-3 px-4 text-left text-sm text-white hover:bg-white/[0.06] disabled:opacity-50";
+
   return createPortal(
     <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black" role="dialog" aria-label={`História de ${story.user.name}`}>
-      <button type="button" aria-label="Fechar" onClick={onClose} className="absolute right-4 top-4 z-20 rounded-full bg-white/10 p-2 text-white/80 hover:bg-white/20">
-        <X className="h-5 w-5" />
-      </button>
-
       <div
-        className="relative h-full w-full max-w-[520px] overflow-hidden bg-space-bg"
+        className="relative h-full w-full max-w-[520px] overflow-hidden bg-space-bg md:h-[92vh] md:rounded-3xl"
         style={story.mediaUrl ? undefined : { aspectRatio: String(ratio) }}
-        onClick={() => setPaused((v) => !v)}
+        onClick={() => (menu ? setMenu(false) : setPaused((v) => !v))}
       >
         <div className="absolute inset-0 flex items-center justify-center">
           {story.type === "video" && story.mediaUrl ? (
@@ -169,7 +257,6 @@ export function PersonalStoryViewer({
               ref={video}
               src={story.mediaUrl}
               autoPlay
-              muted={paused}
               playsInline
               onTimeUpdate={(e) => {
                 const el = e.currentTarget;
@@ -182,63 +269,172 @@ export function PersonalStoryViewer({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={story.mediaUrl} alt="" className="h-full w-full object-contain" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(160deg,#1e1b4b,#6d28d9_45%,#db2777)] px-8 text-center text-2xl font-bold text-white">
+            <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(160deg,#1e1b4b,#6d28d9_45%,#db2777)] px-8 text-center text-2xl font-bold text-snow">
               {story.text}
             </div>
           )}
         </div>
 
-        <div className="absolute inset-x-0 top-0 z-10 flex gap-1.5 p-3">
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-28 bg-gradient-to-b from-black/60 to-transparent" />
+        <div className="absolute inset-x-0 top-0 z-10 flex gap-1.5 p-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           {group?.stories.map((s, idx) => (
             <span key={s.id} className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/25">
               <span
-                className="block h-full bg-white transition-[width] duration-100"
+                className="block h-full bg-snow transition-[width] duration-100"
                 style={{ width: idx < pos.i ? "100%" : idx === pos.i ? `${progress * 100}%` : "0%" }}
               />
             </span>
           ))}
         </div>
 
-        <div className="absolute inset-x-0 top-7 z-10 flex items-center gap-2.5 px-3">
-          {story.user.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={story.user.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
-          ) : (
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-space-card text-xs text-white/60">
-              {story.user.name.charAt(0).toUpperCase()}
-            </span>
-          )}
-          <span className="text-sm font-semibold text-white drop-shadow">{story.user.name}</span>
-          {mine && story.mediaUrl && (
-            <button
-              type="button"
-              onClick={onSave}
-              disabled={busy || savedIds.has(story.id)}
-              title="Guardar como publicação permanente no seu perfil"
-              className="ml-auto rounded-full bg-black/40 px-3 py-1 text-xs font-medium text-snow/90 hover:bg-black/60 disabled:opacity-70"
-            >
-              {savedIds.has(story.id) ? "Salvo no perfil ✓" : "Salvar no perfil"}
+        <div className="absolute inset-x-0 top-[calc(max(0.75rem,env(safe-area-inset-top))+14px)] z-20 flex items-center gap-2.5 pl-3 pr-1.5" onClick={stop}>
+          <Link href={`/perfil/${story.user.username}`} onClick={onClose} className="flex min-w-0 items-center gap-2.5">
+            {story.user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={story.user.avatarUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-white/20" />
+            ) : (
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-space-card text-xs text-white/60">
+                {story.user.name.charAt(0).toUpperCase()}
+              </span>
+            )}
+            <span className="truncate text-sm font-semibold text-snow drop-shadow">{story.user.name}</span>
+          </Link>
+          <span className="shrink-0 text-xs text-snow/70 drop-shadow">{ago(story.createdAt)}</span>
+          <span className="ml-auto flex shrink-0 items-center">
+            {mine && (
+              <button type="button" onClick={() => setMenu((v) => !v)} aria-label="Opções da história" aria-expanded={menu} className="flex h-10 w-10 items-center justify-center rounded-full text-snow hover:bg-white/10">
+                <MoreVertical className="h-5 w-5" />
+              </button>
+            )}
+            <button type="button" aria-label="Fechar" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-full text-snow hover:bg-white/10">
+              <X className="h-6 w-6" />
             </button>
-          )}
-          {mine && (
-            <button
-              type="button"
-              onClick={onDelete}
-              disabled={busy}
-              className={clsx("rounded-full bg-black/40 px-3 py-1 text-xs font-medium text-snow/90 hover:bg-black/60 disabled:opacity-60", !story.mediaUrl && "ml-auto")}
-            >
-              {busy ? <Loader2 className="mx-auto h-3.5 w-3.5 animate-spin" /> : "Excluir"}
-            </button>
-          )}
+          </span>
         </div>
 
-        {/* Tapping the edges navigates, matching the community viewer. */}
-        <button type="button" aria-label="Anterior" onClick={(e) => { e.stopPropagation(); prev(); }} className="absolute inset-y-0 left-0 z-10 w-1/4" />
-        <button type="button" aria-label="Próxima" onClick={(e) => { e.stopPropagation(); next(); }} className="absolute inset-y-0 right-0 z-10 w-1/4" />
+        {menu && (
+          <div role="menu" onClick={stop} className="absolute right-3 top-[calc(max(0.75rem,env(safe-area-inset-top))+62px)] z-30 w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#1f2128]/95 py-1.5 shadow-2xl backdrop-blur">
+            <button type="button" role="menuitem" onClick={openViewers} className={menuItem}>
+              <Eye className="h-5 w-5 text-orbit-blue" /> Visualizações e reações
+            </button>
+            {story.mediaUrl && (
+              <button type="button" role="menuitem" onClick={onSave} disabled={busy || savedIds.has(story.id)} className={menuItem}>
+                {savedIds.has(story.id) ? <Check className="h-5 w-5 text-emerald-400" /> : <BookmarkPlus className="h-5 w-5 text-orbit-blue" />}
+                {savedIds.has(story.id) ? "Salvo no perfil" : "Salvar no perfil"}
+              </button>
+            )}
+            {story.mediaUrl && (
+              <a role="menuitem" href={story.mediaUrl} download target="_blank" rel="noreferrer" onClick={() => setMenu(false)} className={menuItem}>
+                <Download className="h-5 w-5 text-orbit-blue" /> Baixar no aparelho
+              </a>
+            )}
+            <button type="button" role="menuitem" onClick={onDelete} disabled={busy} className={clsx(menuItem, "text-red-300")}>
+              <Trash2 className="h-5 w-5 text-red-400" /> Excluir história
+            </button>
+          </div>
+        )}
 
-        {paused && <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-white/90">Pausado</span>}
-        {error && <p className="absolute inset-x-4 bottom-6 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-center text-sm text-red-300">{error}</p>}
+        {/* Tapping the edges navigates, matching the community viewer. */}
+        <button type="button" aria-label="Anterior" onClick={(e) => { e.stopPropagation(); prev(); }} className="absolute inset-y-24 left-0 z-10 w-1/4" />
+        <button type="button" aria-label="Próxima" onClick={(e) => { e.stopPropagation(); next(); }} className="absolute inset-y-24 right-0 z-10 w-1/4" />
+
+        {paused && <span className="pointer-events-none absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/50 px-3 py-1.5 text-xs font-medium text-snow/90">Pausado</span>}
+
+        <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-3 pb-[max(0.9rem,env(safe-area-inset-bottom))] pt-12" onClick={stop}>
+          {(error || notice) && (
+            <p
+              role="status"
+              className={clsx(
+                "mx-auto mb-3 w-fit max-w-full rounded-full px-4 py-1.5 text-center text-xs font-medium",
+                error ? "bg-red-500/90 text-snow" : "bg-white/90 text-[#111]"
+              )}
+            >
+              {error ?? notice}
+            </p>
+          )}
+          {mine ? (
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={openViewers} className="flex min-h-[44px] items-center gap-2 rounded-full bg-white/15 px-4 text-sm font-medium text-snow backdrop-blur hover:bg-white/25">
+                <Eye className="h-4 w-4" />
+                {story.viewCount === 0 ? "Não há visualizações" : `${story.viewCount} ${story.viewCount === 1 ? "visualização" : "visualizações"}`}
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="mb-2.5 flex justify-center gap-1.5">
+                {STORY_REACTIONS.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => react(e)}
+                    aria-label={`Reagir ${e}`}
+                    aria-pressed={myReaction[story.id] === e}
+                    className={clsx(
+                      "flex h-11 w-11 items-center justify-center rounded-full text-2xl transition active:scale-90",
+                      myReaction[story.id] === e ? "scale-110 bg-white/25 ring-2 ring-white/70" : "bg-white/10 hover:bg-white/20"
+                    )}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+              <form onSubmit={sendReply} className="flex items-center gap-2">
+                <input
+                  value={reply}
+                  onChange={(e) => setReply(e.target.value)}
+                  onFocus={() => setTyping(true)}
+                  onBlur={() => setTyping(false)}
+                  maxLength={1000}
+                  placeholder={`Responder a ${story.user.name.split(" ")[0]}…`}
+                  className="min-h-[46px] min-w-0 flex-1 rounded-full border border-white/40 bg-black/30 px-4 text-sm text-snow outline-none backdrop-blur placeholder:text-snow/65 focus:border-white"
+                />
+                <button type="submit" disabled={!reply.trim() || sending} aria-label="Enviar resposta" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-snow text-[#111] disabled:opacity-40">
+                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                </button>
+              </form>
+            </>
+          )}
+        </div>
       </div>
+
+      <Sheet
+        open={viewersOpen}
+        onClose={() => setViewersOpen(false)}
+        title={
+          <span className="flex items-center gap-2">
+            <Eye className="h-4 w-4" /> {story.viewCount} {story.viewCount === 1 ? "visualização" : "visualizações"}
+            {reactionCount > 0 && <span className="text-sm font-normal text-white/50">· {reactionCount} {reactionCount === 1 ? "reação" : "reações"}</span>}
+          </span>
+        }
+      >
+        {viewers === null ? (
+          <div className="flex justify-center py-6">
+            <Loader2 className="h-5 w-5 animate-spin text-white/40" />
+          </div>
+        ) : viewers.length === 0 ? (
+          <p className="py-8 text-center text-sm text-white/50">Ninguém viu esta história ainda.</p>
+        ) : (
+          <div className="space-y-0.5">
+            {viewers.map((v) => (
+              <Link key={v.userId} href={`/perfil/${v.username}`} onClick={onClose} className="flex min-h-[56px] items-center gap-3 rounded-2xl px-2 hover:bg-white/[0.04]">
+                <span className="relative shrink-0">
+                  {v.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={v.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
+                  ) : (
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-space-card text-sm text-white/60">{v.name.charAt(0).toUpperCase()}</span>
+                  )}
+                  {v.emoji && <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-space-surface text-sm">{v.emoji}</span>}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-white">{v.name}</span>
+                  <span className="block text-[11px] text-white/45">{v.emoji ? `Reagiu ${v.emoji} · ` : "Viu · "}{ago(v.viewedAt)}</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </Sheet>
     </div>,
     document.body
   );

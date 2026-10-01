@@ -50,7 +50,8 @@ export type SavedFrom = {
 export type MessageMeta = {
   forwarded?: boolean;
   /** Reply to a community story (sent from the story viewer). */
-  storyReply?: { id: string; slug: string; community: string; preview: string; thumb: string | null };
+  /** `slug`/`community` só em histórias de comunidade. */
+  storyReply?: { id: string; slug?: string; community?: string; preview: string; thumb: string | null };
   savedFrom?: SavedFrom;
   /** Virtual gift (written only by the database: send_gift). */
   gift?: string;
