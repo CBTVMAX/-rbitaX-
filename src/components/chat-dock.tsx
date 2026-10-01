@@ -17,6 +17,7 @@ import {
   Search,
   Send,
   Square,
+  UserPlus,
   SquareArrowOutUpRight,
   Video,
 } from "lucide-react";
@@ -26,6 +27,7 @@ import { messagePreview, formatTime } from "@/lib/messenger/format";
 import { chatFilePath, uploadChatFile, uploadMime, voiceWaveform, MAX_UPLOAD_BYTES } from "@/lib/messenger/media";
 import { saveFilesToSaved } from "@/lib/messenger/saved";
 import { useCalls } from "@/components/calls/call-provider";
+import { loadFriends } from "@/components/messenger/dialogs";
 
 const PANEL_KEY = "orbitax:chat-panel-open";
 
@@ -359,6 +361,8 @@ function ChatPane({
   }
 
   const { startCall } = useCalls();
+  const [addOpen, setAddOpen] = useState(false);
+  const canAdd = c.isGroup && (c.role === "owner" || c.role === "admin");
   const call = (kind: "voice" | "video") => () => {
     const other = c.otherUser;
     if (c.isGroup || !other) return flash("Chamadas em grupo chegam em breve ao ÓrbitaX.");
@@ -376,19 +380,32 @@ function ChatPane({
         </button>
         <Avatar name={title} url={avatar} size={34} />
         <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{title}</span>
-        <button type="button" onClick={call("voice")} aria-label="Chamada de voz" title="Chamada de voz" className={iconBtn}>
-          <Phone className="h-4 w-4" />
-        </button>
-        <button type="button" onClick={call("video")} aria-label="Chamada de vídeo" title="Chamada de vídeo" className={iconBtn}>
-          <Video className="h-4 w-4" />
-        </button>
-        <Link href={messengerHref} aria-label="Abrir no Messenger" title="Abrir no Messenger" className={iconBtn}>
-          <SquareArrowOutUpRight className="h-4 w-4" />
-        </Link>
+        {c.isGroup ? (
+          // Grupo não tem chamada: só o atalho para adicionar pessoas (para quem administra).
+          canAdd && (
+            <button type="button" onClick={() => setAddOpen((v) => !v)} aria-label="Adicionar pessoas" title="Adicionar pessoas" aria-expanded={addOpen} className={iconBtn}>
+              <UserPlus className="h-4 w-4" />
+            </button>
+          )
+        ) : (
+          <>
+            <button type="button" onClick={call("voice")} aria-label="Chamada de voz" title="Chamada de voz" className={iconBtn}>
+              <Phone className="h-4 w-4" />
+            </button>
+            <button type="button" onClick={call("video")} aria-label="Chamada de vídeo" title="Chamada de vídeo" className={iconBtn}>
+              <Video className="h-4 w-4" />
+            </button>
+            <Link href={messengerHref} aria-label="Abrir no Messenger" title="Abrir no Messenger" className={iconBtn}>
+              <SquareArrowOutUpRight className="h-4 w-4" />
+            </Link>
+          </>
+        )}
         <button type="button" onClick={onCollapse} aria-label="Recolher o Messenger" title="Recolher" className={iconBtn}>
           <PanelRightClose className="h-4 w-4" />
         </button>
       </div>
+
+      {addOpen && canAdd && <AddPeoplePanel conversationId={c.id} me={me} supabase={supabase} onDone={(msg) => { setAddOpen(false); if (msg) flash(msg); }} />}
 
       <div ref={bodyRef} className="chat-space-bg orbit-scrollbar min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 py-3">
         {loading ? (
@@ -491,6 +508,86 @@ function ChatPane({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Adicionar amigos ao grupo sem sair da página (mesma função do Messenger: add_group_members). */
+function AddPeoplePanel({ conversationId, me, supabase, onDone }: { conversationId: string; me: ChatUser; supabase: SB; onDone: (msg?: string) => void }) {
+  const [friends, setFriends] = useState<ChatUser[] | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const [list, { data: rows }] = await Promise.all([
+        loadFriends(supabase, me.id),
+        supabase.from("ConversationMember").select("userId").eq("conversationId", conversationId),
+      ]);
+      const inGroup = new Set((rows ?? []).map((r) => r.userId));
+      if (alive) setFriends(list.filter((f) => !inGroup.has(f.id)));
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [supabase, me.id, conversationId]);
+
+  const term = q.trim().replace(/^@/, "").toLowerCase();
+  const shown = (friends ?? []).filter((f) => !term || f.name.toLowerCase().includes(term) || f.username.toLowerCase().includes(term));
+
+  async function add() {
+    setBusy(true);
+    const { error } = await supabase.rpc("add_group_members", { p_conversation_id: conversationId, p_member_ids: selected });
+    setBusy(false);
+    onDone(error ? "Não foi possível adicionar. Só amigos podem entrar no grupo." : selected.length > 1 ? "Pessoas adicionadas." : "Pessoa adicionada.");
+  }
+
+  return (
+    <div className="border-b border-white/10 bg-white/[0.02] p-3">
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Buscar amigo"
+        className="w-full rounded-xl border border-white/10 bg-space-bg/60 px-3 py-2 text-sm text-white outline-none placeholder:text-white/40 focus:border-chat/60"
+      />
+      <div className="orbit-scrollbar mt-2 max-h-48 space-y-0.5 overflow-y-auto">
+        {friends === null ? (
+          <p className="py-3 text-center text-xs text-white/40">Carregando…</p>
+        ) : shown.length === 0 ? (
+          <p className="py-3 text-center text-xs text-white/40">Nenhum amigo para adicionar.</p>
+        ) : (
+          shown.map((f) => {
+            const on = selected.includes(f.id);
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setSelected((s) => (on ? s.filter((x) => x !== f.id) : [...s, f.id]))}
+                className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left hover:bg-white/5"
+              >
+                <Avatar name={f.name} url={f.avatarUrl} size={30} />
+                <span className="min-w-0 flex-1 truncate text-sm text-white">{f.name}</span>
+                <span className={clsx("h-4 w-4 shrink-0 rounded-full border", on ? "border-transparent bg-chat" : "border-white/25")} />
+              </button>
+            );
+          })
+        )}
+      </div>
+      <div className="mt-2 flex justify-end gap-2">
+        <button type="button" onClick={() => onDone()} className="rounded-full px-3 py-1.5 text-xs text-white/60 hover:text-white">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onClick={add}
+          disabled={!selected.length || busy}
+          className="flex items-center gap-1.5 rounded-full bg-chat-bubble px-3.5 py-1.5 text-xs font-semibold text-snow disabled:opacity-40"
+        >
+          {busy && <Loader2 className="h-3 w-3 animate-spin" />} Adicionar{selected.length ? ` (${selected.length})` : ""}
+        </button>
+      </div>
     </div>
   );
 }

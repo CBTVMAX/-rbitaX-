@@ -15,6 +15,7 @@ import {
   Search,
   Timer,
   Trash2,
+  UserPlus,
   UserRound,
   Video,
   X,
@@ -25,6 +26,7 @@ import { formatTime, messagePreview, toDate } from "@/lib/messenger/format";
 import { conversationTitle, isMuted, MESSAGE_COLUMNS, toMessage, type ChatMessage, type Conversation, type Member } from "@/lib/messenger/types";
 import { useMessenger } from "./context";
 import { ConversationAvatar, IconButton, MenuItem, Popover } from "./ui";
+import { AddMembersDialog } from "./dialogs";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { useCalls } from "@/components/calls/call-provider";
 
@@ -135,8 +137,11 @@ export function ChatHeader({
   onArchive: () => void;
   onDelete: () => void;
 }) {
-  const { toast, me } = useMessenger();
+  const { toast, me, supabase, reloadConversations } = useMessenger();
   const [menu, setMenu] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  // Grupo não tem chamada: o atalho do cabeçalho é adicionar pessoas (só para quem administra).
+  const canAdd = c.isGroup && (c.role === "owner" || c.role === "admin");
   const other = c.otherUser;
   const presence = usePresenceText(c.isGroup ? null : other?.id, other?.presence);
   const onlineInGroup = useOnlineCount(c.isGroup ? members.filter((m) => m.id !== me.id).map((m) => m.id) : []);
@@ -214,6 +219,11 @@ export function ChatHeader({
           </button>
 
           <div className="flex shrink-0 items-center">
+            {canAdd && (
+              <IconButton label="Adicionar pessoas" onClick={() => setAddOpen(true)}>
+                <UserPlus className="h-5 w-5" />
+              </IconButton>
+            )}
             {!c.isGroup && (
               <>
                 <IconButton label="Chamada de voz" onClick={call("voice")}>
@@ -237,7 +247,6 @@ export function ChatHeader({
               <Popover open={menu} onClose={() => setMenu(false)} className="right-0 top-full mt-1 w-60">
                 {!c.isGroup && <MenuItem icon={UserRound} label="Ver perfil" onClick={() => { setMenu(false); onOpenProfile(); }} />}
                 <MenuItem icon={PanelRightOpen} label="Informações da conversa" onClick={() => { setMenu(false); onToggleInfo(); }} />
-                {c.isGroup && <MenuItem icon={Phone} label="Chamada em grupo" hint="Em breve" onClick={() => { setMenu(false); call("voice")(); }} />}
                 <MenuItem icon={muted ? Bell : BellOff} label={muted ? "Reativar notificações" : "Silenciar"} onClick={() => { setMenu(false); onMute(); }} />
                 <MenuItem icon={Archive} label={c.archivedAt ? "Desarquivar" : "Arquivar"} onClick={() => { setMenu(false); onArchive(); }} />
                 <div className="my-1 h-px bg-white/[0.07]" />
@@ -246,6 +255,22 @@ export function ChatHeader({
             </div>
           </div>
         </>
+      )}
+      {canAdd && (
+        <AddMembersDialog
+          open={addOpen}
+          onClose={() => setAddOpen(false)}
+          existing={members.map((m) => m.id)}
+          onAdd={async (ids) => {
+            const { error } = await supabase.rpc("add_group_members", { p_conversation_id: c.id, p_member_ids: ids });
+            if (error) toast("Não foi possível adicionar. Só amigos podem entrar no grupo.", "error");
+            else {
+              toast(ids.length > 1 ? "Pessoas adicionadas." : "Pessoa adicionada.");
+              setAddOpen(false);
+              reloadConversations();
+            }
+          }}
+        />
       )}
     </header>
   );

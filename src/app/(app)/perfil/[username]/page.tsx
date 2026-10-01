@@ -101,13 +101,28 @@ export default async function ProfilePage(props: {
   const requesterIds = (incomingRows ?? []).map((r) => r.requesterId);
 
   const userCard = "id, name, username, avatarUrl, presence, isVerified" as const;
-  const [{ data: friendRows }, { data: requesterRows }] = await Promise.all([
+  const followerSample = Array.from(followerIds).slice(0, 3);
+  // Fotos e vídeos de todas as publicações do perfil (não só das carregadas na página).
+  const mediaCount = (type: string) =>
+    supabase
+      .from("Media")
+      .select("id, post:Post!inner(authorId, communityId, isArchived)", { count: "exact", head: true })
+      .eq("type", type)
+      .eq("post.authorId", user.id)
+      .is("post.communityId", null)
+      .eq("post.isArchived", false);
+  const [{ data: friendRows }, { data: requesterRows }, { data: followerRows2 }, photoCount, videoCount] = await Promise.all([
     friendIds.length
       ? supabase.from("User").select(userCard).in("id", friendIds.slice(0, 60)).order("name")
       : Promise.resolve({ data: [] as ProfileFriend[] }),
     requesterIds.length
       ? supabase.from("User").select(userCard).in("id", requesterIds)
       : Promise.resolve({ data: [] as ProfileFriend[] }),
+    followerSample.length
+      ? supabase.from("User").select(userCard).in("id", followerSample)
+      : Promise.resolve({ data: [] as ProfileFriend[] }),
+    mediaCount("image"),
+    mediaCount("video"),
   ]);
   const requesterById = new Map((requesterRows ?? []).map((u) => [u.id, u]));
   const friendRequests = requesterIds.flatMap((id) => {
@@ -246,7 +261,10 @@ export default async function ProfilePage(props: {
         followers: followerIds.size,
         following: followingIds.length,
         communities: communities.length,
+        photos: photoCount.error ? null : photoCount.count ?? 0,
+        videos: videoCount.error ? null : videoCount.count ?? 0,
       }}
+      followerPreview={followerRows2 ?? []}
       feed={feed}
       level={level}
       coins={coins}

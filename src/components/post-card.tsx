@@ -226,7 +226,7 @@ export function PostCard({
   if (removed) return null;
 
   return (
-    <article className="rounded-2xl border border-white/10 bg-space-card p-4 md:p-5">
+    <article className="ox-card ox-post rounded-2xl border border-white/10 bg-space-card p-4 md:p-5">
       {pinned && (
         <p className="mb-2 flex items-center gap-1 text-[11px] font-medium text-white/50">
           <Pin className="h-3 w-3 text-orbit-cyan" /> Fixado

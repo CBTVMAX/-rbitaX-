@@ -83,7 +83,7 @@ function Carousel({ items, onOpen }: { items: PostMediaItem[]; onOpen: (i: numbe
   }
 
   return (
-    <div className="group relative overflow-hidden rounded-xl bg-black/30">
+    <div className="group relative overflow-hidden rounded-xl bg-space-card">
       <div
         ref={ref}
         onScroll={onScroll}
@@ -97,7 +97,7 @@ function Carousel({ items, onOpen }: { items: PostMediaItem[]; onOpen: (i: numbe
             ) : (
               <button type="button" onClick={() => onOpen(i)} className="flex h-full w-full items-center justify-center" aria-label={`Abrir foto ${i + 1}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={m.url} alt="" className="max-h-full w-auto max-w-full object-contain" />
+                <img src={m.url} alt="" className="h-full w-full object-contain" />
               </button>
             )}
           </div>

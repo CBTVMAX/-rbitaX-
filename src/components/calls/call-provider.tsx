@@ -552,9 +552,9 @@ function RoundButton({
       className={clsx(
         "flex shrink-0 items-center justify-center rounded-full transition active:scale-95",
         size === "sm" ? "h-10 w-10" : "h-14 w-14",
-        tone === "danger" && "bg-red-500 text-white hover:bg-red-600",
-        tone === "accept" && "bg-emerald-500 text-white hover:bg-emerald-600",
-        tone === "neutral" && (active ? "bg-white text-space-bg" : "bg-white/10 text-white hover:bg-white/20")
+        tone === "danger" && "bg-red-500 text-snow hover:bg-red-600",
+        tone === "accept" && "bg-emerald-500 text-snow hover:bg-emerald-600",
+        tone === "neutral" && (active ? "bg-snow text-[#03040b]" : "bg-snow/15 text-snow hover:bg-snow/25")
       )}
     >
       {children}
@@ -658,9 +658,9 @@ function CallScreen({
       role="dialog"
       aria-label={`Chamada com ${peer.name}`}
       className={clsx(
-        "fixed z-[60] overflow-hidden bg-[#03040b] text-white shadow-2xl",
+        "fixed z-[60] overflow-hidden bg-[#03040b] text-snow shadow-2xl",
         minimized
-          ? "bottom-24 left-3 h-44 w-36 rounded-2xl border border-white/15 md:bottom-6 md:left-auto md:right-24 md:h-48 md:w-64"
+          ? "bottom-24 left-3 h-44 w-36 rounded-2xl border border-snow/15 md:bottom-6 md:left-auto md:right-24 md:h-48 md:w-64"
           : "inset-0"
       )}
     >
@@ -673,7 +673,7 @@ function CallScreen({
           {!minimized && (
             <>
               <p className="mt-7 font-display text-2xl font-bold">{peer.name}</p>
-              <p className="mt-1.5 text-sm text-white/60">{status}</p>
+              <p className="mt-1.5 text-sm text-snow/60">{status}</p>
             </>
           )}
         </div>
@@ -684,10 +684,10 @@ function CallScreen({
         <div className="absolute inset-x-0 top-0 flex items-start justify-between bg-gradient-to-b from-black/60 to-transparent p-4 pt-[max(1rem,env(safe-area-inset-top))]">
           <div className={clsx(!showRemoteVideo && "invisible")}>
             <p className="font-semibold">{peer.name}</p>
-            <p className="text-xs text-white/70">{status}</p>
+            <p className="text-xs text-snow/70">{status}</p>
           </div>
           {phase !== "ended" && (
-            <button type="button" onClick={() => onMinimize(true)} aria-label="Minimizar chamada" title="Minimizar" className="rounded-full bg-white/10 p-2.5 transition hover:bg-white/20">
+            <button type="button" onClick={() => onMinimize(true)} aria-label="Minimizar chamada" title="Minimizar" className="rounded-full bg-snow/10 p-2.5 transition hover:bg-snow/20">
               <Minimize2 className="h-4 w-4" />
             </button>
           )}
@@ -702,7 +702,7 @@ function CallScreen({
           playsInline
           autoPlay
           className={clsx(
-            "absolute right-4 top-20 aspect-[3/4] w-28 rounded-2xl border border-white/20 bg-black object-cover shadow-xl md:w-40",
+            "absolute right-4 top-20 aspect-[3/4] w-28 rounded-2xl border border-snow/20 bg-black object-cover shadow-xl md:w-40",
             facingMirror(localStream) && "-scale-x-100",
             cameraOff && "opacity-0"
           )}
@@ -712,7 +712,7 @@ function CallScreen({
       {/* controles */}
       {minimized ? (
         <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-gradient-to-t from-black/80 to-transparent p-2">
-          <span className="min-w-0 truncate px-1 text-[11px] text-white/80">{status}</span>
+          <span className="min-w-0 truncate px-1 text-[11px] text-snow/80">{status}</span>
           <div className="flex gap-1.5">
             <RoundButton label="Expandir chamada" size="sm" onClick={() => onMinimize(false)}>
               <Maximize2 className="h-4 w-4" />

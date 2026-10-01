@@ -29,6 +29,7 @@ import {
   LogOut,
   MessageCircle,
   MoreHorizontal,
+  MoreVertical,
   Palette,
   PanelRightClose,
   PanelRightOpen,
@@ -52,7 +53,7 @@ async function copyProfileLink(username: string) {
   }
 }
 
-export function ShareProfileButton({ username, compact = false }: { username: string; compact?: boolean }) {
+export function ShareProfileButton({ username, compact = false, square = false }: { username: string; compact?: boolean; square?: boolean }) {
   const [copied, setCopied] = useState(false);
 
   async function share() {
@@ -77,8 +78,8 @@ export function ShareProfileButton({ username, compact = false }: { username: st
       onClick={share}
       aria-label="Compartilhar perfil"
       className={clsx(
-        "flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-space-bg/40 text-sm font-medium text-white transition hover:bg-white/5",
-        compact ? "h-11 w-14" : "px-4 py-2.5"
+        "flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/15 bg-space-bg/40 text-sm font-medium text-white transition hover:bg-white/5",
+        square ? "h-12 w-12" : compact ? "h-[42px] w-11" : "px-4 py-2.5"
       )}
     >
       <Share2 className="h-4 w-4" />
@@ -105,11 +106,14 @@ export function ProfileMoreMenu({
   userId,
   isMe,
   compact = false,
+  variant = "default",
 }: {
   username: string;
   userId: string;
   isMe: boolean;
   compact?: boolean;
+  /** "glass": botão redondo e claro, para ficar por cima da capa. */
+  variant?: "default" | "glass";
 }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -134,14 +138,16 @@ export function ProfileMoreMenu({
         aria-label="Mais opções"
         aria-expanded={open}
         className={clsx(
-          "flex items-center justify-center rounded-xl border border-white/15 bg-space-bg/40 text-white transition hover:bg-white/5",
-          compact ? "h-11 w-14" : "h-[42px] w-11"
+          "flex items-center justify-center transition",
+          variant === "glass"
+            ? "h-10 w-10 rounded-full bg-black/35 text-snow backdrop-blur-md hover:bg-black/50"
+            : clsx("rounded-xl border border-white/15 bg-space-bg/40 text-white hover:bg-white/5", compact ? "h-11 w-14" : "h-[42px] w-11")
         )}
       >
-        <MoreHorizontal className="h-5 w-5" />
+        {variant === "glass" ? <MoreVertical className="h-5 w-5" /> : <MoreHorizontal className="h-5 w-5" />}
       </button>
       {open && (
-        <div className="absolute right-0 top-12 z-30 max-h-[70vh] w-60 overflow-y-auto rounded-xl border border-white/10 bg-space-surface py-1 shadow-2xl">
+        <div className="absolute right-0 top-12 z-30 text-left max-h-[70vh] w-60 overflow-y-auto rounded-xl border border-white/10 bg-space-surface py-1 shadow-2xl">
           {isMe && (
             <>
               <Link href="/configuracoes/conta" className={item}>
@@ -532,7 +538,18 @@ export function ProfileImageUpload({
  * Botão discreto da capa no próprio perfil: trocar, reposicionar (reabre o editor com a capa
  * atual) e remover, sempre mostrando a medida recomendada para quem vai preparar a imagem.
  */
-export function CoverMenu({ userId, coverUrl, className }: { userId: string; coverUrl: string | null; className: string }) {
+export function CoverMenu({
+  userId,
+  coverUrl,
+  className,
+  inline = false,
+}: {
+  userId: string;
+  coverUrl: string | null;
+  className: string;
+  /** Sem posicionamento próprio e só com o ícone (usado na barra sobre a capa no celular). */
+  inline?: boolean;
+}) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -582,15 +599,15 @@ export function CoverMenu({ userId, coverUrl, className }: { userId: string; cov
 
   return (
     <>
-      <div className="absolute right-3 top-3 z-20 md:right-4 md:top-4">
+      <div className={inline ? "relative z-20" : "absolute right-3 top-3 z-20 md:right-4 md:top-4"}>
         <button type="button" onClick={() => setOpen((v) => !v)} aria-label="Editar capa" aria-expanded={open} className={className}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-          <span className="hidden md:inline">Editar capa</span>
+          {!inline && <span className="hidden md:inline">Editar capa</span>}
         </button>
         {open && (
           <>
             <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
-            <div className="absolute right-0 top-11 z-20 w-60 overflow-hidden rounded-xl border border-white/10 bg-space-surface py-1 shadow-2xl">
+            <div className="absolute right-0 top-11 z-20 w-60 overflow-hidden rounded-xl border border-white/10 bg-space-surface py-1 text-left shadow-2xl">
               <button type="button" className={item} onClick={() => { setOpen(false); inputRef.current?.click(); }}>
                 <ImagePlus className="h-4 w-4" /> {coverUrl ? "Trocar capa" : "Adicionar capa"}
               </button>

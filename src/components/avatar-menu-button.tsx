@@ -35,7 +35,7 @@ export function AvatarMenu({
         <span
           aria-hidden
           className={`absolute z-10 flex items-center justify-center rounded-full border-2 border-pa bg-space-bg/90 text-white shadow-glow transition group-hover:bg-space-card ${
-            hasFrame ? "bottom-0 right-0 h-7 w-7 md:h-8 md:w-8" : "bottom-[2%] right-[2%] h-8 w-8 md:h-9 md:w-9"
+            hasFrame ? "bottom-0 left-0 h-7 w-7 md:h-8 md:w-8" : "bottom-[2%] left-[2%] h-8 w-8 md:h-9 md:w-9"
           }`}
         >
           <Camera className={hasFrame ? "h-3.5 w-3.5" : "h-4 w-4"} />

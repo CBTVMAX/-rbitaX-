@@ -19,6 +19,7 @@ import { presenceOf } from "@/lib/presence";
 import { AvatarImage } from "@/components/avatar";
 import { ProfileMoments } from "@/components/personal-stories";
 import { AvatarMenu } from "@/components/avatar-menu-button";
+import { NavBack } from "@/components/nav-back";
 import { relationshipLabel } from "@/lib/profile-options";
 import { MyRpgsCard } from "@/components/my-rpgs-card";
 import { ProfileMusic, type ProfileMusicData } from "@/components/profile-music";
@@ -31,6 +32,8 @@ import { OnlineDot, PresenceDot, PresenceStatus } from "@/components/presence-pi
 import {
   Archive,
   Cake,
+  Info,
+  PlusCircle,
   Camera,
   Check,
   ChevronRight,
@@ -125,7 +128,7 @@ function ProfileAvatar({
           : "bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] shadow-[0_0_32px_rgba(139,92,246,0.45)]"
       }`}
     >
-      <div className="h-full w-full rounded-full border-4 border-space-bg">{photo}</div>
+      <div className="h-full w-full rounded-full border-4 border-space-surface">{photo}</div>
     </div>
   );
 
@@ -139,7 +142,7 @@ function ProfileAvatar({
       ) : (
         picture
       )}
-      <OnlineDot userId={userId} initial={online ? "online" : "offline"} className="absolute right-[9%] top-[58%] z-10 h-3.5 w-3.5 rounded-full border-2 border-space-bg bg-emerald-400" />
+      <OnlineDot userId={userId} initial={online ? "online" : "offline"} className="absolute bottom-[7%] right-[7%] z-10 h-4 w-4 rounded-full border-[3px] border-space-surface bg-emerald-400" />
     </div>
   );
 }
@@ -165,7 +168,18 @@ export type ProfileViewProps = {
   info: ProfileInfo | null | undefined;
   current: { authId: string; profile: { name: string; avatarUrl: string | null } } | null;
   isFollowing: boolean;
-  stats: { posts: number; friends: number; followers: number; following: number; communities: number };
+  stats: {
+    posts: number;
+    friends: number;
+    followers: number;
+    following: number;
+    communities: number;
+    /** Total real de fotos/vídeos das publicações (null = não deu para contar; usa as carregadas). */
+    photos?: number | null;
+    videos?: number | null;
+  };
+  /** Algumas pessoas que seguem o perfil, para a prévia ao lado de "seguidores". */
+  followerPreview?: ProfileFriend[];
   level: LevelInfo;
   /** Saldo real de Diamantes (Órbita Coins); só chega quando é o próprio perfil. */
   coins?: number | null;
@@ -218,7 +232,7 @@ function SideCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-space-surface/70 p-4">
+    <section className="ox-card rounded-2xl border border-white/10 bg-space-surface p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-white">
           {title}
@@ -248,6 +262,7 @@ export function ProfileView({
   friends,
   friendState = "none",
   friendRequests = [],
+  followerPreview = [],
   family = [],
   familyRequests = [],
   testimonials = [],
@@ -286,24 +301,24 @@ export function ProfileView({
   const website = info?.website?.trim() || null;
   const websiteHref = website && (/^https?:\/\//i.test(website) ? website : `https://${website}`);
 
-  const identity = (
+  const identity = (center = false) => (
     <>
-      <div className="flex items-center gap-2">
-        <h1 className="truncate font-display text-xl font-bold text-white md:text-2xl">{user.name}</h1>
+      <div className={`flex items-center gap-2 ${center ? "justify-center" : ""}`}>
+        <h1 className="min-w-0 break-words font-display text-[22px] font-bold leading-tight text-white md:text-2xl">{user.name}</h1>
         {user.isVerified && <VerifiedBadge className="h-5 w-5 md:h-6 md:w-6" />}
         {user.isPremium && (
-          <span title="Órbita Premium" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orbit-purple text-space-bg md:h-6 md:w-6">
+          <span title="Órbita Premium" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orbit-purple text-snow md:h-6 md:w-6">
             <Crown className="h-3 w-3 md:h-3.5 md:w-3.5" />
           </span>
         )}
       </div>
-      <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-white/65">
+      <div className={`mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-white/60 ${center ? "justify-center" : ""}`}>
         <span>@{user.username}</span>
         <span aria-hidden className="text-white/25">•</span>
         <PresenceStatus userId={user.id} initial={user.presence} editable={isMe} />
         <span
           title={`Nível ${level.level} · ${level.xpIntoLevel.toLocaleString("pt-BR")} / ${level.xpForNext.toLocaleString("pt-BR")} XP`}
-          className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[11px] font-medium text-white/60"
+          className="rounded-full border border-pa/30 bg-pa/10 px-2 py-0.5 text-[11px] font-semibold text-pa"
         >
           Nível {level.level}
         </span>
@@ -311,50 +326,49 @@ export function ProfileView({
     </>
   );
 
-  const bioAndMeta = (
+  const metaItems = (
+    <>
+      {location && (
+        <span className="flex items-center gap-1.5">
+          <MapPin className="h-4 w-4 text-white/45" /> {location}
+        </span>
+      )}
+      {age !== null && (
+        <span className="flex items-center gap-1.5">
+          <Cake className="h-4 w-4 text-white/45" /> {age} anos
+        </span>
+      )}
+      {sign && (
+        <span className="flex items-center gap-1.5">
+          <Sparkles className="h-4 w-4 text-white/45" /> {sign}
+        </span>
+      )}
+      {website && websiteHref && (
+        <a href={websiteHref} target="_blank" rel="noopener noreferrer nofollow" className="flex max-w-[16rem] items-center gap-1.5 truncate text-orbit-blue hover:underline">
+          <Link2 className="h-4 w-4 shrink-0" /> <span className="truncate">{website.replace(/^https?:\/\//i, "")}</span>
+        </a>
+      )}
+    </>
+  );
+
+  const bioAndMeta = (center = false) => (
     <>
       {user.bio ? (
-        <p className="mt-3 max-w-xl text-sm text-white/80">{user.bio}</p>
+        <p className={`mt-3 whitespace-pre-line text-[15px] leading-relaxed text-white/85 md:max-w-xl md:text-sm ${center ? "mx-auto text-center" : ""}`}>{user.bio}</p>
       ) : (
         isMe && (
-          <Link href="/configuracoes/conta" className="mt-3 block text-sm text-white/70 hover:text-white">
+          <Link href="/configuracoes/conta" className={`mt-3 block text-sm text-white/55 hover:text-white ${center ? "text-center" : ""}`}>
             Conte um pouco sobre você...
           </Link>
         )
       )}
-      {(age !== null || sign || location || website) && (
-        <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-white/65 md:text-sm">
-          {age !== null && (
-            <span className="flex items-center gap-1.5">
-              <Cake className="h-4 w-4" /> {age} anos
-            </span>
-          )}
-          {sign && (
-            <span className="flex items-center gap-1.5">
-              <Sparkles className="h-4 w-4" /> {sign}
-            </span>
-          )}
-          {location && (
-            <span className="flex items-center gap-1.5">
-              <MapPin className="h-4 w-4" /> {location}
-            </span>
-          )}
-          {website && websiteHref && (
-            <a
-              href={websiteHref}
-              target="_blank"
-              rel="noopener noreferrer nofollow"
-              className="flex max-w-[16rem] items-center gap-1.5 truncate text-orbit-blue hover:underline"
-            >
-              <Link2 className="h-4 w-4 shrink-0" /> <span className="truncate">{website.replace(/^https?:\/\//i, "")}</span>
-            </a>
-          )}
-        </div>
+      {!center && (age !== null || sign || location || website) && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-white/65">{metaItems}</div>
       )}
-      {(interests.length > 0 || isMe) && (
+      {!center && (interests.length > 0 || isMe) && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {interests.map((i) => (
-            <span key={i} className="rounded-lg border border-pa/50 bg-pa/10 px-3 py-1 text-xs text-white/85">
+            <span key={i} className="rounded-lg border border-pa/40 bg-pa/10 px-3 py-1 text-xs text-white/85">
               {i}
             </span>
           ))}
@@ -568,7 +582,7 @@ export function ProfileView({
 
   const compact = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
   const seeAll = (tab: string, label = "Ver todas") => (
-    <a href={`#tab-${tab}`} className="text-xs font-medium text-orbit-blue hover:underline">
+    <a href={`#tab-${tab}`} className="text-xs font-medium text-pa hover:underline">
       {label}
     </a>
   );
@@ -582,17 +596,37 @@ export function ProfileView({
   const photos = allMedia.filter((m) => m.type === "image");
   const videos = allMedia.filter((m) => m.type === "video");
   const audioPosts = feed.filter((p) => p.media.some((m) => m.type === "audio"));
+  const photoTotal = stats.photos ?? photos.length;
+  const videoTotal = stats.videos ?? videos.length;
 
-  // ---------- Coluna lateral: só informação complementar, em blocos pequenos ----------
+  const cardClass = "ox-card rounded-2xl border border-white/10 bg-space-surface";
+
+  const avatarStack = (people: ProfileFriend[]) =>
+    people.length > 0 && (
+      <span className="flex -space-x-2.5">
+        {people.slice(0, 3).map((f) => (
+          <span key={f.id} className="flex h-8 w-8 items-end justify-center overflow-hidden rounded-full border-2 border-space-surface bg-space-card">
+            {f.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={f.avatarUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <Silhouette className="h-[78%] w-[78%] text-orbit-blue/55" />
+            )}
+          </span>
+        ))}
+      </span>
+    );
+
+  // ---------- Coluna lateral (computador): informações complementares ----------
   const aboutFilled = visibleAbout.filter((r) => r.text);
   const aside = (
     <>
-      {(aboutFilled.length > 0 || isMe) && (
+      {(user.bio || aboutFilled.length > 0 || isMe) && (
         <SideCard
-          title="Sobre"
+          title="Sobre mim"
           action={
             isMe ? (
-              <Link href="/configuracoes/conta" className="text-xs font-medium text-orbit-blue hover:underline">
+              <Link href="/configuracoes/conta" className="text-xs font-medium text-pa hover:underline">
                 Editar
               </Link>
             ) : (
@@ -600,9 +634,10 @@ export function ProfileView({
             )
           }
         >
-          {aboutFilled.length ? (
-            <div className="space-y-2 text-[13px]">
-              {aboutFilled.slice(0, 5).map(({ icon: Icon, text, prompt }) => (
+          {user.bio && <p className="mb-3 whitespace-pre-line text-[13px] leading-relaxed text-white/75">{user.bio}</p>}
+          {aboutFilled.length > 0 ? (
+            <div className="space-y-2.5 text-[13px]">
+              {aboutFilled.slice(0, 6).map(({ icon: Icon, text, prompt }) => (
                 <p key={prompt} className="flex items-start gap-2.5 text-white/75">
                   <Icon className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
                   <span className="min-w-0 break-words">{text}</span>
@@ -610,10 +645,54 @@ export function ProfileView({
               ))}
             </div>
           ) : (
-            <Link href="/configuracoes/conta" className="text-[13px] text-white/45 hover:text-white/75">
-              Adicione cidade, interesses e um link.
+            !user.bio && <p className="text-[13px] text-white/45">Nenhuma informação ainda.</p>
+          )}
+          {isMe && (
+            <Link
+              href="/configuracoes/conta"
+              className="mt-4 flex w-full items-center justify-center rounded-xl border border-white/12 bg-white/[0.03] py-2 text-[13px] font-medium text-white/85 transition hover:bg-white/[0.06]"
+            >
+              Editar informações
             </Link>
           )}
+        </SideCard>
+      )}
+
+      {photos.length > 0 && (
+        <SideCard title="Fotos" count={photoTotal} action={seeAll("fotos")}>
+          <div className="grid grid-cols-3 gap-1.5">
+            {photos.slice(0, 6).map((m) => (
+              <a key={m.id} href={m.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={m.url} alt="" className="aspect-square w-full object-cover transition hover:scale-105" />
+              </a>
+            ))}
+          </div>
+        </SideCard>
+      )}
+
+      {friends.length > 0 && (
+        <SideCard title="Amigos" count={stats.friends} action={seeAll("amigos")}>
+          <div className="grid grid-cols-4 gap-x-2 gap-y-3">
+            {friends.slice(0, 8).map((f) => (
+              <Link key={f.id} href={`/perfil/${f.username}`} className="group flex min-w-0 flex-col items-center gap-1.5 text-center">
+                <span className="relative">
+                  <span className="flex h-[52px] w-[52px] items-end justify-center overflow-hidden rounded-full border-2 border-pa/50 bg-space-card p-[2px] transition group-hover:border-pa">
+                    <span className="flex h-full w-full items-end justify-center overflow-hidden rounded-full bg-space-card">
+                      {f.avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={f.avatarUrl} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <Silhouette className="h-[78%] w-[78%] text-orbit-blue/55" />
+                      )}
+                    </span>
+                  </span>
+                  <PresenceDot value={f.presence} userId={f.id} className="absolute bottom-0 right-0 h-3 w-3 border-2 border-space-surface" />
+                </span>
+                <span className="max-w-full truncate text-[11px] text-white/75">{f.name.split(" ")[0]}</span>
+              </Link>
+            ))}
+          </div>
         </SideCard>
       )}
 
@@ -622,8 +701,8 @@ export function ProfileView({
           <ul className="space-y-1">
             {sortedCommunities.slice(0, 4).map((c) => (
               <li key={c.id}>
-                <Link href={`/comunidades/${c.slug}`} className="-mx-1.5 flex items-center gap-2.5 rounded-xl px-1.5 py-1.5 transition hover:bg-white/5">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-space-card">
+                <Link href={`/comunidades/${c.slug}`} className="-mx-1.5 flex items-center gap-3 rounded-xl px-1.5 py-1.5 transition hover:bg-white/5">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-space-card">
                     {c.avatarUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={c.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -638,6 +717,7 @@ export function ProfileView({
                       {isMe && hiddenSet.has(c.id) && " · oculta"}
                     </span>
                   </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
                 </Link>
               </li>
             ))}
@@ -645,39 +725,26 @@ export function ProfileView({
         </SideCard>
       )}
 
-      {friends.length > 0 && (
-        <SideCard title="Amigos" count={stats.friends} action={seeAll("amigos", "Ver todos")}>
-          <div className="grid grid-cols-4 gap-x-2 gap-y-3">
-            {friends.slice(0, 8).map((f) => (
-              <Link key={f.id} href={`/perfil/${f.username}`} className="group flex min-w-0 flex-col items-center gap-1 text-center">
-                <span className="relative">
-                  <span className="flex h-12 w-12 items-end justify-center overflow-hidden rounded-full bg-space-card ring-1 ring-white/10 transition group-hover:ring-pa/60">
-                    {f.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={f.avatarUrl} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <Silhouette className="h-[78%] w-[78%] text-orbit-blue/55" />
-                    )}
-                  </span>
-                  <PresenceDot value={f.presence} userId={f.id} className="absolute bottom-0 right-0 h-3 w-3 border-2 border-space-surface" />
+      {testimonials.length > 0 && (
+        <SideCard title="Depoimentos" count={testimonials.length} action={seeAll("depoimentos", "Ver todos")}>
+          <ul className="space-y-3">
+            {testimonials.slice(0, 2).map((t) => (
+              <li key={t.id} className="flex gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-end justify-center overflow-hidden rounded-full bg-space-card">
+                  {t.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={t.avatarUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <Silhouette className="h-[78%] w-[78%] text-orbit-blue/55" />
+                  )}
                 </span>
-                <span className="max-w-full truncate text-[11px] text-white/70">{f.name.split(" ")[0]}</span>
-              </Link>
+                <span className="min-w-0">
+                  <span className="block truncate text-[12px] font-semibold text-white">{t.name}</span>
+                  <span className="line-clamp-3 text-[12px] leading-snug text-white/65">“{t.body}”</span>
+                </span>
+              </li>
             ))}
-          </div>
-        </SideCard>
-      )}
-
-      {photos.length > 0 && (
-        <SideCard title="Fotos" count={photos.length} action={seeAll("fotos")}>
-          <div className="grid grid-cols-3 gap-1.5">
-            {photos.slice(0, 6).map((m) => (
-              <a key={m.id} href={m.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={m.url} alt="" className="aspect-square w-full object-cover transition hover:scale-105" />
-              </a>
-            ))}
-          </div>
+          </ul>
         </SideCard>
       )}
     </>
@@ -688,11 +755,7 @@ export function ProfileView({
     const role = ROLE_LABEL[c.role] ?? ROLE_LABEL.member;
     const RoleIcon = role.icon;
     return (
-      <Link
-        key={c.id}
-        href={`/comunidades/${c.slug}`}
-        className="flex items-center gap-3 rounded-2xl border border-white/10 bg-space-surface/80 p-3 transition hover:border-pa/50"
-      >
+      <Link key={c.id} href={`/comunidades/${c.slug}`} className={`${cardClass} flex items-center gap-3 p-3 transition hover:border-pa/50`}>
         <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-space-card">
           {c.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -737,9 +800,9 @@ export function ProfileView({
     sortedCommunities.length || isMe ? (
       <div className="space-y-4">
         {isMe && (
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-space-surface/60 px-4 py-3 text-xs text-white/55">
+          <div className={`${cardClass} flex items-center justify-between gap-3 px-4 py-3 text-xs text-white/55`}>
             <span>Você escolhe quais comunidades aparecem para quem visita seu perfil.</span>
-            <Link href="/configuracoes/comunidades" className="shrink-0 font-medium text-orbit-blue hover:underline">
+            <Link href="/configuracoes/comunidades" className="shrink-0 font-medium text-pa hover:underline">
               Gerenciar
             </Link>
           </div>
@@ -758,9 +821,9 @@ export function ProfileView({
           </section>
         )}
         {sortedCommunities.length === 0 && (
-          <div className="rounded-2xl border border-white/10 bg-space-surface/80 p-10 text-center text-sm text-white/50">
+          <div className={`${cardClass} p-10 text-center text-sm text-white/50`}>
             Você ainda não participa de comunidades.{" "}
-            <Link href="/comunidades" className="text-orbit-cyan hover:underline">
+            <Link href="/comunidades" className="text-pa hover:underline">
               Explorar
             </Link>
           </div>
@@ -769,9 +832,9 @@ export function ProfileView({
     ) : undefined;
 
   const photosTab = photos.length ? (
-    <div className="grid grid-cols-3 gap-1.5 md:gap-2">
+    <div className="grid grid-cols-3 gap-1 md:gap-2">
       {photos.map((m) => (
-        <a key={m.id} href={m.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl">
+        <a key={m.id} href={m.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg md:rounded-xl">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={m.url} alt="" className="aspect-square w-full object-cover transition hover:scale-105" />
         </a>
@@ -792,7 +855,7 @@ export function ProfileView({
     music || isMe || audioPosts.length ? (
       <div className="space-y-3 md:space-y-4">
         {(music || isMe) && (
-          <section className="rounded-2xl border border-white/10 bg-space-surface/80 p-4">
+          <section className={`${cardClass} p-4`}>
             <h3 className="mb-3 text-sm font-semibold text-white">Música do perfil</h3>
             <ProfileMusic music={music} isMe={isMe} userId={user.id} />
           </section>
@@ -804,13 +867,9 @@ export function ProfileView({
     ) : undefined;
 
   const friendsList = friends.length ? (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-3 xl:grid-cols-4">
       {friends.map((f) => (
-        <Link
-          key={f.id}
-          href={`/perfil/${f.username}`}
-          className="flex flex-col items-center rounded-2xl border border-white/10 bg-space-surface/80 px-3 py-4 text-center transition hover:border-pa/50"
-        >
+        <Link key={f.id} href={`/perfil/${f.username}`} className={`${cardClass} flex flex-col items-center px-2 py-4 text-center transition hover:border-pa/50`}>
           <span className="relative">
             <span className="flex h-16 w-16 items-end justify-center overflow-hidden rounded-full border-2 border-pa/60 bg-space-card">
               {f.avatarUrl ? (
@@ -820,7 +879,7 @@ export function ProfileView({
                 <Silhouette className="h-[78%] w-[78%] text-orbit-blue/55" />
               )}
             </span>
-            <PresenceDot value={f.presence} userId={f.id} className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 border-2 border-space-bg" />
+            <PresenceDot value={f.presence} userId={f.id} className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 border-2 border-space-surface" />
           </span>
           <span className="mt-2.5 flex max-w-full items-center gap-1">
             <span className="truncate text-sm font-medium text-white">{f.name}</span>
@@ -837,82 +896,84 @@ export function ProfileView({
       <p className="flex items-center gap-2 text-sm text-white/80">
         <Archive className="h-4 w-4 text-orbit-purple" /> Publicações arquivadas · só você vê
       </p>
-      <Link href={`/perfil/${user.username}`} className="shrink-0 text-xs font-medium text-orbit-blue hover:underline">
+      <Link href={`/perfil/${user.username}`} className="shrink-0 text-xs font-medium text-pa hover:underline">
         Voltar ao perfil
       </Link>
     </div>
   ) : null;
 
+  // ---------- Números (computador): faixa com 6 caixas, como no mockup ----------
   const statItems: { value: number; label: string; tab?: string }[] = [
-    { value: stats.friends, label: "amigos", tab: "amigos" },
-    { value: stats.followers, label: "seguidores" },
-    { value: stats.following, label: "seguindo" },
-    { value: stats.posts, label: "publicações", tab: "posts" },
-    { value: stats.communities, label: "comunidades", tab: "comunidades" },
+    { value: stats.friends, label: "Amigos", tab: "amigos" },
+    { value: stats.followers, label: "Seguidores" },
+    { value: stats.following, label: "Seguindo" },
+    { value: photoTotal, label: "Fotos", tab: "fotos" },
+    { value: videoTotal, label: "Vídeos", tab: "videos" },
+    { value: stats.communities, label: "Comunidades", tab: "comunidades" },
   ];
-  const statsRow = (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-white/55">
+  const statsStrip = (
+    <div className="grid grid-cols-6 divide-x divide-white/10 overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
       {statItems.map(({ value, label, tab }) => {
         const content = (
           <>
-            <span className="font-semibold text-white">{compact.format(value)}</span> {label}
+            <span className="block text-lg font-bold leading-tight text-white">{compact.format(value)}</span>
+            <span className="mt-0.5 block text-xs text-white/55">{label}</span>
           </>
         );
         return tab ? (
-          <a key={label} href={`#tab-${tab}`} className="transition hover:text-white">
+          <a key={label} href={`#tab-${tab}`} className="px-2 py-3 text-center transition hover:bg-white/[0.04]">
             {content}
           </a>
         ) : (
-          <span key={label}>{content}</span>
+          <span key={label} className="px-2 py-3 text-center">
+            {content}
+          </span>
         );
       })}
     </div>
   );
 
-  const ownerActions = (mobile: boolean) => (
-    <>
-      {editButton(mobile ? "h-10 flex-1" : "px-5 py-2.5")}
-      <ShareProfileButton username={user.username} compact={mobile} />
-    </>
+  const coverImage = user.coverUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={user.coverUrl} alt="" className="h-full w-full object-cover" />
+  ) : (
+    <div
+      className={`flex h-full items-center justify-center bg-gradient-to-br ${
+        accent ? "from-pa/45 via-[#0b0e1c] to-pa/15" : "from-[#1b2a6b] via-[#0b0e1c] to-[#3b1d5e]"
+      }`}
+    >
+      {isMe && (
+        <p className="flex items-center gap-2 text-xs text-snow/60">
+          <ImagePlus className="h-4 w-4" /> Adicione uma capa
+        </p>
+      )}
+    </div>
   );
+  // Botões por cima da capa: sempre claros (a capa é uma imagem, em qualquer tema).
+  const glassButton = "flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-snow backdrop-blur-md transition hover:bg-black/50";
+
+  const moments = current?.authId ? <ProfileMoments viewerId={current.authId} userId={user.id} isMe={isMe} /> : null;
 
   return (
-    <div className="mx-auto max-w-[1180px] px-0 pt-0 sm:px-3 sm:pt-3 md:px-5 md:py-5" style={profileAccentStyle(user.profileColor)}>
+    <div
+      className="mx-auto max-w-[1220px] md:px-5 md:py-5 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-5"
+      style={profileAccentStyle(user.profileColor)}
+    >
       <div className="min-w-0 space-y-3 md:space-y-4">
-        <section
-          className={`overflow-hidden border-white/10 bg-space-surface/80 sm:rounded-2xl sm:border ${
-            accent ? "sm:border-pa/40 sm:shadow-[0_0_40px_rgb(var(--pa)/0.12)]" : ""
-          }`}
-        >
-          {/* Capa compacta (7:2) — não domina o perfil. */}
-          <div className="relative aspect-[7/2] max-h-[230px] w-full overflow-hidden">
-            {user.coverUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={user.coverUrl} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <div
-                className={`flex h-full items-center justify-center bg-gradient-to-br ${
-                  accent ? "from-pa/30 via-space-card to-pa/10" : "from-orbit-blue/20 via-space-card to-orbit-purple/20"
-                }`}
-              >
-                {isMe && (
-                  <p className="flex items-center gap-2 text-xs text-white/50">
-                    <ImagePlus className="h-4 w-4" /> Adicione uma capa
-                  </p>
-                )}
-              </div>
-            )}
+        {/* ================= COMPUTADOR ================= */}
+        <section className={`${cardClass} hidden overflow-hidden md:block ${accent ? "border-pa/35 shadow-[0_0_40px_rgb(var(--pa)/0.12)]" : ""}`}>
+          <div className="relative aspect-[7/2] max-h-[240px] w-full overflow-hidden">
+            {coverImage}
             {isMe && (
               <CoverMenu
                 userId={user.id}
                 coverUrl={user.coverUrl}
-                className="flex items-center gap-2 rounded-full border border-white/15 bg-space-bg/75 p-2 text-xs font-medium text-white backdrop-blur transition hover:bg-space-bg md:rounded-xl md:px-3 md:py-1.5"
+                className="flex items-center gap-2 rounded-xl bg-black/40 px-3 py-1.5 text-xs font-medium text-snow backdrop-blur-md transition hover:bg-black/55"
               />
             )}
           </div>
 
-          {/* Desktop: avatar sobrepondo levemente a capa + identidade + ações principais */}
-          <div className="hidden gap-5 px-6 pb-4 md:flex">
+          <div className="flex gap-5 px-6 pb-5">
             <ProfileAvatar
               name={user.name}
               url={user.avatarUrl}
@@ -922,24 +983,51 @@ export function ProfileView({
               online={online}
               accent={accent}
               frame={frame}
-              className={`-mt-14 h-[120px] w-[120px] ${frame ? "mx-6 mb-6" : ""}`}
+              className={`-mt-16 h-[136px] w-[136px] ${frame ? "mx-6 mb-6" : ""}`}
             />
             <div className="min-w-0 flex-1 pt-3">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">{identity}</div>
+              <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+                <div className="min-w-0 flex-1 basis-[280px]">{identity()}</div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {isMe ? ownerActions(false) : visitorActions(false)}
+                  {isMe ? (
+                    <>
+                      {editButton("px-5 py-2.5")}
+                      <ShareProfileButton username={user.username} compact />
+                    </>
+                  ) : (
+                    visitorActions(false)
+                  )}
                   <ProfileMoreMenu username={user.username} userId={user.id} isMe={isMe} />
                 </div>
               </div>
-              {bioAndMeta}
-              <div className="mt-3">{statsRow}</div>
+              {bioAndMeta()}
+            </div>
+          </div>
+          <div className="px-6 pb-5">{statsStrip}</div>
+          {moments}
+        </section>
+
+        {/* ================= CELULAR ================= */}
+        <section className="md:hidden">
+          <div className="relative aspect-[9/4] w-full overflow-hidden">
+            {coverImage}
+            <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/45 to-transparent" />
+            <NavBack fallback="/feed" className={`${glassButton} absolute left-3 top-3`} />
+            <div className="absolute right-3 top-3 flex items-center gap-2">
+              {isMe && (
+                <CoverMenu
+                  userId={user.id}
+                  coverUrl={user.coverUrl}
+                  inline
+                  className={glassButton}
+                />
+              )}
+              <ProfileMoreMenu username={user.username} userId={user.id} isMe={isMe} variant="glass" />
             </div>
           </div>
 
-          {/* Mobile: layout próprio, não uma versão encolhida do desktop */}
-          <div className="px-4 pb-3 md:hidden">
-            <div className="flex items-end justify-between gap-3">
+          <div className="ox-card relative -mt-7 rounded-t-[28px] bg-space-surface px-4 pb-5 text-center">
+            <div className="flex justify-center">
               <ProfileAvatar
                 name={user.name}
                 url={user.avatarUrl}
@@ -949,72 +1037,124 @@ export function ProfileView({
                 online={online}
                 accent={accent}
                 frame={frame}
-                className={`-mt-10 h-[88px] w-[88px] ${frame ? "mb-5 ml-4" : ""}`}
+                className={`-mt-14 h-[112px] w-[112px] ${frame ? "mb-5" : ""}`}
               />
             </div>
-            <div className="mt-2.5">{identity}</div>
-            {bioAndMeta}
-            <div className="mt-3">{statsRow}</div>
-            <div className="mt-3.5 flex items-center gap-2">
-              {isMe ? ownerActions(true) : visitorActions(true)}
-              <ProfileMoreMenu username={user.username} userId={user.id} isMe={isMe} compact />
-            </div>
+            <div className="mt-3">{identity(true)}</div>
+            {bioAndMeta(true)}
+            {(location || aboutFilled.length > 0) && (
+              <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[13px] text-white/55">
+                {location && (
+                  <span className="flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5" /> {location}
+                  </span>
+                )}
+                <a href="#tab-sobre" className="flex items-center gap-1 text-white/70 hover:text-white">
+                  <Info className="h-3.5 w-3.5" /> Saber mais
+                </a>
+              </div>
+            )}
           </div>
 
-          {current?.authId && <ProfileMoments viewerId={current.authId} userId={user.id} isMe={isMe} />}
+          <div className="space-y-2.5 bg-space-bg px-3 pt-2.5">
+            {current?.authId && (
+              <ProfileMoments viewerId={current.authId} userId={user.id} isMe={isMe} frameClassName={`${cardClass} px-4 py-2.5`} />
+            )}
+
+            <div className={`${cardClass} grid grid-cols-2 divide-x divide-white/10`}>
+              <a href="#tab-amigos" className="flex items-center justify-between gap-2 px-4 py-3.5 text-left">
+                <span>
+                  <span className="block text-xl font-bold leading-none text-white">{compact.format(stats.friends)}</span>
+                  <span className="mt-1 block text-[13px] text-white/55">amigos</span>
+                </span>
+                {avatarStack(friends)}
+              </a>
+              <div className="flex items-center justify-between gap-2 px-4 py-3.5">
+                <span>
+                  <span className="block text-xl font-bold leading-none text-white">{compact.format(stats.followers)}</span>
+                  <span className="mt-1 block text-[13px] text-white/55">seguidores</span>
+                </span>
+                {avatarStack(followerPreview)}
+              </div>
+            </div>
+
+            <div className={`${cardClass} flex items-center gap-2 p-2.5`}>
+              {isMe ? (
+                <>
+                  <a
+                    href="#tab-posts"
+                    className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold transition active:scale-[0.99] ${
+                      accent ? "bg-pa text-snow shadow-[0_0_24px_rgb(var(--pa)/0.35)]" : "bg-orbit-gradient text-snow shadow-glow"
+                    }`}
+                  >
+                    <PlusCircle className="h-5 w-5" /> Publicar
+                  </a>
+                  <Link
+                    href="/configuracoes/conta"
+                    aria-label="Editar perfil"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/12 text-white/80"
+                  >
+                    <PenLine className="h-5 w-5" />
+                  </Link>
+                  <ShareProfileButton username={user.username} compact square />
+                </>
+              ) : (
+                visitorActions(true)
+              )}
+            </div>
+          </div>
         </section>
 
-        {friendRequestsCard}
-        {onboarding}
-        {archiveBanner}
+        <div className="space-y-3 px-3 md:space-y-4 md:px-0">
+          {friendRequestsCard}
+          {onboarding}
+          {archiveBanner}
 
-        <ProfileTabs
-          accent={accent}
-          aside={aside}
-          slots={{
-            posts: (
-              <div className="space-y-3 md:space-y-4">
-                {isMe && current && !showArchive && (
-                  <PostComposer
-                    userId={current.authId}
-                    name={current.profile.name}
-                    avatarUrl={current.profile.avatarUrl}
-                    variant="profile"
-                  />
-                )}
-                {showArchive && feed.length === 0 ? (
-                  <div className="rounded-2xl border border-white/10 bg-space-surface/80 p-10 text-center text-sm text-white/50">
-                    Nenhuma publicação arquivada.
-                  </div>
-                ) : (
-                  feedList
-                )}
-              </div>
-            ),
-            sobre: aboutList ? (
-              <div className="rounded-2xl border border-white/10 bg-space-surface/80 p-5">{aboutList}</div>
-            ) : undefined,
-            fotos: photosTab,
-            videos: videosTab,
-            musica: musicTab,
-            comunidades: communitiesTab,
-            amigos: friendsList,
-            familia: <ProfileFamily isMe={isMe} family={family} requests={familyRequests} />,
-            conquistas: <AchievementsGrid achievements={achievements} isMe={isMe} name={user.name} />,
-            depoimentos: (
-              <ProfileTestimonials
-                isMe={isMe}
-                canWrite={!!current}
-                profileName={user.name}
-                profileUserId={user.id}
-                approved={testimonials}
-                pending={testimonialsPending}
-                myExisting={myTestimonial}
-              />
-            ),
-          }}
-        />
+          <ProfileTabs
+            accent={accent}
+            slots={{
+              posts: (
+                <div className="space-y-3 md:space-y-4">
+                  {isMe && current && !showArchive && (
+                    <PostComposer userId={current.authId} name={current.profile.name} avatarUrl={current.profile.avatarUrl} variant="profile" />
+                  )}
+                  {showArchive && feed.length === 0 ? (
+                    <div className={`${cardClass} p-10 text-center text-sm text-white/50`}>Nenhuma publicação arquivada.</div>
+                  ) : (
+                    feedList
+                  )}
+                </div>
+              ),
+              sobre: aboutList ? <div className={`${cardClass} p-5`}>{aboutList}</div> : undefined,
+              fotos: photosTab,
+              videos: videosTab,
+              musica: musicTab,
+              momentos: current?.authId ? (
+                <div className={`${cardClass} p-4`}>
+                  <ProfileMoments viewerId={current.authId} userId={user.id} isMe={isMe} variant="grid" />
+                </div>
+              ) : undefined,
+              comunidades: communitiesTab,
+              amigos: friendsList,
+              depoimentos: (
+                <ProfileTestimonials
+                  isMe={isMe}
+                  canWrite={!!current}
+                  profileName={user.name}
+                  profileUserId={user.id}
+                  approved={testimonials}
+                  pending={testimonialsPending}
+                  myExisting={myTestimonial}
+                />
+              ),
+              familia: <ProfileFamily isMe={isMe} family={family} requests={familyRequests} />,
+              conquistas: <AchievementsGrid achievements={achievements} isMe={isMe} name={user.name} />,
+            }}
+          />
+        </div>
       </div>
+
+      <aside className="hidden space-y-3 lg:sticky lg:top-20 lg:block">{aside}</aside>
     </div>
   );
 }
