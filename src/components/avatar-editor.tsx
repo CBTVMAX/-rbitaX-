@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Loader2, Monitor, Move, RotateCw, Smartphone, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Loader2, Move, RotateCw, X, ZoomIn, ZoomOut } from "lucide-react";
 
 /**
  * Avatar editor. The picture is saved in its own aspect ratio, so the profile shows exactly the
@@ -106,23 +106,56 @@ export function AvatarEditor({
   // Two-finger pinch on touch devices.
   const pinch = useRef<Map<number, { x: number; y: number }> | null>(null);
 
+  // State for the img element loaded via URL
+  const [imgLoaded, setImgLoaded] = useState(false);
+
   useEffect(() => {
-    const url = URL.createObjectURL(file);
-    setSrc(url);
+    let mounted = true;
+    let currentUrl: string | null = null;
+
+    // Create URL when file changes
+    currentUrl = URL.createObjectURL(file);
+    setSrc(currentUrl);
+    setImgLoaded(false);
+    setCrop({ x: 0, y: 0, w: 1 });
+    setRotation(0);
+    setZoom(1);
+    setError(null);
+
+    // Preload image to get dimensions
     const img = new Image();
     img.onload = () => {
+      if (!mounted) return;
       imgRef.current = img;
       const n = { w: img.naturalWidth, h: img.naturalHeight };
       setNat(n);
-      // After rotation the image may be portrait or landscape; the ratio follows what is shown.
+      // Initialize crop to center of image
       const r = AVATAR_RATIO;
       const rs = rotatedSize(n, 0);
       const w = baseWidth(rs, r);
       setCrop({ w, x: (rs.w - w) / 2, y: (rs.h - w / r) / 2 });
     };
-    img.onerror = () => setError("Não foi possível abrir essa imagem. Use JPG, PNG ou WebP.");
-    img.src = url;
-    return () => URL.revokeObjectURL(url);
+    img.onerror = () => {
+      if (!mounted) return;
+      setError("Não foi possível abrir essa imagem. Use JPG, PNG ou WebP.");
+    };
+    img.src = currentUrl;
+
+    return () => {
+      mounted = false;
+      // Only revoke if loading is done (otherwise browser may complain)
+      if (img.complete && img.naturalWidth > 0) {
+        if (currentUrl) URL.revokeObjectURL(currentUrl);
+      }
+      // If still loading, revoke after a short delay
+      if (currentUrl) {
+        img.onload = null;
+        img.onerror = null;
+        setTimeout(() => {
+          try { URL.revokeObjectURL(currentUrl!); } catch { /* already revoked */ }
+        }, 100);
+      }
+    };
   }, [file]);
 
   // Ratio of the rotated image — a 90° turn turns a portrait into a landscape avatar.
@@ -214,7 +247,7 @@ export function AvatarEditor({
   }
 
   async function confirm() {
-    if (!nat) return;
+    if (!nat || !crop?.w || crop.w < 10) return;
     setSaving(true);
     setError(null);
     const outW = Math.round(Math.min(OUTPUT_MAX_WIDTH, crop.w));
@@ -297,7 +330,36 @@ export function AvatarEditor({
           style={{ aspectRatio: String(ratio), maxHeight: "58vh", marginInline: "auto" }}
         >
           {src && nat ? (
-            <canvas id="editor-canvas" className="block h-full w-full" />
+            <>
+              {/* Image with CSS transform for position, scale, and rotation */}
+              <img
+                src={src}
+                alt="Foto para ajustar"
+                className="pointer-events-none"
+                onLoad={(e) => {
+                  setImgLoaded(true);
+                  imgRef.current = e.currentTarget;
+                }}
+                onError={() => setError("Não foi possível abrir essa imagem.")}
+                style={{
+                  position: "absolute",
+                  // Center in container
+                  left: "50%",
+                  top: "50%",
+                  // Transform to position, scale, and rotate
+                  // Offset = (crop center - image center) * zoom
+                  // Positive offset moves image right/down, negative moves left/up
+                  transform: `translate(
+                    calc(-50% + ${(crop.x + crop.w / 2 - nat.w / 2) * zoom}px),
+                    calc(-50% + ${(crop.y + crop.w / 2 - nat.h / 2) * zoom}px)
+                  ) scale(${zoom}) rotate(${rotation}deg)`,
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                  objectFit: "contain",
+                }}
+              />
+              <canvas id="editor-canvas" className="hidden" />
+            </>
           ) : (
             !error && <Loader2 className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 animate-spin text-white/50" />
           )}
@@ -306,12 +368,12 @@ export function AvatarEditor({
           </span>
           {/* The guide circle: what stays visible in the profile, so the user frames against it. */}
           {src && nat && (
-            <span
+            <div
               aria-hidden
               className="pointer-events-none absolute inset-0"
               style={{
-                background: "radial-gradient(circle at 50% 50%, transparent 0 calc(50% - 1px), rgba(0,0,0,0.45) calc(50% - 1px) 50%, transparent 50%)",
-                borderRadius: "12.5%",
+                // Scrim outside the circle
+                background: "radial-gradient(circle at center, transparent 35%, rgba(0,0,0,0.6) 35.5%, rgba(0,0,0,0.6) 100%)",
               }}
             />
           )}
@@ -348,41 +410,6 @@ export function AvatarEditor({
           <p className="mt-2 text-xs text-amber-300/90">
             A imagem ficou com pouca resolução nesse enquadramento. Para melhor qualidade, use uma imagem de pelo menos 1024 px de lado.
           </p>
-        )}
-
-        {src && nat && (
-          <div className="mt-5 grid gap-4 md:grid-cols-[minmax(0,1fr)_200px] md:items-end">
-            <div>
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-white/70">
-                <Monitor className="h-4 w-4" /> Computador
-              </p>
-              <div className="rounded-2xl border border-white/10 bg-space-bg/60 p-2">
-                <div className="flex items-end gap-3 px-3 pb-2 pt-4">
-                  <span className="relative block w-16 shrink-0 overflow-hidden rounded-2xl bg-space-card" style={{ height: 64 }}>
-                    <canvas id="preview-desktop" className="block h-full w-full" />
-                  </span>
-                  <div className="space-y-1.5 pb-1">
-                    <span className="block h-2.5 w-28 rounded bg-white/25" />
-                    <span className="block h-2 w-20 rounded bg-white/15" />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="mx-auto w-[200px]">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-white/70">
-                <Smartphone className="h-4 w-4" /> Celular
-              </p>
-              <div className="rounded-[1.6rem] border-4 border-white/15 bg-space-bg p-1.5">
-                <div className="px-2 pb-3 pt-4">
-                  <span className="relative block w-12 shrink-0 overflow-hidden rounded-xl bg-space-card" style={{ height: 48 }}>
-                    <canvas id="preview-mobile" className="block h-full w-full" />
-                  </span>
-                  <span className="mt-2 block h-2 w-24 rounded bg-white/25" />
-                  <span className="mt-1.5 block h-1.5 w-16 rounded bg-white/15" />
-                </div>
-              </div>
-            </div>
-          </div>
         )}
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

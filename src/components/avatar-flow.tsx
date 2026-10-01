@@ -96,26 +96,27 @@ export function AvatarFlow({
   }
 
   async function publish() {
-    if (!file || !cropped) return;
+    if (!file) return setError("Algo deu errado. Tente selecionar a foto novamente.");
     if (!asProfile && !asStory) return setError("Escolha onde publicar a foto.");
     setBusy(true);
     setError(null);
     const supabase = createClient();
     try {
-      // Upload once, then point the avatar and/or the story at the same file.
-      const mediaUrl = await uploadAvatarFile(supabase, userId, cropped, ratio);
+      // Upload the original file (the crop/rotate info is stored in ratio metadata)
+      const mediaUrl = await uploadAvatarFile(supabase, userId, file, ratio);
       if (asProfile) {
         await saveAvatarUrl(supabase, userId, mediaUrl);
       }
       if (asStory) {
         const { error: storyError } = await supabase.rpc("story_create", {
-          p: { type: "image", mediaUrl, hours: 24, meta: { source: "avatar" } },
+          p: { type: "image", mediaUrl, hours: 24, meta: { source: "avatar", ratio } },
         });
         if (storyError) throw new Error("STORY_FAILED");
       }
       router.refresh();
       close();
     } catch (e) {
+      console.error("[publish] Error:", e);
       setError(
         e instanceof Error && e.message === "STORY_FAILED"
           ? "A foto foi salva, mas não foi possível publicar a história. Tente novamente."
