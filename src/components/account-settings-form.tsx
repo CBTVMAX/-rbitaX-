@@ -415,7 +415,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
               {uploading === "avatar" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
             </button>
             <input ref={avatarRef} type="file" accept="image/*" hidden onChange={(e) => uploadImage("avatar", e)} />
-            {avatarFile && <AvatarEditor file={avatarFile} onCancel={() => setAvatarFile(null)} onConfirm={applyAvatar} />}
+            {avatarFile && <AvatarEditor file={avatarFile} confirmLabel="Salvar" onCancel={() => setAvatarFile(null)} onConfirm={applyAvatar} />}
           </div>
           <div className="pb-2 lg:hidden">
             <p className="text-sm font-medium text-white">Foto de perfil</p>

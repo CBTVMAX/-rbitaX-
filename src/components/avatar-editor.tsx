@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Loader2, Move, RotateCw, X, ZoomIn, ZoomOut } from "lucide-react";
+import { Loader2, RotateCw, X, ZoomIn, ZoomOut } from "lucide-react";
 
 /**
  * Avatar editor. The picture is saved in its own aspect ratio, so the profile shows exactly the
@@ -84,16 +84,42 @@ function paintAvatar(
  */
 const AVATAR_RATIO = 1;
 
+/** Margin of photo shown around the circle, as a share of the crop width (circle = ~82% of the stage). */
+const STAGE_PAD = 0.11;
+
+function expandCrop(c: Crop): Crop {
+  const pad = c.w * STAGE_PAD;
+  return { x: c.x - pad, y: c.y - pad, w: c.w + pad * 2 };
+}
+
+/** Paints a canvas at its CSS size times the device pixel ratio. */
+function paintCanvas(c: HTMLCanvasElement | null, size: number, img: HTMLImageElement, nat: Size, crop: Crop, rot: Rotation) {
+  if (!c || size < 10) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  c.width = Math.round(size * dpr);
+  c.height = Math.round(size * dpr);
+  const ctx = c.getContext("2d");
+  if (ctx) paintAvatar(ctx, img, nat, crop, AVATAR_RATIO, rot, c.width, c.height);
+}
+
+/**
+ * Seleção da miniatura, como no VK: a foto inteira com o círculo por cima (fora dele fica escuro),
+ * arrastar/zoom/girar, e ao lado o "exemplo de avatar" mostrando como a foto fica junto do nome.
+ */
 export function AvatarEditor({
   file,
+  name,
+  confirmLabel = "Continuar",
   onCancel,
   onConfirm,
 }: {
   file: File;
+  /** Nome mostrado no exemplo de avatar. */
+  name?: string;
+  confirmLabel?: string;
   onCancel: () => void;
   onConfirm: (blob: Blob, ratio: number) => Promise<void>;
 }) {
-  const [src, setSrc] = useState<string | null>(null);
   const [nat, setNat] = useState<Size | null>(null);
   const [crop, setCrop] = useState<Crop>({ x: 0, y: 0, w: 1 });
   const [rotation, setRotation] = useState<Rotation>(0);
@@ -102,63 +128,63 @@ export function AvatarEditor({
   const [error, setError] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const stageCanvas = useRef<HTMLCanvasElement>(null);
+  const previewBig = useRef<HTMLCanvasElement>(null);
+  const previewSmall = useRef<HTMLCanvasElement>(null);
+  const previewRow = useRef<HTMLCanvasElement>(null);
   const drag = useRef<{ px: number; py: number; crop: Crop } | null>(null);
   // Two-finger pinch on touch devices.
-  const pinch = useRef<Map<number, { x: number; y: number }> | null>(null);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinchDist = useRef<number | null>(null);
+  const ratio = AVATAR_RATIO;
 
   useEffect(() => {
-    console.log("[avatar-editor] useEffect started, file:", file.name, "size:", file.size);
     const url = URL.createObjectURL(file);
-    console.log("[avatar-editor] created object URL:", url);
-    setSrc(url);
-
     const img = new Image();
     img.onload = () => {
-      console.log("[avatar-editor] img.onload fired, naturalWidth:", img.naturalWidth, "naturalHeight:", img.naturalHeight);
       imgRef.current = img;
       const n = { w: img.naturalWidth, h: img.naturalHeight };
-      console.log("[avatar-editor] setting nat:", n);
       setNat(n);
-      // After rotation the image may be portrait or landscape; the ratio follows what is shown.
-      const r = AVATAR_RATIO;
-      const rs = rotatedSize(n, 0);
-      const w = baseWidth(rs, r);
-      console.log("[avatar-editor] setting crop, baseWidth:", w);
-      setCrop({ w, x: (rs.w - w) / 2, y: (rs.h - w / r) / 2 });
+      const w = baseWidth(n, AVATAR_RATIO);
+      setCrop({ w, x: (n.w - w) / 2, y: (n.h - w) / 2 });
     };
-    img.onerror = (e) => {
-      console.log("[avatar-editor] img.onerror:", e);
-      setError("Não foi possível abrir essa imagem. Use JPG, PNG ou WebP.");
-    };
-    console.log("[avatar-editor] setting img.src to:", url);
+    img.onerror = () => setError("Não foi possível abrir essa imagem. Use JPG, PNG ou WebP.");
     img.src = url;
-    console.log("[avatar-editor] img.complete after setting src:", img.complete, "img.naturalWidth:", img.naturalWidth);
     return () => {
-      img.src = "";
       img.onload = null;
       img.onerror = null;
-      console.log("[avatar-editor] cleanup, img.complete:", img.complete, "naturalWidth:", img.naturalWidth);
-      if (!img.complete || img.naturalWidth === 0) URL.revokeObjectURL(url);
+      URL.revokeObjectURL(url);
     };
   }, [file]);
 
-  // Ratio of the rotated image — a 90° turn turns a portrait into a landscape avatar.
-  const ratio = nat ? AVATAR_RATIO : 1;
+  // Esc fecha; a página por trás não rola enquanto o editor está aberto.
+  const cancelRef = useRef(onCancel);
+  cancelRef.current = onCancel;
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && cancelRef.current();
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, []);
 
   const applyZoom = useCallback(
     (next: number) => {
       if (!nat) return;
-      const r = AVATAR_RATIO;
       const z = Math.min(Math.max(next, 1), MAX_ZOOM);
       setZoom(z);
       setCrop((c) => {
-        const w = baseWidth(rotatedSize(nat, rotation), r) / z;
+        const rs = rotatedSize(nat, rotation);
+        const w = baseWidth(rs, ratio) / z;
         const cx = c.x + c.w / 2;
-        const cy = c.y + c.w / r / 2;
-        return clampCrop({ w, x: cx - w / 2, y: cy - w / r / 2 }, rotatedSize(nat, rotation), r);
+        const cy = c.y + c.w / ratio / 2;
+        return clampCrop({ w, x: cx - w / 2, y: cy - w / ratio / 2 }, rs, ratio);
       });
     },
-    [nat, rotation]
+    [nat, rotation, ratio]
   );
 
   function onRotate() {
@@ -168,48 +194,47 @@ export function AvatarEditor({
     // Keep the same visible center after the turn.
     setCrop((c) => {
       const rs = rotatedSize(nat, next);
-      const r = AVATAR_RATIO;
       const cx = c.x + c.w / 2;
-      const cy = c.y + c.w / AVATAR_RATIO / 2;
-      const w = Math.min(c.w, baseWidth(rs, r));
-      return clampCrop({ w, x: cx - w / 2, y: cy - w / r / 2 }, rs, r);
+      const cy = c.y + c.w / ratio / 2;
+      const w = Math.min(c.w, baseWidth(rs, ratio));
+      return clampCrop({ w, x: cx - w / 2, y: cy - w / ratio / 2 }, rs, ratio);
     });
     setZoom(1);
   }
 
   function onPointerDown(e: React.PointerEvent) {
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     drag.current = { px: e.clientX, py: e.clientY, crop };
-    if (!pinch.current) pinch.current = new Map();
-    pinch.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    pinchDist.current = null;
   }
 
   function onPointerMove(e: React.PointerEvent) {
-    if (pinch.current) pinch.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-    if (pinch.current && pinch.current.size === 2 && nat) {
-      const [a, b] = [...pinch.current.values()];
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size === 2) {
+      const [a, b] = [...pointers.current.values()];
       const dist = Math.hypot(a.x - b.x, a.y - b.y);
-      const prev = (pinch.current as Map<number, unknown> & { _dist?: number })._dist;
-      if (prev) applyZoom(zoom * (dist / prev));
-      (pinch.current as Map<number, unknown> & { _dist?: number })._dist = dist;
+      if (pinchDist.current) applyZoom(zoom * (dist / pinchDist.current));
+      pinchDist.current = dist;
+      drag.current = null;
       return;
     }
-
     if (!drag.current || !nat || !stageRef.current) return;
-    const perPx = drag.current.crop.w / stageRef.current.clientWidth;
+    // The stage shows the crop plus a margin, so one screen pixel covers expandCrop().w / width source pixels.
+    const perPx = expandCrop(drag.current.crop).w / stageRef.current.clientWidth;
     const dx = (e.clientX - drag.current.px) * perPx;
     const dy = (e.clientY - drag.current.py) * perPx;
-    const r = AVATAR_RATIO;
-    setCrop(clampCrop({ w: drag.current.crop.w, x: drag.current.crop.x - dx, y: drag.current.crop.y - dy }, rotatedSize(nat, rotation), r));
+    setCrop(clampCrop({ w: drag.current.crop.w, x: drag.current.crop.x - dx, y: drag.current.crop.y - dy }, rotatedSize(nat, rotation), ratio));
   }
 
   function endPointer(e: React.PointerEvent) {
-    if (pinch.current) {
-      pinch.current.delete(e.pointerId);
-      if (pinch.current.size < 2) (pinch.current as Map<number, unknown> & { _dist?: number })._dist = undefined;
-    }
-    if (drag.current) drag.current = null;
+    pointers.current.delete(e.pointerId);
+    pinchDist.current = null;
+    drag.current = null;
+    // Lifting one finger of a pinch continues as a drag from where that finger is.
+    const rest = [...pointers.current.values()][0];
+    if (rest) drag.current = { px: rest.x, py: rest.y, crop };
   }
 
   function onWheel(e: React.WheelEvent) {
@@ -235,8 +260,7 @@ export function AvatarEditor({
     setSaving(true);
     setError(null);
     const outW = Math.round(Math.min(OUTPUT_MAX_WIDTH, crop.w));
-    const outH = Math.round(outW / ratio);
-    const blob = await toBlob(outW, outH);
+    const blob = await toBlob(outW, Math.round(outW / ratio));
     if (!blob) {
       setSaving(false);
       return setError("Não foi possível preparar a imagem.");
@@ -249,144 +273,131 @@ export function AvatarEditor({
     setSaving(false);
   }
 
-  // Paint the visible editor canvas with crop/zoom/rotation
+  // Palco (foto com margem em volta do círculo) e as miniaturas usam o mesmo desenho do arquivo final.
   useEffect(() => {
-    if (!imgRef.current || !nat || !src || !stageRef.current) return;
-
+    const img = imgRef.current;
     const stage = stageRef.current;
-    const c = document.getElementById("editor-canvas") as HTMLCanvasElement | null;
-    if (!c) return;
-
+    if (!img || !nat || !stage) return;
     const paint = () => {
-      const stageBox = stage.getBoundingClientRect();
-      const maxW = stageBox.width;
-      const maxH = stageBox.height;
-
-      // For square avatars, use the smaller dimension to fit
-      const size = Math.min(maxW, maxH);
-      if (size < 50) return;
-
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      c.width = Math.round(size * dpr);
-      c.height = Math.round(size * dpr);
-      c.style.width = `${size}px`;
-      c.style.height = `${size}px`;
-
-      const ctx = c.getContext("2d");
-      if (ctx && imgRef.current) {
-        paintAvatar(ctx, imgRef.current, nat, crop, ratio, rotation, c.width, c.height);
-      }
+      paintCanvas(stageCanvas.current, stage.clientWidth, img, nat, expandCrop(crop), rotation);
+      for (const c of [previewBig.current, previewSmall.current, previewRow.current]) if (c) paintCanvas(c, c.clientWidth, img, nat, crop, rotation);
     };
-
     paint();
     const ro = new ResizeObserver(paint);
     ro.observe(stage);
     return () => ro.disconnect();
-  }, [nat, src, crop, ratio, rotation]);
+  }, [nat, crop, rotation]);
 
-  const lowRes = nat && crop.w < 700;
+  const lowRes = nat && crop.w < 400;
+  const displayName = name?.trim() || "Seu nome";
 
-  console.log("[avatar-editor] render: src:", src ? "set" : "null", "nat:", nat, "error:", error);
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 backdrop-blur-sm md:items-center md:p-6" role="dialog" aria-modal="true" aria-label="Ajustar foto">
-      <div className="max-h-[100dvh] w-full max-w-4xl overflow-y-auto rounded-t-3xl border border-white/10 bg-space-surface p-4 shadow-2xl md:rounded-3xl md:p-6">
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <div>
-            <h2 className="font-display text-lg font-bold text-white md:text-xl">Ajustar foto</h2>
-            <p className="text-xs text-white/55 md:text-sm">
-              Arraste para posicionar, use o zoom e gire se precisar. É assim que a foto vai aparecer no seu perfil.
+    <div
+      className="fixed inset-0 z-[70] flex flex-col bg-black text-snow md:items-center md:justify-center md:bg-black/75 md:p-6 md:backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Seleção de miniatura"
+    >
+      <div className="flex min-h-0 w-full flex-1 flex-col md:max-w-[820px] md:flex-none md:overflow-hidden md:rounded-3xl md:border md:border-white/10 md:bg-space-surface md:text-white md:shadow-2xl">
+        <header className="flex shrink-0 items-center gap-3 px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] md:border-b md:border-white/[0.08] md:px-6 md:py-4">
+          <button type="button" onClick={onCancel} aria-label="Cancelar" className="flex h-10 w-10 items-center justify-center rounded-full text-snow/80 hover:bg-white/10 md:order-last md:ml-auto md:h-9 md:w-9 md:text-white/60">
+            <X className="h-6 w-6 md:h-5 md:w-5" />
+          </button>
+          <h2 className="text-[17px] font-semibold md:text-lg">Seleção de miniatura</h2>
+        </header>
+
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:gap-6 md:overflow-visible md:p-6">
+          <div className="flex flex-1 flex-col md:min-w-0">
+            <p className="hidden text-sm text-white/55 md:mb-4 md:block">
+              Escolha a área que vai aparecer nas publicações, nos comentários e nas mensagens. Arraste a foto e use o zoom para ajustar.
             </p>
+            {error && <p className="mx-4 mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300 md:mx-0">{error}</p>}
+
+            <div className="flex flex-1 items-center justify-center md:flex-none">
+              <div
+                ref={stageRef}
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={endPointer}
+                onPointerCancel={endPointer}
+                onWheel={onWheel}
+                className="relative aspect-square w-full max-w-[min(100vw,58dvh)] cursor-grab touch-none select-none overflow-hidden bg-[#0d0f1a] active:cursor-grabbing md:max-w-[440px] md:rounded-2xl"
+              >
+                <canvas ref={stageCanvas} className="absolute inset-0 h-full w-full" />
+                {!nat && !error && (
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-white/50" />
+                  </span>
+                )}
+                {nat && (
+                  <>
+                    {/* Fora do círculo fica escuro; dentro é exatamente o que vira o avatar. */}
+                    <span aria-hidden className="pointer-events-none absolute inset-[9%] rounded-full border-2 border-white/85 shadow-[0_0_0_9999px_rgba(0,0,0,0.68)]" />
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="mx-auto mt-3 flex w-full max-w-[440px] items-center gap-3 px-4 md:px-0">
+              <button type="button" onClick={() => applyZoom(zoom - 0.2)} aria-label="Diminuir zoom" className="text-snow/60 hover:text-snow md:text-white/60 md:hover:text-white">
+                <ZoomOut className="h-5 w-5" />
+              </button>
+              <input
+                type="range"
+                min={1}
+                max={MAX_ZOOM}
+                step={0.01}
+                value={zoom}
+                onChange={(e) => applyZoom(Number(e.target.value))}
+                aria-label="Zoom"
+                className="h-1.5 flex-1 cursor-pointer accent-orbit-blue"
+              />
+              <button type="button" onClick={() => applyZoom(zoom + 0.2)} aria-label="Aumentar zoom" className="text-snow/60 hover:text-snow md:text-white/60 md:hover:text-white">
+                <ZoomIn className="h-5 w-5" />
+              </button>
+              <button type="button" onClick={onRotate} aria-label="Girar foto" title="Girar 90°" className="rounded-lg p-1.5 text-snow/60 hover:bg-white/10 hover:text-snow md:text-white/60 md:hover:text-white">
+                <RotateCw className="h-5 w-5" />
+              </button>
+            </div>
+            {lowRes && <p className="mx-auto mt-2 max-w-[440px] px-4 text-xs text-amber-300/90 md:px-0">Pouca resolução nesse enquadramento. Diminua o zoom ou use uma foto maior.</p>}
           </div>
-          <button type="button" onClick={onCancel} aria-label="Fechar" className="rounded-full p-1.5 text-white/60 hover:bg-white/5 hover:text-white">
-            <X className="h-5 w-5" />
-          </button>
+
+          <aside className="shrink-0 px-4 pt-4 md:w-[220px] md:px-0 md:pt-0">
+            {/* Computador: miniaturas em dois tamanhos, como no VK. */}
+            <div className="hidden md:block">
+              <p className="mb-3 text-sm font-medium text-white/70">Miniaturas</p>
+              <div className="flex items-end gap-4">
+                <canvas ref={previewBig} className="h-[100px] w-[100px] rounded-full bg-white/[0.06]" />
+                <canvas ref={previewSmall} className="h-[50px] w-[50px] rounded-full bg-white/[0.06]" />
+              </div>
+            </div>
+            <p className="mb-2 text-[13px] text-snow/50 md:mt-6 md:text-white/50">Exemplo de avatar</p>
+            <div className="flex items-center gap-3 rounded-2xl bg-white/[0.07] p-3 md:bg-white/[0.04]">
+              <canvas ref={previewRow} className="h-11 w-11 shrink-0 rounded-full bg-white/[0.06]" />
+              <span className="min-w-0">
+                <span className="block truncate text-[15px] font-semibold">{displayName}</span>
+                <span className="block text-[13px] text-snow/50 md:text-white/45">online agora</span>
+              </span>
+            </div>
+          </aside>
         </div>
 
-        {error && <p className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>}
-
-        <div
-          ref={stageRef}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={endPointer}
-          onPointerCancel={endPointer}
-          onWheel={onWheel}
-          className="relative flex w-full cursor-grab touch-none items-center justify-center overflow-hidden rounded-2xl border border-white/15 active:cursor-grabbing"
-          style={{ aspectRatio: String(ratio), maxHeight: "58vh", marginInline: "auto", background: "#1a1a2e" }}
-        >
-          {src && nat ? (
-            <>
-              {/* Canvas shows the actual cropped/zoomed result */}
-              <canvas id="editor-canvas" className="block max-h-[58vh] w-auto" />
-            </>
-          ) : !src ? (
-            !error && <Loader2 className="h-6 w-6 animate-spin text-white/50" />
-          ) : null}
-          <span className="pointer-events-none absolute left-3 top-3 flex items-center gap-1.5 rounded-lg bg-space-bg/70 px-2.5 py-1 text-[11px] text-white/80 backdrop-blur">
-            <Move className="h-3.5 w-3.5" /> Arraste para posicionar
-          </span>
-          {/* The guide circle: dark overlay outside the circle, clear inside */}
-          {src && nat && (
-            <span
-              aria-hidden
-              className="pointer-events-none absolute inset-0 rounded-full"
-              style={{
-                background: "radial-gradient(circle at 50% 50%, transparent 0 48%, rgba(0,0,0,0.7) 48%)",
-              }}
-            />
-          )}
-        </div>
-
-        <div className="mt-3 flex items-center gap-3">
-          <button type="button" onClick={() => applyZoom(zoom - 0.2)} aria-label="Diminuir zoom" className="text-white/60 hover:text-white">
-            <ZoomOut className="h-5 w-5" />
-          </button>
-          <input
-            type="range"
-            min={1}
-            max={MAX_ZOOM}
-            step={0.01}
-            value={zoom}
-            onChange={(e) => applyZoom(Number(e.target.value))}
-            aria-label="Zoom"
-            className="h-1.5 flex-1 cursor-pointer accent-orbit-purple"
-          />
-          <button type="button" onClick={() => applyZoom(zoom + 0.2)} aria-label="Aumentar zoom" className="text-white/60 hover:text-white">
-            <ZoomIn className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            onClick={onRotate}
-            aria-label="Girar foto"
-            className="rounded-lg p-1.5 text-white/60 hover:bg-white/5 hover:text-white"
-            title="Girar 90°"
-          >
-            <RotateCw className="h-5 w-5" />
-          </button>
-        </div>
-        {lowRes && (
-          <p className="mt-2 text-xs text-amber-300/90">
-            A imagem ficou com pouca resolução nesse enquadramento. Para melhor qualidade, use uma imagem de pelo menos 1024 px de lado.
-          </p>
-        )}
-
-        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <button type="button" onClick={onCancel} className="rounded-xl border border-white/15 px-5 py-2.5 text-sm font-medium text-white/80 hover:bg-white/5">
+        <footer className="flex shrink-0 flex-col-reverse gap-2 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 md:flex-row md:justify-end md:border-t md:border-white/[0.08] md:px-6 md:py-4">
+          <button type="button" onClick={onCancel} className="h-12 rounded-2xl px-5 text-[15px] font-medium text-snow/80 hover:bg-white/10 md:h-10 md:rounded-xl md:border md:border-white/15 md:text-sm md:text-white/80">
             Voltar
           </button>
           <button
             type="button"
             onClick={confirm}
             disabled={!nat || saving}
-            className="flex items-center justify-center gap-2 rounded-xl bg-orbit-gradient px-6 py-2.5 text-sm font-semibold text-snow shadow-glow disabled:opacity-60"
+            className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-snow px-6 text-[17px] font-semibold text-[#05060f] transition active:scale-[0.99] disabled:opacity-60 md:h-10 md:rounded-xl md:bg-orbit-blue md:text-sm md:text-snow"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            {saving ? "Salvando..." : "Salvar"}
+            {saving ? "Salvando..." : confirmLabel}
           </button>
-        </div>
+        </footer>
       </div>
-    </div>
-    ,
+    </div>,
     document.body
   );
 }

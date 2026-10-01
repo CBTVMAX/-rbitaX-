@@ -141,7 +141,7 @@ function ProfileAvatar({
     <div className={`relative shrink-0 ${className}`}>
       {isMe ? (
         // Tapping the picture itself opens the photo menu, as the spec asks.
-        <AvatarMenu userId={userId} avatarUrl={url} username={username} hasFrame={!!frame}>
+        <AvatarMenu userId={userId} avatarUrl={url} username={username} name={name} hasFrame={!!frame}>
           <div className="h-full w-full">{picture}</div>
         </AvatarMenu>
       ) : (
@@ -990,7 +990,7 @@ export function ProfileView({
               online={online}
               accent={accent}
               frame={frame}
-              className={`-mt-20 h-[196px] w-[196px] shrink-0 ${frame ? "mx-6 mb-6" : ""}`}
+              className={frame ? "mx-9 -mt-7 mb-9 h-[112px] w-[112px] shrink-0" : "-mt-[72px] h-[152px] w-[152px] shrink-0"}
             />
             {/* Como no VK: nome, uma linha de bio e uma linha com cidade · comunidade · Mais; ações à direita. */}
             <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-x-4 gap-y-3 pt-3">
@@ -1135,7 +1135,7 @@ export function ProfileView({
                 online={online}
                 accent={accent}
                 frame={frame}
-                className={`-mt-16 h-[124px] w-[124px] ${frame ? "mb-5 ml-5" : ""}`}
+                className={frame ? "-mt-6 mb-6 ml-6 h-[76px] w-[76px]" : "-mt-14 h-[100px] w-[100px]"}
               />
             </div>
             <div className="mt-3">{identity()}</div>

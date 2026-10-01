@@ -14,8 +14,10 @@ export function AvatarMenu({
   avatarUrl,
   username,
   hasFrame,
+  name,
   children,
 }: {
+  name?: string;
   userId: string;
   avatarUrl: string | null;
   username: string;
@@ -48,6 +50,7 @@ export function AvatarMenu({
           userId={userId}
           avatarUrl={avatarUrl}
           username={username}
+          name={name}
           open
           onClose={() => setOpen(false)}
         />
