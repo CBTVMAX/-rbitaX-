@@ -101,9 +101,11 @@ export default async function ProfilePage(props: {
       : Promise.resolve({ data: null }),
   ]);
 
-  const followerIds = new Set((followerRows ?? []).map((f) => f.followerId));
-  const followingIds = (followingRows ?? []).map((f) => f.followingId);
   const friendIds = (friendshipRows ?? []).map((f) => (f.requesterId === user.id ? f.addresseeId : f.requesterId));
+  // Como no VK: quem virou amigo sai de Seguidores/Seguindo e conta só em Amigos.
+  const friendSet = new Set(friendIds);
+  const followerIds = new Set((followerRows ?? []).map((f) => f.followerId).filter((id) => !friendSet.has(id)));
+  const followingIds = (followingRows ?? []).map((f) => f.followingId).filter((id) => !friendSet.has(id));
   const requesterIds = (incomingRows ?? []).map((r) => r.requesterId);
 
   const userCard = "id, name, username, avatarUrl, presence, isVerified" as const;
