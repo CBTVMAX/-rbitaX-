@@ -62,6 +62,11 @@ export default async function FeedPage(props: { searchParams: Promise<{ aba?: st
     rows = data ?? [];
   }
 
+  // Quem eu bloqueei some do meu feed (o banco já impede o resto do contato).
+  const { data: myBlocks } = await supabase.from("Block").select("blockedId").eq("blockerId", me);
+  const blockedIds = new Set((myBlocks ?? []).map((b) => b.blockedId));
+  if (blockedIds.size) rows = (rows ?? []).filter((p) => !blockedIds.has((p.author as unknown as { id: string } | null)?.id ?? ""));
+
   const postIds = (rows ?? []).map((p) => p.id);
   const none = Promise.resolve({ data: [] as { postId: string }[] });
   const [{ data: likeRows }, { data: myLikes }, { data: commentRows }, { data: savedRows }, shared] = await Promise.all([
