@@ -386,7 +386,7 @@ export function AvatarEditor({
                 alt="Foto para ajustar"
                 className="pointer-events-none max-h-[58vh] w-auto"
                 style={{ maxWidth: "100%", objectFit: "contain" }}
-                onLoad={() => console.log("[avatar-editor] MAIN img onLoad, natural:", (event.target as HTMLImageElement).naturalWidth)}
+                onLoad={(e) => console.log("[avatar-editor] MAIN img onLoad, natural:", (e.target as HTMLImageElement).naturalWidth)}
                 onError={() => console.log("[avatar-editor] MAIN img onError")}
               />
               {/* Hidden canvas for the editor preview - painted by paintAvatar */}
