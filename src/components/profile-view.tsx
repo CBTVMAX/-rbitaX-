@@ -839,7 +839,7 @@ export function ProfileView({
         >
           <div
             className={`relative overflow-hidden rounded-t-2xl ${
-              !user.coverUrl && isMe ? "h-60 md:aspect-[8/3] md:h-auto" : "aspect-[8/3]"
+              !user.coverUrl && isMe ? "h-36 md:h-48" : "aspect-[8/2]"
             }`}
           >
             {user.coverUrl ? (
@@ -877,7 +877,7 @@ export function ProfileView({
 
           {/* Desktop */}
           <div className="hidden gap-6 px-6 pb-5 md:flex">
-            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} username={user.username} isMe={isMe} online={online} accent={accent} frame={frame} className={`-mt-24 h-44 w-44 ${frame ? "mx-8 mb-8" : ""}`} />
+            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} username={user.username} isMe={isMe} online={online} accent={accent} frame={frame} className={`-mt-12 h-32 w-32 ${frame ? "mx-8 mb-8" : ""}`} />
             <div className="min-w-0 flex-1 pt-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">{identity}</div>
@@ -900,7 +900,7 @@ export function ProfileView({
 
           {/* Mobile */}
           <div className="px-4 pb-4 md:hidden">
-            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} username={user.username} isMe={isMe} online={online} accent={accent} frame={frame} className={`-mt-12 h-28 w-28 ${frame ? "mb-6 ml-5" : ""}`} />
+            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} username={user.username} isMe={isMe} online={online} accent={accent} frame={frame} className={`-mt-10 h-24 w-24 ${frame ? "mb-6 ml-5" : ""}`} />
             <div className="mt-3">{identity}</div>
             {bioAndMeta}
             <div className="mt-4 flex items-center gap-2">
