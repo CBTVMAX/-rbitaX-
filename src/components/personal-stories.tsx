@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Loader2, X } from "lucide-react";
+import Link from "next/link";
+import { Loader2, Plus, X } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { verifyUpload } from "@/lib/upload-guard";
 import { deletePersonalStory, groupPersonalStories, loadPersonalStories, markStorySeen, type PersonalStory } from "@/lib/personal-stories";
 import { avatarAspect } from "@/lib/avatar-aspect";
 import { clsx } from "clsx";
@@ -288,5 +291,195 @@ export function PersonalStories({ viewerId, highlight }: { viewerId: string; hig
         />
       )}
     </>
+  );
+}
+
+/**
+ * "Momentos" do perfil: faixa discreta de círculos pequenos com os momentos ativos da pessoa.
+ * O dono vê o "+" para criar um novo (foto ou vídeo, 24h); tocar abre o visualizador, onde o
+ * dono também pode excluir. Quem pode ver é decidido pelo banco (privacidade do perfil).
+ */
+export function ProfileMoments({
+  viewerId,
+  userId,
+  isMe,
+  variant = "strip",
+  frameClassName,
+}: {
+  viewerId: string;
+  userId: string;
+  isMe: boolean;
+  /** "strip": faixa de círculos no cabeçalho; "grid": quadros maiores na aba Momentos. */
+  variant?: "strip" | "grid";
+  /** Moldura da faixa (só é desenhada quando a faixa aparece). */
+  frameClassName?: string;
+}) {
+  const [stories, setStories] = useState<PersonalStory[] | null>(null);
+  const [start, setStart] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const reload = useCallback(() => {
+    return loadPersonalStories()
+      .then((all) => setStories(all.filter((s) => s.userId === userId)))
+      .catch(() => setStories([]));
+  }, [userId]);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  async function create(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const mime = await verifyUpload(file, ["image", "video"], file.name);
+      const type = mime.startsWith("video") ? "video" : "image";
+      const supabase = createClient();
+      const ext = file.name.split(".").pop() || (type === "video" ? "mp4" : "jpg");
+      const path = `${viewerId}/moments/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("media").upload(path, file, { contentType: mime });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
+      const { error: rpcErr } = await supabase.rpc("story_create", { p: { type, mediaUrl: pub.publicUrl, hours: 24 } });
+      if (rpcErr) throw rpcErr;
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : "Não foi possível publicar o momento.");
+    }
+    setBusy(false);
+  }
+
+  if (stories === null) return null;
+  if (!isMe && stories.length === 0 && variant === "strip") return null;
+
+  const group: PersonalGroup | null = stories.length
+    ? { key: userId, name: stories[0].user.name, avatarUrl: stories[0].user.avatarUrl, stories, seen: false }
+    : null;
+
+  const viewer =
+    group && start !== null ? (
+      <PersonalStoryViewer
+        groups={[group]}
+        start={{ g: 0, i: start }}
+        viewerId={viewerId}
+        onClose={() => setStart(null)}
+        onDeleted={() => {
+          setStart(null);
+          reload();
+        }}
+      />
+    ) : null;
+  const errorToast = error && (
+    <button type="button" role="alert" onClick={() => setError(null)} className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-red-500/95 px-4 py-2.5 text-sm font-medium text-snow shadow-2xl md:bottom-6">
+      {error}
+    </button>
+  );
+  const fileInput = <input ref={inputRef} type="file" accept="image/*,video/*" hidden onChange={create} />;
+
+  if (variant === "grid") {
+    return (
+      <>
+        {stories.length === 0 && !isMe ? (
+          <p className="py-8 text-center text-sm text-white/50">Nenhum momento ativo agora.</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-2 md:grid-cols-4">
+            {isMe && (
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                disabled={busy}
+                className="flex aspect-[9/14] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 text-white/60 transition hover:border-pa/60 hover:text-white disabled:opacity-60"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-pa/15 text-pa">
+                  {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
+                </span>
+                <span className="text-xs font-medium">Novo momento</span>
+                <span className="text-[10px] text-white/40">fica 24h</span>
+              </button>
+            )}
+            {stories.map((s, i) => (
+              <button key={s.id} type="button" onClick={() => setStart(i)} aria-label={`Ver momento ${i + 1}`} className="relative aspect-[9/14] overflow-hidden rounded-xl bg-space-card ring-2 ring-pa/40 transition hover:ring-pa">
+                {s.type === "image" && s.mediaUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={s.mediaUrl} alt="" className="h-full w-full object-cover" />
+                ) : s.type === "video" && s.mediaUrl ? (
+                  <video src={s.mediaUrl} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center p-2 text-xs text-white/70">{s.text ?? "Momento"}</span>
+                )}
+                <span className="absolute bottom-1.5 left-1.5 rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] text-snow">
+                  {new Date(s.createdAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+        {isMe && (
+          <p className="mt-3 text-[11px] text-white/40">
+            Quem vê seus momentos segue a privacidade do perfil.{" "}
+            <Link href="/configuracoes/conta" className="text-pa hover:underline">
+              Privacidade
+            </Link>
+          </p>
+        )}
+        {fileInput}
+        {errorToast}
+        {viewer}
+      </>
+    );
+  }
+
+  return (
+    <div className={clsx("flex items-center gap-3", frameClassName ?? "px-4 pb-3 md:px-6")}>
+      <span className="shrink-0 text-xs font-medium text-white/50">Momentos</span>
+      <div className="orbit-scrollbar flex min-w-0 items-center gap-2 overflow-x-auto py-0.5">
+        {isMe && (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={busy}
+            aria-label="Criar momento"
+            title="Criar momento (24h)"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-dashed border-white/25 text-white/60 transition hover:border-orbit-purple/60 hover:text-white disabled:opacity-60"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          </button>
+        )}
+        {stories.map((s, i) => (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => setStart(i)}
+            aria-label={`Ver momento ${i + 1}`}
+            className="h-10 w-10 shrink-0 rounded-full bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] p-[2px]"
+          >
+            <span className="block h-full w-full overflow-hidden rounded-full border-2 border-space-surface bg-space-card">
+              {s.type === "image" && s.mediaUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={s.mediaUrl} alt="" className="h-full w-full object-cover" />
+              ) : s.type === "video" && s.mediaUrl ? (
+                <video src={s.mediaUrl} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+              ) : (
+                <span className="flex h-full w-full items-center justify-center text-[10px] text-white/60">Aa</span>
+              )}
+            </span>
+          </button>
+        ))}
+        {isMe && stories.length === 0 && <span className="text-xs text-white/40">Compartilhe um momento de 24h</span>}
+      </div>
+      {isMe && (
+        <Link href="/configuracoes/conta" className="ml-auto hidden shrink-0 text-[11px] text-white/40 hover:text-white/70 sm:block" title="Quem vê seus momentos segue a privacidade do perfil">
+          Privacidade
+        </Link>
+      )}
+      {fileInput}
+      {errorToast}
+      {viewer}
+    </div>
   );
 }

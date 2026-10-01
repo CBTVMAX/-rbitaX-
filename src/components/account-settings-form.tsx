@@ -371,7 +371,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
       <div className="lg:space-y-5">
       <section className="rounded-t-2xl border border-b-0 border-white/10 bg-space-surface/80 lg:rounded-2xl lg:border-b lg:p-5">
         <SectionHeader title="Foto e capa" subtitle="Personalize sua capa e foto de perfil" icon={ImagePlus} desktopOnly />
-        <div className="relative aspect-[8/3] overflow-hidden rounded-t-2xl lg:rounded-xl">
+        <div className="relative aspect-[7/2] overflow-hidden rounded-t-2xl lg:rounded-xl">
           {coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={coverUrl} alt="" className="h-full w-full object-cover" />

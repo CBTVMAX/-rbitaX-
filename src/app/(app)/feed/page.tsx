@@ -18,9 +18,10 @@ export default async function FeedPage() {
   const { data: posts } = await supabase
     .from("Post")
     .select(
-      "id, content, createdAt, editedAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, position), sharedPostId"
+      "id, content, createdAt, editedAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, position), sharedPostId, visibility"
     )
     .is("communityId", null)
+    .eq("isArchived", false)
     .order("createdAt", { ascending: false })
     .limit(30);
 
@@ -56,6 +57,7 @@ export default async function FeedPage() {
     likeCount: likeCountByPost.get(p.id) ?? 0,
     commentCount: commentCountByPost.get(p.id) ?? 0,
     likedByMe: likedSet.has(p.id),
+    visibility: p.visibility,
     ...(p.sharedPostId ? { shared: shared.get(p.sharedPostId) ?? null } : {}),
   }));
 

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo, initials } from "@/lib/format";
-import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Repeat2, Pencil, Trash2, Link2, Check, X, Loader2 } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Repeat2, Pencil, Trash2, Link2, Check, X, Loader2, Archive, ArchiveRestore, Globe2, Users, Lock, ChevronRight } from "lucide-react";
 import type { SharedEmbed } from "@/lib/shared-posts";
 import { clsx } from "clsx";
 import { VerifiedBadge } from "@/components/verified-badge";
@@ -25,7 +25,16 @@ export type FeedPost = {
   likedByMe: boolean;
   /** Repost of a community publication: undefined = not a repost, null = original no longer available. */
   shared?: SharedEmbed | null;
+  /** "public" | "followers" | "private" — aplicado pelo banco (RLS) para quem está vendo. */
+  visibility?: string;
+  isArchived?: boolean;
 };
+
+const VISIBILITY: { id: string; label: string; hint: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: "public", label: "Público", hint: "Qualquer pessoa", icon: Globe2 },
+  { id: "followers", label: "Seguidores", hint: "Só quem segue você", icon: Users },
+  { id: "private", label: "Somente eu", hint: "Só você vê", icon: Lock },
+];
 
 type CommentRow = {
   id: string;
@@ -84,6 +93,31 @@ export function PostCard({
   const [deleting, setDeleting] = useState(false);
   const [removed, setRemoved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [visibility, setVisibility] = useState(post.visibility ?? "public");
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [archived, setArchived] = useState(!!post.isArchived);
+
+  async function changeVisibility(next: string) {
+    setPrivacyOpen(false);
+    setMenuOpen(false);
+    if (next === visibility) return;
+    const prev = visibility;
+    setVisibility(next);
+    const { error } = await supabase.from("Post").update({ visibility: next }).eq("id", post.id);
+    if (error) setVisibility(prev);
+  }
+
+  async function toggleArchive() {
+    setMenuOpen(false);
+    const next = !archived;
+    const { error } = await supabase.from("Post").update({ isArchived: next }).eq("id", post.id);
+    if (error) return;
+    setArchived(next);
+    // Arquivar tira do perfil e do feed (e solta o fixado, se for o caso).
+    if (next && pinned) await supabase.from("User").update({ pinnedPostId: null }).eq("id", currentUserId);
+    setRemoved(true);
+    router.refresh();
+  }
 
   async function togglePin() {
     setPinBusy(true);
@@ -192,10 +226,10 @@ export function PostCard({
   if (removed) return null;
 
   return (
-    <article className="rounded-2xl border border-white/10 bg-space-card p-4 md:p-5">
+    <article className="ox-card ox-post rounded-2xl border border-white/10 bg-space-card p-4 md:p-5">
       {pinned && (
-        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-orbit-cyan">
-          <Pin className="h-3.5 w-3.5" /> Publicação fixada
+        <p className="mb-2 flex items-center gap-1 text-[11px] font-medium text-white/50">
+          <Pin className="h-3 w-3 text-orbit-cyan" /> Fixado
         </p>
       )}
       <div className="mb-3 flex items-center gap-3">
@@ -210,12 +244,18 @@ export function PostCard({
           <p className="text-xs text-white/40">
             @{post.author.username} · {timeAgo(post.createdAt)}
             {edited && " · editada"}
+            {isAuthor && visibility !== "public" && (
+              <span title={visibility === "followers" ? "Visível para seguidores" : "Visível só para você"}>
+                {" · "}
+                {visibility === "followers" ? <Users className="inline h-3 w-3 align-[-2px]" /> : <Lock className="inline h-3 w-3 align-[-2px]" />}
+              </span>
+            )}
           </p>
         </div>
         <div className="relative ml-auto">
           <button
             type="button"
-            onClick={() => setMenuOpen((v) => !v)}
+            onClick={() => { setMenuOpen((v) => !v); setPrivacyOpen(false); }}
             aria-label="Opções da publicação"
             className="rounded-lg p-1.5 text-white/50 transition hover:bg-white/5 hover:text-white"
           >
@@ -243,6 +283,50 @@ export function PostCard({
                   >
                     {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
                     {pinned ? "Desafixar do perfil" : "Fixar no perfil"}
+                  </button>
+                )}
+                {isAuthor && !archived && (
+                  <button
+                    type="button"
+                    onClick={() => setPrivacyOpen((v) => !v)}
+                    aria-expanded={privacyOpen}
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-white/85 hover:bg-white/5"
+                  >
+                    {(() => {
+                      const V = VISIBILITY.find((v) => v.id === visibility) ?? VISIBILITY[0];
+                      return <V.icon className="h-4 w-4" />;
+                    })()}
+                    Alterar privacidade
+                    <ChevronRight className={clsx("ml-auto h-4 w-4 text-white/40 transition", privacyOpen && "rotate-90")} />
+                  </button>
+                )}
+                {privacyOpen && (
+                  <div className="border-y border-white/5 bg-space-bg/40 py-1">
+                    {VISIBILITY.map((v) => (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => changeVisibility(v.id)}
+                        className="flex w-full items-center gap-2.5 py-2 pl-8 pr-4 text-left text-sm text-white/80 hover:bg-white/5"
+                      >
+                        <v.icon className="h-3.5 w-3.5" />
+                        <span className="min-w-0 flex-1">
+                          {v.label}
+                          <span className="block text-[11px] text-white/40">{v.hint}</span>
+                        </span>
+                        {visibility === v.id && <Check className="h-4 w-4 text-orbit-cyan" />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {isAuthor && (
+                  <button
+                    type="button"
+                    onClick={toggleArchive}
+                    className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-white/85 hover:bg-white/5"
+                  >
+                    {archived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                    {archived ? "Desarquivar" : "Arquivar"}
                   </button>
                 )}
                 <button

@@ -49,6 +49,7 @@ export function AvatarFlow({
   const [ratio, setRatio] = useState(1);
   const [asProfile, setAsProfile] = useState(true);
   const [asStory, setAsStory] = useState(false);
+  const [asPost, setAsPost] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -102,7 +103,7 @@ export function AvatarFlow({
   async function publish() {
     if (!file) return setError("Algo deu errado. Tente selecionar a foto novamente.");
     if (!cropped) return setError("Edite a foto antes de publicar.");
-    if (!asProfile && !asStory) return setError("Escolha onde publicar a foto.");
+    if (!asProfile && !asStory && !asPost) return setError("Escolha onde publicar a foto.");
     setBusy(true);
     setError(null);
     const supabase = createClient();
@@ -118,6 +119,27 @@ export function AvatarFlow({
         });
         if (storyError) throw new Error("STORY_FAILED");
       }
+      if (asPost) {
+        // Mesma estrutura do composer: um Post de imagem com a foto como Media.
+        const postId = crypto.randomUUID();
+        const { error: postError } = await supabase.from("Post").insert({
+          id: postId,
+          authorId: userId,
+          content: "",
+          kind: "image",
+          updatedAt: new Date().toISOString(),
+        });
+        if (postError) throw new Error("POST_FAILED");
+        const { error: mediaError } = await supabase.from("Media").insert({
+          id: crypto.randomUUID(),
+          postId,
+          type: "image",
+          url: mediaUrl,
+          mimeType: cropped.type || "image/jpeg",
+          position: 0,
+        });
+        if (mediaError) throw new Error("POST_FAILED");
+      }
       router.refresh();
       close();
     } catch (e) {
@@ -125,7 +147,9 @@ export function AvatarFlow({
       setError(
         e instanceof Error && e.message === "STORY_FAILED"
           ? "A foto foi salva, mas não foi possível publicar a história. Tente novamente."
-          : "Não foi possível salvar a foto. Tente novamente."
+          : e instanceof Error && e.message === "POST_FAILED"
+            ? "A foto foi salva, mas não foi possível criar a publicação. Tente novamente."
+            : "Não foi possível salvar a foto. Tente novamente."
       );
     }
     setBusy(false);
@@ -225,6 +249,16 @@ export function AvatarFlow({
                 />
                 <span className="text-sm font-medium text-white/90">História</span>
                 <span className="ml-auto text-[11px] text-white/45">24h</span>
+              </label>
+              <label className="flex cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 hover:bg-white/5">
+                <input
+                  type="checkbox"
+                  checked={asPost}
+                  onChange={(e) => setAsPost(e.target.checked)}
+                  className="h-4 w-4 accent-orbit-purple"
+                />
+                <span className="text-sm font-medium text-white/90">Publicação no perfil</span>
+                <span className="ml-auto text-[11px] text-white/45">Post</span>
               </label>
             </div>
 

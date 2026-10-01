@@ -15,8 +15,12 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export default async function ProfilePage(props: { params: Promise<{ username: string }> }) {
+export default async function ProfilePage(props: {
+  params: Promise<{ username: string }>;
+  searchParams: Promise<{ arquivo?: string }>;
+}) {
   const params = await props.params;
+  const search = await props.searchParams;
   const supabase = await createClient();
   const current = await getCurrentUser();
 
@@ -59,7 +63,7 @@ export default async function ProfilePage(props: { params: Promise<{ username: s
   ] = await Promise.all([
     supabase.from("Follow").select("followerId").eq("followingId", user.id),
     supabase.from("Follow").select("followingId").eq("followerId", user.id),
-    supabase.from("Post").select("id", { count: "exact", head: true }).eq("authorId", user.id).is("communityId", null),
+    supabase.from("Post").select("id", { count: "exact", head: true }).eq("authorId", user.id).is("communityId", null).eq("isArchived", false),
     supabase
       .from("CommunityMember")
       .select("role, community:Community(id, name, slug, avatarUrl)")
@@ -97,13 +101,28 @@ export default async function ProfilePage(props: { params: Promise<{ username: s
   const requesterIds = (incomingRows ?? []).map((r) => r.requesterId);
 
   const userCard = "id, name, username, avatarUrl, presence, isVerified" as const;
-  const [{ data: friendRows }, { data: requesterRows }] = await Promise.all([
+  const followerSample = Array.from(followerIds).slice(0, 3);
+  // Fotos e vídeos de todas as publicações do perfil (não só das carregadas na página).
+  const mediaCount = (type: string) =>
+    supabase
+      .from("Media")
+      .select("id, post:Post!inner(authorId, communityId, isArchived)", { count: "exact", head: true })
+      .eq("type", type)
+      .eq("post.authorId", user.id)
+      .is("post.communityId", null)
+      .eq("post.isArchived", false);
+  const [{ data: friendRows }, { data: requesterRows }, { data: followerRows2 }, photoCount, videoCount] = await Promise.all([
     friendIds.length
       ? supabase.from("User").select(userCard).in("id", friendIds.slice(0, 60)).order("name")
       : Promise.resolve({ data: [] as ProfileFriend[] }),
     requesterIds.length
       ? supabase.from("User").select(userCard).in("id", requesterIds)
       : Promise.resolve({ data: [] as ProfileFriend[] }),
+    followerSample.length
+      ? supabase.from("User").select(userCard).in("id", followerSample)
+      : Promise.resolve({ data: [] as ProfileFriend[] }),
+    mediaCount("image"),
+    mediaCount("video"),
   ]);
   const requesterById = new Map((requesterRows ?? []).map((u) => [u.id, u]));
   const friendRequests = requesterIds.flatMap((id) => {
@@ -112,27 +131,32 @@ export default async function ProfilePage(props: { params: Promise<{ username: s
   });
 
   const postSelect =
-    "id, content, createdAt, editedAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, position), sharedPostId" as const;
+    "id, content, createdAt, editedAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, position), sharedPostId, visibility, isArchived" as const;
+
+  // "Publicações arquivadas" (menu Mais): só o dono vê, e o perfil mostra apenas o arquivo.
+  const showArchive = !!current && current.authId === user.id && search.arquivo === "1";
 
   const { data: recentPosts } = await supabase
     .from("Post")
     .select(postSelect)
     .eq("authorId", user.id)
     .is("communityId", null)
+    .eq("isArchived", showArchive)
     .order("createdAt", { ascending: false })
-    .limit(20);
+    .limit(showArchive ? 60 : 20);
 
   let posts = recentPosts ?? [];
-  if (user.pinnedPostId && !posts.some((p) => p.id === user.pinnedPostId)) {
+  if (!showArchive && user.pinnedPostId && !posts.some((p) => p.id === user.pinnedPostId)) {
     const { data: pinnedRow } = await supabase
       .from("Post")
       .select(postSelect)
       .eq("id", user.pinnedPostId)
       .eq("authorId", user.id)
+      .eq("isArchived", false)
       .maybeSingle();
     if (pinnedRow) posts = [pinnedRow, ...posts];
   }
-  const pinnedPostId = user.pinnedPostId && posts.some((p) => p.id === user.pinnedPostId) ? user.pinnedPostId : null;
+  const pinnedPostId = !showArchive && user.pinnedPostId && posts.some((p) => p.id === user.pinnedPostId) ? user.pinnedPostId : null;
 
   const postIds = posts.map((p) => p.id);
   const [{ data: likeRows }, { data: myLikes }, { data: commentRows }, shared] = await Promise.all([
@@ -161,16 +185,29 @@ export default async function ProfilePage(props: { params: Promise<{ username: s
     likeCount: likeCountByPost.get(p.id) ?? 0,
     commentCount: commentCountByPost.get(p.id) ?? 0,
     likedByMe: likedSet.has(p.id),
+    visibility: p.visibility,
+    isArchived: p.isArchived,
     ...(p.sharedPostId ? { shared: shared.get(p.sharedPostId) ?? null } : {}),
   }));
 
-  const communities: ProfileCommunity[] = (membershipRows ?? []).flatMap((m) => {
+  const isMe = current?.authId === user.id;
+
+  // Comunidades que a pessoa escolheu não mostrar no perfil (Configurações → Comunidades no perfil).
+  // O dono vê todas (com a marca de oculta); visitantes só recebem as visíveis, filtradas no banco.
+  const [{ data: hiddenRaw }, { data: visibleRaw, error: visibleError }] = await Promise.all([
+    isMe ? supabase.rpc("profile_hidden_communities", { p_user: user.id }) : Promise.resolve({ data: [] as string[] }),
+    !isMe ? supabase.rpc("profile_visible_community_ids", { p_user: user.id }) : Promise.resolve({ data: null, error: null }),
+  ]);
+  const hiddenCommunityIds = Array.isArray(hiddenRaw) ? (hiddenRaw as string[]) : [];
+  const visibleCommunityIds =
+    !isMe && !visibleError && Array.isArray(visibleRaw) ? new Set(visibleRaw as unknown as string[]) : null;
+
+  const allCommunities: ProfileCommunity[] = (membershipRows ?? []).flatMap((m) => {
     const c = (m as unknown as { community: Omit<ProfileCommunity, "role"> | Omit<ProfileCommunity, "role">[] | null }).community;
     const community = Array.isArray(c) ? c[0] : c;
     return community ? [{ ...community, role: m.role }] : [];
   });
-
-  const isMe = current?.authId === user.id;
+  const communities = visibleCommunityIds ? allCommunities.filter((c) => visibleCommunityIds.has(c.id)) : allCommunities;
   // Nível vem de atividade real (posts, seguidores, amizades, comunidades) — nada fictício.
   const level = computeLevel({
     posts: postCount ?? 0,
@@ -224,12 +261,17 @@ export default async function ProfilePage(props: { params: Promise<{ username: s
         followers: followerIds.size,
         following: followingIds.length,
         communities: communities.length,
+        photos: photoCount.error ? null : photoCount.count ?? 0,
+        videos: videoCount.error ? null : videoCount.count ?? 0,
       }}
+      followerPreview={followerRows2 ?? []}
       feed={feed}
       level={level}
       coins={coins}
       pinnedPostId={pinnedPostId}
+      showArchive={showArchive}
       communities={communities}
+      hiddenCommunityIds={hiddenCommunityIds}
       roleBadges={roleBadges}
       friends={friendRows ?? []}
       friendState={parseFriendState(friendStateRaw as string | null)}

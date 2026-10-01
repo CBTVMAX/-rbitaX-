@@ -10,7 +10,7 @@ import { PresenceDot } from "@/components/presence-picker";
 import { disablePush } from "@/lib/push-client";
 import { endPresenceForSignOut } from "@/components/presence-heartbeat";
 import { saveCover } from "@/lib/cover-upload";
-import { CoverCropDialog } from "@/components/cover-crop-dialog";
+import { COVER_RECOMMENDED, CoverCropDialog } from "@/components/cover-crop-dialog";
 import { saveAvatar } from "@/lib/avatar-upload";
 import { AvatarEditor } from "@/components/avatar-editor";
 import { verifyUpload } from "@/lib/upload-guard";
@@ -18,13 +18,18 @@ import {
   Archive,
   BarChart3,
   Camera,
+  Gem,
   Image as ImageIcon,
+  ImagePlus,
+  Move,
+  Trash2,
   Link2,
   Loader2,
   Lock,
   LogOut,
   MessageCircle,
   MoreHorizontal,
+  MoreVertical,
   Palette,
   PanelRightClose,
   PanelRightOpen,
@@ -33,6 +38,7 @@ import {
   Settings,
   Share2,
   ShieldCheck,
+  Star,
   UserPlus,
   UsersRound,
 } from "lucide-react";
@@ -47,7 +53,7 @@ async function copyProfileLink(username: string) {
   }
 }
 
-export function ShareProfileButton({ username, compact = false }: { username: string; compact?: boolean }) {
+export function ShareProfileButton({ username, compact = false, square = false }: { username: string; compact?: boolean; square?: boolean }) {
   const [copied, setCopied] = useState(false);
 
   async function share() {
@@ -72,8 +78,8 @@ export function ShareProfileButton({ username, compact = false }: { username: st
       onClick={share}
       aria-label="Compartilhar perfil"
       className={clsx(
-        "flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-space-bg/40 text-sm font-medium text-white transition hover:bg-white/5",
-        compact ? "h-11 w-14" : "px-4 py-2.5"
+        "flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/15 bg-space-bg/40 text-sm font-medium text-white transition hover:bg-white/5",
+        square ? "h-12 w-12" : compact ? "h-[42px] w-11" : "px-4 py-2.5"
       )}
     >
       <Share2 className="h-4 w-4" />
@@ -100,11 +106,14 @@ export function ProfileMoreMenu({
   userId,
   isMe,
   compact = false,
+  variant = "default",
 }: {
   username: string;
   userId: string;
   isMe: boolean;
   compact?: boolean;
+  /** "glass": botão redondo e claro, para ficar por cima da capa. */
+  variant?: "default" | "glass";
 }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -129,14 +138,16 @@ export function ProfileMoreMenu({
         aria-label="Mais opções"
         aria-expanded={open}
         className={clsx(
-          "flex items-center justify-center rounded-xl border border-white/15 bg-space-bg/40 text-white transition hover:bg-white/5",
-          compact ? "h-11 w-14" : "h-[42px] w-11"
+          "flex items-center justify-center transition",
+          variant === "glass"
+            ? "h-10 w-10 rounded-full bg-black/35 text-snow backdrop-blur-md hover:bg-black/50"
+            : clsx("rounded-xl border border-white/15 bg-space-bg/40 text-white hover:bg-white/5", compact ? "h-11 w-14" : "h-[42px] w-11")
         )}
       >
-        <MoreHorizontal className="h-5 w-5" />
+        {variant === "glass" ? <MoreVertical className="h-5 w-5" /> : <MoreHorizontal className="h-5 w-5" />}
       </button>
       {open && (
-        <div className="absolute right-0 top-12 z-30 max-h-[70vh] w-60 overflow-y-auto rounded-xl border border-white/10 bg-space-surface py-1 shadow-2xl">
+        <div className="absolute right-0 top-12 z-30 text-left max-h-[70vh] w-60 overflow-y-auto rounded-xl border border-white/10 bg-space-surface py-1 shadow-2xl">
           {isMe && (
             <>
               <Link href="/configuracoes/conta" className={item}>
@@ -168,6 +179,11 @@ export function ProfileMoreMenu({
           >
             <Link2 className="h-4 w-4" /> {copied ? "Link copiado" : "Copiar link"}
           </button>
+          {!isMe && (
+            <span title="Em breve" className={soon}>
+              <Star className="h-4 w-4" /> Adicionar aos favoritos
+            </span>
+          )}
           {isMe && (
             <>
               {divider}
@@ -177,9 +193,12 @@ export function ProfileMoreMenu({
               <span title="Em breve" className={soon}>
                 <Search className="h-4 w-4" /> Pesquisar publicações
               </span>
-              <span title="Em breve" className={soon}>
-                <Archive className="h-4 w-4" /> Arquivo
-              </span>
+              <Link href={`/perfil/${username}?arquivo=1`} className={item}>
+                <Archive className="h-4 w-4" /> Publicações arquivadas
+              </Link>
+              <Link href="/diamantes" className={item}>
+                <Gem className="h-4 w-4" /> Carteira de Diamantes
+              </Link>
               {divider}
               <Link href="/configuracoes" className={item}>
                 <Settings className="h-4 w-4" /> Configurações
@@ -501,6 +520,126 @@ export function ProfileImageUpload({
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={onPick} />
       {coverFile && <CoverCropDialog file={coverFile} onCancel={() => setCoverFile(null)} onConfirm={applyCover} />}
       {avatarFile && <AvatarEditor file={avatarFile} onCancel={() => setAvatarFile(null)} onConfirm={applyAvatar} />}
+      {error && (
+        <button
+          type="button"
+          role="alert"
+          onClick={() => setError(null)}
+          className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-red-500/95 px-4 py-2.5 text-sm font-medium text-white shadow-2xl md:bottom-6"
+        >
+          {error}
+        </button>
+      )}
+    </>
+  );
+}
+
+/**
+ * Botão discreto da capa no próprio perfil: trocar, reposicionar (reabre o editor com a capa
+ * atual) e remover, sempre mostrando a medida recomendada para quem vai preparar a imagem.
+ */
+export function CoverMenu({
+  userId,
+  coverUrl,
+  className,
+  inline = false,
+}: {
+  userId: string;
+  coverUrl: string | null;
+  className: string;
+  /** Sem posicionamento próprio e só com o ícone (usado na barra sobre a capa no celular). */
+  inline?: boolean;
+}) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = e.target.files?.[0];
+    e.target.value = "";
+    if (!picked) return;
+    if (!picked.type.startsWith("image/")) return setError("Escolha um arquivo de imagem.");
+    if (picked.size > 20 * 1024 * 1024) return setError("A imagem precisa ter no máximo 20 MB.");
+    try {
+      await verifyUpload(picked, ["image"], picked.name);
+    } catch (err) {
+      return setError(err instanceof Error ? err.message : "Imagem inválida.");
+    }
+    setError(null);
+    setFile(picked);
+  }
+
+  async function reposition() {
+    if (!coverUrl) return;
+    setOpen(false);
+    setBusy(true);
+    try {
+      const res = await fetch(coverUrl);
+      const blob = await res.blob();
+      setFile(new File([blob], "capa", { type: blob.type || "image/jpeg" }));
+    } catch {
+      setError("Não foi possível abrir a capa atual. Envie a imagem novamente.");
+    }
+    setBusy(false);
+  }
+
+  async function remove() {
+    setOpen(false);
+    setBusy(true);
+    const { error: err } = await createClient().from("User").update({ coverUrl: null }).eq("id", userId);
+    setBusy(false);
+    if (err) setError("Não foi possível remover a capa.");
+    else router.refresh();
+  }
+
+  const item = "flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-white/85 hover:bg-white/5";
+
+  return (
+    <>
+      <div className={inline ? "relative z-20" : "absolute right-3 top-3 z-20 md:right-4 md:top-4"}>
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-label="Editar capa" aria-expanded={open} className={className}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+          {!inline && <span className="hidden md:inline">Editar capa</span>}
+        </button>
+        {open && (
+          <>
+            <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
+            <div className="absolute right-0 top-11 z-20 w-60 overflow-hidden rounded-xl border border-white/10 bg-space-surface py-1 text-left shadow-2xl">
+              <button type="button" className={item} onClick={() => { setOpen(false); inputRef.current?.click(); }}>
+                <ImagePlus className="h-4 w-4" /> {coverUrl ? "Trocar capa" : "Adicionar capa"}
+              </button>
+              {coverUrl && (
+                <>
+                  <button type="button" className={item} onClick={reposition}>
+                    <Move className="h-4 w-4" /> Reposicionar
+                  </button>
+                  <button type="button" className={clsx(item, "text-red-400 hover:bg-red-500/5")} onClick={remove}>
+                    <Trash2 className="h-4 w-4" /> Remover capa
+                  </button>
+                </>
+              )}
+              <p className="border-t border-white/10 px-4 py-2 text-[11px] leading-snug text-white/45">
+                Recomendado: {COVER_RECOMMENDED.w} × {COVER_RECOMMENDED.h} px (7:2)
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+      <input ref={inputRef} type="file" accept="image/*" hidden onChange={onPick} />
+      {file && (
+        <CoverCropDialog
+          file={file}
+          onCancel={() => setFile(null)}
+          onConfirm={async (blob) => {
+            await saveCover(userId, blob);
+            setFile(null);
+            router.refresh();
+          }}
+        />
+      )}
       {error && (
         <button
           type="button"
