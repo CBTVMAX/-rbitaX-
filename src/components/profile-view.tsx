@@ -990,7 +990,7 @@ export function ProfileView({
               online={online}
               accent={accent}
               frame={frame}
-              className={`-mt-20 h-[156px] w-[156px] shrink-0 ${frame ? "mx-6 mb-6" : ""}`}
+              className={`-mt-20 h-[196px] w-[196px] shrink-0 ${frame ? "mx-6 mb-6" : ""}`}
             />
             {/* Como no VK: nome, uma linha de bio e uma linha com cidade · comunidade · Mais; ações à direita. */}
             <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-x-4 gap-y-3 pt-3">
