@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/client";
 import { parseDbDate } from "@/lib/communities";
 import { Avatar } from "@/components/post-card";
 import { RichText } from "@/lib/rich-text";
+import { stickerBox, stickerFileUrl, stickerPreviewUrl } from "@/lib/stickers/catalog";
+import type { StickerInfo } from "@/lib/messenger/types";
 
 export type CommentUser = { id?: string; name: string; username: string; avatarUrl: string | null };
 export type ThreadComment = { id: string; content: string; createdAt: string; userId: string; parentId: string | null; status?: string; user: CommentUser };
@@ -30,21 +32,87 @@ export function commentDate(iso: string) {
 
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name;
 
+// ── Adesivo no comentário ───────────────────────────────────────────────────
+// O comentário guarda o adesivo como um marcador no próprio texto ("John, [[adesivo:{…}]]"),
+// então funciona sem mudar o banco; quem lê vê o adesivo, as notificações mostram "[adesivo]".
+const STICKER_TOKEN = /\[\[adesivo:(\{[^\n]{1,600}\})\]\]\s*$/;
+const SAFE_FILE = /^[a-z0-9-]{1,32}\/[a-z0-9-]{1,64}\.(webp|png|gif)$/;
+const STORAGES = new Set(["app", "app-premium", "public", "premium"]);
+
+export function encodeStickerComment(prefix: string, info: StickerInfo) {
+  const { storage, file, preview, format, w, h, size, label } = info;
+  return `${prefix}[[adesivo:${JSON.stringify({ storage, file, preview, format, w, h, size, label: label?.slice(0, 40) })}]]`;
+}
+
+/** Separa texto e adesivo; ignora qualquer marcador malformado ou com caminho estranho. */
+export function parseStickerComment(content: string): { text: string; sticker: StickerInfo | null } {
+  const m = content.match(STICKER_TOKEN);
+  if (!m) return { text: content, sticker: null };
+  const bare = content.slice(0, m.index).trimEnd();
+  try {
+    const raw = JSON.parse(m[1]) as Partial<StickerInfo>;
+    const okPreview = raw.preview == null || (typeof raw.preview === "string" && SAFE_FILE.test(raw.preview));
+    // Marcador adulterado: some do texto em vez de aparecer cru.
+    if (!raw.file || !SAFE_FILE.test(raw.file) || !STORAGES.has(String(raw.storage)) || !okPreview) return { text: bare, sticker: null };
+    const sticker: StickerInfo = {
+      storage: raw.storage as StickerInfo["storage"],
+      file: raw.file,
+      preview: raw.preview ?? null,
+      format: raw.format === "animated" ? "animated" : "static",
+      w: Number(raw.w) || 1,
+      h: Number(raw.h) || 1,
+      size: raw.size === "mini" || raw.size === "large" ? raw.size : "normal",
+      label: typeof raw.label === "string" ? raw.label.slice(0, 40) : undefined,
+    };
+    return { text: bare, sticker };
+  } catch {
+    return { text: bare, sticker: null };
+  }
+}
+
+/** Adesivo em tamanho real; se for premium e quem vê não tiver o pack, mostra a prévia. */
+function CommentSticker({ info }: { info: StickerInfo }) {
+  const box = stickerBox(info);
+  const [src, setSrc] = useState(() => stickerFileUrl(info));
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={info.label ? `Adesivo: ${info.label}` : "Adesivo"}
+      width={box.width}
+      height={box.height}
+      loading="lazy"
+      draggable={false}
+      onError={() => {
+        const fallback = stickerPreviewUrl(info);
+        if (src !== fallback) setSrc(fallback);
+      }}
+      className="mt-1 select-none object-contain"
+      style={{ width: box.width, height: box.height }}
+    />
+  );
+}
+
 /** Respostas começam com "Nome, …": o nome aparece em destaque, como no VK. */
-export function CommentText({ text, names }: { text: string; names: Set<string> }) {
+export function CommentText({ text: content, names }: { text: string; names: Set<string> }) {
+  const { text, sticker } = parseStickerComment(content);
   const m = text.match(/^([^,\n]{1,40}),\s?/);
-  if (m && names.has(m[1].trim())) {
-    return (
+  const body =
+    m && names.has(m[1].trim()) ? (
       <span className="whitespace-pre-wrap break-words">
         <span className="font-medium text-orbit-blue">{m[1]}</span>
         <RichText text={text.slice(m[1].length)} />
       </span>
-    );
-  }
+    ) : text ? (
+      <span className="whitespace-pre-wrap break-words">
+        <RichText text={text} />
+      </span>
+    ) : null;
   return (
-    <span className="whitespace-pre-wrap break-words">
-      <RichText text={text} />
-    </span>
+    <>
+      {body}
+      {sticker && <CommentSticker info={sticker} />}
+    </>
   );
 }
 

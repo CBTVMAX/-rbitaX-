@@ -32,7 +32,9 @@ import {
 } from "lucide-react";
 import { Avatar } from "@/components/post-card";
 import { ReactionButton, ReactorsSheet } from "@/components/reactions";
-import { CommentItem, firstName, threadComments, useCommentLikes } from "@/components/comments/comment-kit";
+import { CommentItem, encodeStickerComment, firstName, threadComments, useCommentLikes } from "@/components/comments/comment-kit";
+import { CommentStickerButton } from "@/components/comments/comment-sticker-picker";
+import type { StickerInfo } from "@/lib/messenger/types";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { ago as timeAgo } from "@/lib/communities";
 import { can, communityError, compactNumber, downloadCommunityMedia, isEditorOrAdmin, rank, TAG_LABEL, type CommunityPost, type ReactionKey } from "@/lib/communities";
@@ -340,24 +342,44 @@ export function CommunityPostCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showComments]);
 
-  async function sendComment(e: React.FormEvent) {
-    e.preventDefault();
-    const text = commentText.trim();
-    if (!text || !viewer) return;
+  async function postComment(content: string, clearText: () => void) {
+    if (!content || !viewer || sending) return;
     setSending(true);
     const { data, error } = await supabase
       .from("Comment")
-      .insert({ id: crypto.randomUUID(), postId: post.id, userId: viewer.id, content: text.slice(0, 2000), updatedAt: new Date().toISOString(), parentId: replyTo?.id ?? null })
+      .insert({ id: crypto.randomUUID(), postId: post.id, userId: viewer.id, content: content.slice(0, 2000), updatedAt: new Date().toISOString(), parentId: replyTo?.id ?? null })
       .select(COMMENT_COLUMNS)
       .single();
     setSending(false);
     if (error) return toast(communityError(error.message), true);
-    setCommentText("");
+    clearText();
     setReplyTo(null);
     const row = data as unknown as CommentRow;
     setComments((c) => [...(c ?? []), row]);
     if (row.status === "visible") update({ commentCount: post.commentCount + 1 });
     else toast("Seu comentário foi enviado para aprovação da moderação.");
+  }
+
+  function sendComment(e: React.FormEvent) {
+    e.preventDefault();
+    postComment(commentText.trim(), () => setCommentText(""));
+  }
+
+  function sendStickerComment(info: StickerInfo) {
+    const prefix = replyTo ? `${firstName(replyTo.user.name)}, ` : "";
+    postComment(encodeStickerComment(prefix, info), () => setCommentText((t) => t.replace(/^[^,\n]{1,40},\s?/, "")));
+  }
+
+  function insertCommentEmoji(emoji: string) {
+    const el = commentInput.current;
+    const start = el?.selectionStart ?? commentText.length;
+    const end = el?.selectionEnd ?? commentText.length;
+    setCommentText((t) => t.slice(0, start) + emoji + t.slice(end));
+    requestAnimationFrame(() => {
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(start + emoji.length, start + emoji.length);
+    });
   }
 
   async function commentAction(c: CommentRow, a: "approve" | "remove" | "delete") {
@@ -655,7 +677,7 @@ export function CommunityPostCard({
             </div>
           )}
           {canComment ? (
-            <form onSubmit={sendComment} className="pt-1">
+            <form onSubmit={sendComment} className="relative pt-1">
               {replyTo && (
                 <p className="mb-1.5 flex items-center gap-2 px-2 text-[12px] text-white/50">
                   <span className="min-w-0 flex-1 truncate">
@@ -686,6 +708,7 @@ export function CommunityPostCard({
                 placeholder="Comentário"
                 className="max-h-[120px] min-h-[44px] min-w-0 flex-1 resize-none rounded-3xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white outline-none placeholder:text-white/35 focus:border-orbit-purple/60"
               />
+              {viewer && <CommentStickerButton viewer={viewer} onEmoji={insertCommentEmoji} onSticker={sendStickerComment} />}
               <button type="submit" disabled={sending || !commentText.trim()} aria-label="Enviar comentário" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orbit-gradient text-snow disabled:opacity-40">
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </button>
