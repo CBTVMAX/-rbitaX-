@@ -109,6 +109,19 @@ export default async function ProfilePage(props: {
   const requesterIds = (incomingRows ?? []).map((r) => r.requesterId);
 
   const userCard = "id, name, username, avatarUrl, presence, isVerified" as const;
+
+  // Amigos em comum (quem visita): meus amigos que também são amigos deste perfil.
+  let mutualIds: string[] = [];
+  if (current && current.authId !== user.id && friendIds.length) {
+    const { data: myFriendRows } = await supabase
+      .from("Friendship")
+      .select("requesterId, addresseeId")
+      .eq("status", "accepted")
+      .or(`requesterId.eq.${current.authId},addresseeId.eq.${current.authId}`)
+      .limit(2000);
+    const mine = new Set((myFriendRows ?? []).map((f) => (f.requesterId === current.authId ? f.addresseeId : f.requesterId)));
+    mutualIds = friendIds.filter((id) => mine.has(id));
+  }
   const followerSample = Array.from(followerIds).slice(0, 3);
   // Fotos e vídeos de todas as publicações do perfil (não só das carregadas na página).
   const mediaCount = (type: string) =>
@@ -119,7 +132,7 @@ export default async function ProfilePage(props: {
       .eq("post.authorId", user.id)
       .is("post.communityId", null)
       .eq("post.isArchived", false);
-  const [{ data: friendRows }, { data: requesterRows }, { data: followerRows2 }, photoCount, videoCount] = await Promise.all([
+  const [{ data: friendRows }, { data: requesterRows }, { data: followerRows2 }, photoCount, videoCount, { data: mutualRows }] = await Promise.all([
     friendIds.length
       ? supabase.from("User").select(userCard).in("id", friendIds.slice(0, 60)).order("name")
       : Promise.resolve({ data: [] as ProfileFriend[] }),
@@ -131,6 +144,9 @@ export default async function ProfilePage(props: {
       : Promise.resolve({ data: [] as ProfileFriend[] }),
     mediaCount("image"),
     mediaCount("video"),
+    mutualIds.length
+      ? supabase.from("User").select(userCard).in("id", mutualIds.slice(0, 3))
+      : Promise.resolve({ data: [] as ProfileFriend[] }),
   ]);
   const requesterById = new Map((requesterRows ?? []).map((u) => [u.id, u]));
   const friendRequests = requesterIds.flatMap((id) => {
@@ -291,6 +307,7 @@ export default async function ProfilePage(props: {
       friendState={parseFriendState(friendStateRaw as string | null)}
       friendRequests={friendRequests}
       blockedByMe={!!blockRow}
+      mutual={{ count: mutualIds.length, preview: (mutualRows ?? []) as ProfileFriend[] }}
     />
   );
 }
