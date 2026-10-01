@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo, initials } from "@/lib/format";
-import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Repeat2, Pencil, Trash2, Link2, Check, X, Loader2, Archive, ArchiveRestore, Globe2, Users, Lock, ChevronRight, MapPin } from "lucide-react";
+import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Repeat2, Pencil, Trash2, Link2, Check, X, Loader2, Archive, ArchiveRestore, Globe2, Users, Lock, ChevronRight, MapPin, CalendarClock } from "lucide-react";
 import type { SharedEmbed } from "@/lib/shared-posts";
 import { clsx } from "clsx";
 import { VerifiedBadge } from "@/components/verified-badge";
@@ -30,6 +30,8 @@ export type FeedPost = {
   isArchived?: boolean;
   /** Local marcado na publicação (opcional). */
   location?: string | null;
+  /** Agendada para esta data (só o autor vê até lá). */
+  publishAt?: string | null;
 };
 
 const VISIBILITY: { id: string; label: string; hint: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -285,6 +287,12 @@ export function PostCard({
         bleed ? "border-y px-0 py-3 md:rounded-2xl md:border md:p-5" : "rounded-2xl border p-4 md:p-5"
       )}
     >
+      {post.publishAt && new Date(post.publishAt).getTime() > Date.now() && (
+        <p className={clsx("mb-2 flex items-center gap-1.5 text-[12px] font-medium text-amber-300", bleed && "px-4 md:px-0")}>
+          <CalendarClock className="h-3.5 w-3.5" /> Agendada para{" "}
+          {new Date(post.publishAt).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })} · só você vê até lá
+        </p>
+      )}
       {pinned && (
         <p className={clsx("mb-2 flex items-center gap-1 text-[11px] font-medium text-white/50", bleed && "px-4 md:px-0")}>
           <Pin className="h-3 w-3 text-orbit-cyan" /> Fixado

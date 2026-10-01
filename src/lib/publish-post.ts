@@ -13,12 +13,15 @@ export async function publishPost({
   files,
   location = null,
   visibility = "public",
+  publishAt = null,
 }: {
   userId: string;
   content: string;
   files: File[];
   location?: string | null;
   visibility?: PostVisibility;
+  /** Agendamento ("Quando publicar"). null = agora. */
+  publishAt?: Date | null;
 }) {
   const supabase = createClient();
   const postId = crypto.randomUUID();
@@ -36,6 +39,7 @@ export async function publishPost({
     kind,
     location: location?.trim() || null,
     visibility,
+    ...(publishAt ? { publishAt: publishAt.toISOString() } : {}),
     updatedAt: new Date().toISOString(),
   });
   if (postError) throw postError;

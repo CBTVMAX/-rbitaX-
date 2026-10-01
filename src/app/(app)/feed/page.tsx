@@ -14,7 +14,7 @@ import { ChevronDown, Check } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 const POST_SELECT =
-  "id, content, createdAt, editedAt, kind, location, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, position), sharedPostId, visibility" as const;
+  "id, content, createdAt, editedAt, kind, location, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, position), sharedPostId, visibility, publishAt" as const;
 
 const KIND_OF: Record<Exclude<FeedType, "todos">, string> = { fotos: "image", videos: "video", texto: "text", musica: "music" };
 
@@ -91,6 +91,7 @@ export default async function FeedPage(props: { searchParams: Promise<{ aba?: st
     commentCount: commentCountByPost.get(p.id) ?? 0,
     likedByMe: likedSet.has(p.id),
     visibility: p.visibility,
+    publishAt: p.publishAt,
     ...(p.sharedPostId ? { shared: shared.get(p.sharedPostId) ?? null } : {}),
   }));
 
@@ -98,7 +99,7 @@ export default async function FeedPage(props: { searchParams: Promise<{ aba?: st
   if (tab === "para-voce") {
     const now = Date.now();
     const score = (p: FeedPost) => {
-      const hours = (now - new Date(p.createdAt).getTime()) / 3_600_000;
+      const hours = Math.max(0, (now - new Date(p.createdAt).getTime()) / 3_600_000);
       const close = friendIds.has(p.author.id) || followingIds.has(p.author.id) ? 6 : 0;
       return (1 + p.likeCount * 2 + p.commentCount * 3 + close) / Math.pow(hours + 2, 1.3);
     };

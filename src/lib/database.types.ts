@@ -132,8 +132,8 @@ type DiceRollRow = { id: string; conversationId: string; userId: string; dice: s
 type DiceRollInsert = { id?: string; conversationId: string; userId: string; dice: string; sides: number; count?: number; rolls: number[]; total: number; messageId?: string | null; createdAt?: string };
 type DiceRollUpdate = Partial<DiceRollInsert>;
 
-type PostRow = { authorId: string; commentsEnabled: boolean; content: string; createdAt: string; editedAt: string | null; id: string; isArchived: boolean; isPinned: boolean; kind: string; linkUrl: string | null; location: string | null; moderationStatus: string; sharedPostId: string | null; updatedAt: string; viewCount: number; visibility: string; communityId: string | null; albumId: string | null; meta: Json; authorType: string };
-type PostInsert = { authorId: string; commentsEnabled?: boolean; content: string; createdAt?: string; editedAt?: string | null; id: string; isArchived?: boolean; isPinned?: boolean; kind?: string; linkUrl?: string | null; location?: string | null; moderationStatus?: string; sharedPostId?: string | null; updatedAt: string; viewCount?: number; visibility?: string };
+type PostRow = { authorId: string; commentsEnabled: boolean; content: string; createdAt: string; editedAt: string | null; id: string; isArchived: boolean; isPinned: boolean; kind: string; linkUrl: string | null; location: string | null; moderationStatus: string; sharedPostId: string | null; updatedAt: string; viewCount: number; visibility: string; communityId: string | null; albumId: string | null; meta: Json; authorType: string; publishAt: string | null };
+type PostInsert = { authorId: string; commentsEnabled?: boolean; content: string; createdAt?: string; editedAt?: string | null; id: string; isArchived?: boolean; isPinned?: boolean; kind?: string; linkUrl?: string | null; location?: string | null; moderationStatus?: string; sharedPostId?: string | null; updatedAt: string; viewCount?: number; visibility?: string; publishAt?: string | null };
 type PostUpdate = Partial<PostInsert>;
 
 type PostViewRow = { createdAt: string; id: string; postId: string; userId: string };
