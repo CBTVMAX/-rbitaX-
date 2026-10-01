@@ -6,6 +6,7 @@ import type { FeedPost } from "@/components/post-card";
 import { sortMedia } from "@/lib/post-media";
 import { loadSharedEmbeds } from "@/lib/shared-posts";
 import { computeLevel } from "@/lib/level";
+import { summarizeReactions } from "@/lib/post-reactions";
 import {
   ProfileView,
   type ProfileCommunity,
@@ -160,7 +161,7 @@ export default async function ProfilePage(props: {
 
   const postIds = posts.map((p) => p.id);
   const [{ data: likeRows }, { data: myLikes }, { data: commentRows }, shared, { data: savedRows }] = await Promise.all([
-    postIds.length ? supabase.from("Like").select("postId").in("postId", postIds) : Promise.resolve({ data: [] as { postId: string }[] }),
+    postIds.length ? supabase.from("Like").select("postId, userId, reaction").in("postId", postIds) : Promise.resolve({ data: [] as { postId: string }[] }),
     postIds.length && current
       ? supabase.from("Like").select("postId").in("postId", postIds).eq("userId", current.authId)
       : Promise.resolve({ data: [] as { postId: string }[] }),
@@ -172,8 +173,7 @@ export default async function ProfilePage(props: {
   ]);
   const savedPostIds = (savedRows ?? []).map((r) => r.postId);
 
-  const likeCountByPost = new Map<string, number>();
-  (likeRows ?? []).forEach((l) => likeCountByPost.set(l.postId, (likeCountByPost.get(l.postId) ?? 0) + 1));
+  const reactions = summarizeReactions((likeRows ?? []) as { postId: string; userId?: string; reaction: string | null }[], current?.authId);
   const likedSet = new Set((myLikes ?? []).map((l) => l.postId));
   const commentCountByPost = new Map<string, number>();
   (commentRows ?? []).forEach((c) => commentCountByPost.set(c.postId, (commentCountByPost.get(c.postId) ?? 0) + 1));
@@ -186,9 +186,11 @@ export default async function ProfilePage(props: {
     kind: p.kind,
     author: p.author as unknown as FeedPost["author"],
     media: sortMedia(p.media),
-    likeCount: likeCountByPost.get(p.id) ?? 0,
+    likeCount: reactions.count(p.id),
     commentCount: commentCountByPost.get(p.id) ?? 0,
     likedByMe: likedSet.has(p.id),
+    myReaction: reactions.mine(p.id),
+    topReactions: reactions.top(p.id),
     visibility: p.visibility,
     isArchived: p.isArchived,
     ...(p.sharedPostId ? { shared: shared.get(p.sharedPostId) ?? null } : {}),

@@ -30,7 +30,7 @@ create trigger post_schedule_guard before insert or update on public."Post"
   for each row execute function public.post_schedule_guard();
 
 drop policy if exists post_select_visible on public."Post";
-create policy post_select_visible on public."Post" for select
+create policy post_select_visible on public."Post" for select to authenticated
   using (
     "authorId" = auth.uid()::text
     or (
@@ -45,7 +45,7 @@ create policy post_select_visible on public."Post" for select
   );
 
 drop policy if exists post_select_anon on public."Post";
-create policy post_select_anon on public."Post" for select
+create policy post_select_anon on public."Post" for select to anon
   using (visibility = 'public' and ("publishAt" is null or "publishAt" <= now()));
 
 create index if not exists post_publish_at_idx on public."Post" ("publishAt") where "publishAt" is not null;
