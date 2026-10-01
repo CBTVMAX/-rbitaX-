@@ -35,10 +35,10 @@ export function AvatarMenu({
         <span
           aria-hidden
           className={`absolute z-10 flex items-center justify-center rounded-full border-2 border-pa bg-space-bg/90 text-white shadow-glow transition group-hover:bg-space-card ${
-            hasFrame ? "bottom-0 right-0 h-8 w-8 md:h-10 md:w-10" : "bottom-[3%] right-[3%] h-10 w-10 md:h-12 md:w-12"
+            hasFrame ? "bottom-0 right-0 h-7 w-7 md:h-8 md:w-8" : "bottom-[2%] right-[2%] h-8 w-8 md:h-9 md:w-9"
           }`}
         >
-          <Camera className={hasFrame ? "h-4 w-4 md:h-5 md:w-5" : "h-5 w-5"} />
+          <Camera className={hasFrame ? "h-3.5 w-3.5" : "h-4 w-4"} />
         </span>
       </button>
       {/* Mounted only while open: AvatarFlow seeds its step from `open` and discards pending

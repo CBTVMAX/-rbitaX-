@@ -15,7 +15,9 @@ import { AccountSwitcher } from "@/components/account-switcher";
 import { getAccounts, removeAccount } from "@/lib/accounts";
 import { CountBadge, useLiveCounts, type LiveCounts } from "@/components/live-activity";
 import {
+  Archive,
   Bell,
+  Bookmark,
   CalendarDays,
   ChevronDown,
   Clapperboard,
@@ -36,12 +38,12 @@ import {
   Plus,
   Search,
   Settings,
-  ShoppingBag,
   Smile,
   Store,
   User,
   UserRound,
   Users,
+  UsersRound,
   Video,
   Vote,
   X,
@@ -56,21 +58,29 @@ function sidebarItems(username: string): NavItem[] {
     { href: `/perfil/${username}`, label: "Perfil", icon: UserRound },
     { href: "/feed", label: "Feed", icon: Newspaper },
     { href: "/mensagens", label: "Messenger", icon: MessageCircle, badge: "messages" },
+    // Chamadas de voz/vídeo ainda não estão no ar (o Messenger avisa "em breve").
+    { href: null, label: "Chamadas", icon: Phone },
     { href: "/amigos", label: "Amigos", icon: Users, badge: "friendRequests" },
-    { href: "/comunidades", label: "Comunidades", icon: Users },
+    { href: "/comunidades", label: "Comunidades", icon: UsersRound },
+    { href: `/perfil/${username}#tab-fotos`, label: "Fotos", icon: ImageIcon },
     { href: "/musica", label: "Música", icon: Music2 },
     { href: "/videos", label: "Vídeos", icon: Video },
   ];
 }
 
-const MORE_ITEMS: { href: string | null; label: string; icon: Icon; badge?: keyof LiveCounts }[] = [
-  { href: "/diamantes", label: "Diamantes", icon: Gem },
-  { href: "/loja", label: "Mercado", icon: Store },
-  { href: "/loja/adesivos", label: "Adesivos", icon: Smile },
-  { href: "/videos", label: "Clipes", icon: Clapperboard },
-  { href: null, label: "Jogos", icon: Gamepad2 },
-  { href: null, label: "Eventos", icon: CalendarDays },
-];
+/** Funções secundárias: continuam existindo, só não competem com as principais. */
+function moreItems(username: string): NavItem[] {
+  return [
+    { href: "/videos", label: "Clipes", icon: Clapperboard },
+    { href: null, label: "Jogos", icon: Gamepad2 },
+    { href: "/loja/adesivos", label: "Adesivos", icon: Smile },
+    { href: "/loja", label: "Mercado", icon: Store },
+    { href: "/diamantes", label: "Carteira · Diamantes", icon: Gem },
+    { href: null, label: "Eventos", icon: CalendarDays },
+    { href: null, label: "Favoritos", icon: Bookmark },
+    { href: `/perfil/${username}?arquivo=1`, label: "Arquivados", icon: Archive },
+  ];
+}
 
 const TOP_NAV: { href: string; label: string; icon: Icon; badge?: keyof LiveCounts }[] = [
   { href: "/feed", label: "Início", icon: Home },
@@ -235,6 +245,7 @@ export function AppSidebar({ username }: { username: string; name: string; avata
           ) : (
             <span key={label} title="Em breve" className={classes}>
               <Icon className="h-5 w-5" /> {label}
+              <span className="ml-auto rounded-full border border-white/10 px-1.5 py-px text-[10px] text-white/35">em breve</span>
             </span>
           );
         })}
@@ -249,7 +260,7 @@ export function AppSidebar({ username }: { username: string; name: string; avata
         </button>
         {moreOpen && (
           <div className="space-y-0.5 pl-4">
-            {MORE_ITEMS.map(({ href, label, icon: Icon }) =>
+            {moreItems(username).map(({ href, label, icon: Icon }) =>
               href ? (
                 <Link key={label} href={href} className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5 hover:text-white">
                   <Icon className="h-4 w-4" /> {label}
@@ -385,14 +396,25 @@ export function MobileHeader({
               </span>
             )
           )}
-          <Link
-            href="/loja"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/80 hover:bg-white/5"
-          >
-            <ShoppingBag className="h-5 w-5" /> Órbita X Store
-            <CoinBadge />
-          </Link>
+          <p className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-white/35">Mais</p>
+          {moreItems(username).map(({ href, label, icon: Icon }) =>
+            href ? (
+              <Link
+                key={label}
+                href={href}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/70 hover:bg-white/5"
+              >
+                <Icon className="h-4 w-4" /> {label}
+                {href === "/diamantes" && <CoinBadge />}
+              </Link>
+            ) : (
+              <span key={label} title="Em breve" className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-white/40">
+                <Icon className="h-4 w-4" /> {label}
+              </span>
+            )
+          )}
+          <div className="my-1 border-t border-white/10" />
           <Link
             href="/configuracoes"
             onClick={() => setOpen(false)}

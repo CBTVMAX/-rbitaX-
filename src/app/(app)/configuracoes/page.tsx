@@ -14,6 +14,7 @@ import {
   Sticker,
   SunMoon,
   UserRound,
+  UsersRound,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/current-user";
 import { createClient } from "@/lib/supabase/server";
@@ -87,6 +88,7 @@ export default async function SettingsPage() {
         items={[
           { href: "/configuracoes/conta", icon: UserRound, label: "Minha conta", hint: "Nome, @, bio, foto, capa e informações" },
           { href: "/configuracoes/conta", icon: Lock, label: "Privacidade", hint: "O que aparece no seu perfil" },
+          { href: "/configuracoes/comunidades", icon: UsersRound, label: "Comunidades no perfil", hint: "Escolha quais comunidades aparecem publicamente" },
           { href: "/configuracoes/seguranca", icon: ShieldCheck, label: "Segurança", hint: "Senha, verificação em duas etapas e aparelhos" },
           { href: "/configuracoes/notificacoes", icon: Bell, label: "Notificações", hint: "No celular e no computador, mesmo com o app fechado" },
         ]}

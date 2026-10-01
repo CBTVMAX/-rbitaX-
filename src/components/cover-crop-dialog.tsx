@@ -4,10 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Loader2, Monitor, Move, Smartphone, User, X, ZoomIn, ZoomOut } from "lucide-react";
 
-// Every cover in Órbita X is stored and displayed at this ratio (e.g. 2000×750),
+// Every cover in Órbita X is stored and displayed at this ratio (2100×600 recommended),
 // so the framing chosen here is exactly what shows on desktop and mobile.
-export const COVER_RATIO = 8 / 3;
-const OUTPUT_MAX_WIDTH = 2000;
+export const COVER_RATIO = 7 / 2;
+export const COVER_RECOMMENDED = { w: 2100, h: 600 };
+const OUTPUT_MAX_WIDTH = 2100;
 const MAX_ZOOM = 3;
 
 type Crop = { x: number; y: number; w: number };
@@ -155,6 +156,9 @@ export function CoverCropDialog({
             <p className="text-xs text-white/55 md:text-sm">
               Arraste para enquadrar e use o zoom. É assim que a capa vai aparecer no computador e no celular.
             </p>
+            <p className="mt-1 text-[11px] text-white/45 md:text-xs">
+              Tamanho recomendado: <span className="font-semibold text-white/70">{COVER_RECOMMENDED.w} × {COVER_RECOMMENDED.h} px</span> (proporção 7:2) · JPG, PNG ou WebP até 20 MB
+            </p>
           </div>
           <button type="button" onClick={onCancel} aria-label="Fechar" className="rounded-full p-1.5 text-white/60 hover:bg-white/5 hover:text-white">
             <X className="h-5 w-5" />
@@ -170,7 +174,7 @@ export function CoverCropDialog({
           onPointerUp={() => (drag.current = null)}
           onPointerCancel={() => (drag.current = null)}
           onWheel={onWheel}
-          className="relative aspect-[8/3] w-full cursor-grab touch-none overflow-hidden rounded-2xl border border-white/15 bg-space-card active:cursor-grabbing"
+          className="relative aspect-[7/2] w-full cursor-grab touch-none overflow-hidden rounded-2xl border border-white/15 bg-space-card active:cursor-grabbing"
         >
           {src && nat ? (
             <CroppedImage src={src} nat={nat} crop={crop} />
@@ -202,7 +206,7 @@ export function CoverCropDialog({
         </div>
         {lowRes && (
           <p className="mt-2 text-xs text-amber-300/90">
-            A imagem ficou com pouca resolução nesse enquadramento. Para melhor qualidade, use uma imagem de pelo menos 2000×750.
+            A imagem ficou com pouca resolução nesse enquadramento. Para melhor qualidade, use uma imagem de pelo menos {COVER_RECOMMENDED.w}×{COVER_RECOMMENDED.h} px.
           </p>
         )}
 
@@ -213,7 +217,7 @@ export function CoverCropDialog({
                 <Monitor className="h-4 w-4" /> Computador
               </p>
               <div className="rounded-2xl border border-white/10 bg-space-bg/60 p-2">
-                <div className="relative aspect-[8/3] w-full overflow-hidden rounded-xl">
+                <div className="relative aspect-[7/2] w-full overflow-hidden rounded-xl">
                   <CroppedImage src={src} nat={nat} crop={crop} />
                 </div>
                 <div className="flex items-end gap-3 px-3 pb-2">
@@ -232,7 +236,7 @@ export function CoverCropDialog({
                 <Smartphone className="h-4 w-4" /> Celular
               </p>
               <div className="rounded-[1.6rem] border-4 border-white/15 bg-space-bg p-1.5">
-                <div className="relative aspect-[8/3] w-full overflow-hidden rounded-lg">
+                <div className="relative aspect-[7/2] w-full overflow-hidden rounded-lg">
                   <CroppedImage src={src} nat={nat} crop={crop} />
                 </div>
                 <div className="px-2 pb-3">

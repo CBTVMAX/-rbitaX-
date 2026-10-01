@@ -9,28 +9,27 @@ import { ProfileFamily, type FamilyMember, type FamilyRequest } from "@/componen
 import { ProfileTestimonials, type Testimonial, type PendingTestimonial } from "@/components/profile-testimonials";
 import type { FriendState } from "@/lib/friends";
 import {
+  CoverMenu,
   OrbitIcon,
   ProfileImageUpload,
   ProfileMoreMenu,
-  ProfileRightRail,
   ShareProfileButton,
 } from "@/components/profile-client";
 import { presenceOf } from "@/lib/presence";
 import { AvatarImage } from "@/components/avatar";
-import { PersonalStories } from "@/components/personal-stories";
+import { ProfileMoments } from "@/components/personal-stories";
 import { AvatarMenu } from "@/components/avatar-menu-button";
 import { relationshipLabel } from "@/lib/profile-options";
-import { CoinIcon, formatCoins } from "@/components/coins";
 import { MyRpgsCard } from "@/components/my-rpgs-card";
-import { ProfileStatus } from "@/components/profile-status";
 import { ProfileMusic, type ProfileMusicData } from "@/components/profile-music";
-import { AchievementsCard, AchievementsGrid } from "@/components/achievements";
+import { AchievementsGrid } from "@/components/achievements";
 import { computeAchievements } from "@/lib/achievements";
 import type { LevelInfo } from "@/lib/level";
 import { frameBackdropStyle, frameSrc, getFrame, type AvatarFrame } from "@/lib/avatar-frames";
-import { hasCustomAccent, profileAccentStyle, profileColorHex, profileColorLabel } from "@/lib/profile-colors";
+import { hasCustomAccent, profileAccentStyle } from "@/lib/profile-colors";
 import { OnlineDot, PresenceDot, PresenceStatus } from "@/components/presence-picker";
 import {
+  Archive,
   Cake,
   Camera,
   Check,
@@ -43,10 +42,7 @@ import {
   Lock,
   MapPin,
   MessageCircle,
-  Music2,
-  Palette,
   PenLine,
-  Play,
   Plus,
   Shield,
   Sparkles,
@@ -148,15 +144,6 @@ function ProfileAvatar({
   );
 }
 
-function StatBox({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-space-bg/40 px-1 py-2.5 text-center md:py-3.5">
-      <p className="text-base font-bold text-white md:text-lg">{value}</p>
-      <p className="text-[10px] text-white/60 md:text-xs">{label}</p>
-    </div>
-  );
-}
-
 export type ProfileViewProps = {
   user: {
     id: string;
@@ -184,7 +171,11 @@ export type ProfileViewProps = {
   coins?: number | null;
   feed: FeedPost[];
   pinnedPostId: string | null;
+  /** Só o dono: o perfil está mostrando "Publicações arquivadas". */
+  showArchive?: boolean;
   communities: ProfileCommunity[];
+  /** Só o dono: comunidades que ele escolheu esconder do perfil (aparecem marcadas para ele). */
+  hiddenCommunityIds?: string[];
   /** Cargos personalizados por comunidade (crachás), keyed pelo id da comunidade. */
   roleBadges?: Record<string, { name: string; color: string; icon: string }[]>;
   friends: ProfileFriend[];
@@ -215,11 +206,24 @@ const ROLE_LABEL: Record<string, { label: string; icon: React.ComponentType<{ cl
   member: { label: "Membro", icon: UserIcon, className: "text-white/60" },
 };
 
-function SideCard({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+function SideCard({
+  title,
+  count,
+  action,
+  children,
+}: {
+  title: string;
+  count?: number;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-space-surface/80 p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-white">{title}</h2>
+    <section className="rounded-2xl border border-white/10 bg-space-surface/70 p-4">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold text-white">
+          {title}
+          {typeof count === "number" && <span className="ml-1.5 font-normal text-white/45">{count}</span>}
+        </h2>
         {action}
       </div>
       {children}
@@ -237,7 +241,9 @@ export function ProfileView({
   coins,
   feed,
   pinnedPostId,
+  showArchive = false,
   communities,
+  hiddenCommunityIds = [],
   roleBadges = {},
   friends,
   friendState = "none",
@@ -291,10 +297,17 @@ export function ProfileView({
           </span>
         )}
       </div>
-      <p className="mt-0.5 text-sm text-white/70">
-        @{user.username}
-      </p>
-      <PresenceStatus userId={user.id} initial={user.presence} editable={isMe} className="mt-1.5" />
+      <div className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-white/65">
+        <span>@{user.username}</span>
+        <span aria-hidden className="text-white/25">•</span>
+        <PresenceStatus userId={user.id} initial={user.presence} editable={isMe} />
+        <span
+          title={`Nível ${level.level} · ${level.xpIntoLevel.toLocaleString("pt-BR")} / ${level.xpForNext.toLocaleString("pt-BR")} XP`}
+          className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[11px] font-medium text-white/60"
+        >
+          Nível {level.level}
+        </span>
+      </div>
     </>
   );
 
@@ -370,20 +383,6 @@ export function ProfileView({
       } ${extra}`}
     >
       Editar perfil
-    </Link>
-  );
-
-  const customizeButton = (compact: boolean) => (
-    <Link
-      href="/configuracoes/personalizar"
-      aria-label="Personalizar perfil"
-      title="Personalizar perfil"
-      className={`flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-space-bg/40 text-sm font-medium text-white transition hover:bg-white/5 ${
-        compact ? "h-11 w-11 shrink-0" : "px-4 py-2.5"
-      }`}
-    >
-      <Palette className={`h-4 w-4 ${accent ? "text-pa" : "text-orbit-purple"}`} />
-      {!compact && "Personalizar"}
     </Link>
   );
 
@@ -567,238 +566,242 @@ export function ProfileView({
       </section>
     ) : null;
 
-  const soonButton =
-    "mt-3 w-full cursor-default rounded-xl border border-white/15 bg-space-bg/40 py-2 text-xs font-medium text-white/60";
-
-  const statusAside = (
-    <>
-      <SideCard title="Nível">
-        <div className="flex items-center gap-3">
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orbit-gradient text-snow shadow-glow">
-            <span className="text-lg font-bold leading-none">{level.level}</span>
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-white">Nível {level.level}</p>
-            <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-white/10">
-              <span className="block h-full rounded-full bg-orbit-gradient" style={{ width: `${Math.round(level.progress * 100)}%` }} />
-            </div>
-            <p className="mt-1 text-[11px] text-white/50">
-              {level.xpIntoLevel.toLocaleString("pt-BR")} / {level.xpForNext.toLocaleString("pt-BR")} XP
-            </p>
-          </div>
-        </div>
-      </SideCard>
-
-      {isMe && (
-        <SideCard title="Órbita Coins">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <CoinIcon className="h-7 w-7" />
-              <div>
-                <p className="text-lg font-bold leading-none text-amber-300">{formatCoins(coins ?? 0)}</p>
-                <p className="mt-1 text-[11px] text-white/50">Diamantes</p>
-              </div>
-            </div>
-            <Link
-              href="/loja"
-              aria-label="Obter mais Diamantes"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orbit-gradient text-snow shadow-glow transition hover:opacity-90"
-            >
-              <Plus className="h-4 w-4" />
-            </Link>
-          </div>
-        </SideCard>
-      )}
-
-      {isMe &&
-        (user.isPremium ? (
-          <SideCard title="Órbita Premium">
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400/30 to-orbit-purple/20 text-amber-300">
-                <Crown className="h-6 w-6" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-white">Premium ativo</p>
-                <p className="text-xs text-white/50">Perfil personalizado e vantagens.</p>
-              </div>
-            </div>
-            <Link
-              href="/configuracoes"
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-space-bg/40 py-2 text-xs font-medium text-white/80 transition hover:bg-white/5 hover:text-white"
-            >
-              Gerenciar assinatura
-            </Link>
-          </SideCard>
-        ) : (
-          <SideCard title="Órbita Premium">
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400/25 to-orbit-purple/15 text-amber-300">
-                <Crown className="h-6 w-6" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-white">Seja Premium</p>
-                <p className="text-xs text-white/50">Personalize seu perfil e desbloqueie vantagens.</p>
-              </div>
-            </div>
-            <Link
-              href="/loja"
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-orbit-purple py-2 text-xs font-semibold text-space-bg shadow-glow transition hover:opacity-90"
-            >
-              <Crown className="h-3.5 w-3.5" /> Conhecer o Premium
-            </Link>
-          </SideCard>
-        ))}
-    </>
+  const compact = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
+  const seeAll = (tab: string, label = "Ver todas") => (
+    <a href={`#tab-${tab}`} className="text-xs font-medium text-orbit-blue hover:underline">
+      {label}
+    </a>
   );
 
-  const restAside = (
-    <>
-      {isMe && <MyRpgsCard username={user.username} />}
+  // Administradas primeiro, depois as que a pessoa só participa.
+  const isStaff = (role: string) => role === "owner" || role === "admin" || role === "moderator";
+  const sortedCommunities = [...communities].sort((a, b) => Number(isStaff(b.role)) - Number(isStaff(a.role)));
+  const hiddenSet = new Set(hiddenCommunityIds);
 
-      {isMe && (
-        <SideCard title="Seu tema atual">
-          <div className="flex items-center gap-3">
-            {accent ? (
-              <span
-                className="h-12 w-12 shrink-0 rounded-xl border border-pa/60 shadow-[0_0_16px_rgb(var(--pa)/0.45)]"
-                style={{ backgroundColor: profileColorHex(user.profileColor) }}
-              />
-            ) : (
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl border border-orbit-purple/40 bg-gradient-to-br from-orbit-blue/25 to-orbit-purple/25">
-                <Gem className="h-6 w-6 text-orbit-cyan" />
-              </span>
-            )}
-            <div>
-              <p className="text-sm font-medium text-white">{accent ? "Órbita X" : "Padrão Órbita X"}</p>
-              <p className="text-xs text-white/50">Cor: {profileColorLabel(user.profileColor)}</p>
-            </div>
-          </div>
-          <Link
-            href="/configuracoes/personalizar"
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-space-bg/40 py-2 text-xs font-medium text-white/80 transition hover:bg-white/5 hover:text-white"
-          >
-            <Palette className="h-3.5 w-3.5" /> Personalizar perfil
-          </Link>
-        </SideCard>
-      )}
-      {isMe && (
-        <SideCard title="Moldura do avatar">
-          <Link
-            href="/configuracoes/personalizar"
-            className="flex items-center gap-3 rounded-xl border border-white/10 bg-space-bg/40 p-3 transition hover:border-orbit-purple/50"
-          >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center">
-              {frame ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={frameSrc(frame.id)} alt="" className="h-full w-full object-contain" />
-              ) : (
-                <span className="h-11 w-11 rounded-full border-2 border-orbit-blue/70 shadow-[0_0_14px_rgba(43,108,255,0.45)]" />
-              )}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-white">{frame ? frame.name : "Nenhuma moldura"}</p>
-              <p className="text-xs text-white/50">{frame ? "Toque para trocar a moldura" : "Escolha uma moldura para o seu avatar"}</p>
-            </div>
-            <ChevronRight className="h-4 w-4 text-white/40" />
-          </Link>
-        </SideCard>
-      )}
-      <SideCard title="Conquistas">
-        <AchievementsCard achievements={achievements} isMe={isMe} name={user.name} />
-      </SideCard>
-      {(music || isMe) && (
-        <SideCard title="Música do perfil">
-          <ProfileMusic music={music} isMe={isMe} userId={user.id} />
-        </SideCard>
-      )}
-      {aboutList && (
+  const allMedia = feed.flatMap((p) => p.media);
+  const photos = allMedia.filter((m) => m.type === "image");
+  const videos = allMedia.filter((m) => m.type === "video");
+  const audioPosts = feed.filter((p) => p.media.some((m) => m.type === "audio"));
+
+  // ---------- Coluna lateral: só informação complementar, em blocos pequenos ----------
+  const aboutFilled = visibleAbout.filter((r) => r.text);
+  const aside = (
+    <>
+      {(aboutFilled.length > 0 || isMe) && (
         <SideCard
-          title="Sobre mim"
+          title="Sobre"
           action={
-            isMe && (
-              <Link href="/configuracoes/conta" className="text-xs text-orbit-blue hover:underline">
+            isMe ? (
+              <Link href="/configuracoes/conta" className="text-xs font-medium text-orbit-blue hover:underline">
                 Editar
               </Link>
+            ) : (
+              seeAll("sobre", "Ver mais")
             )
           }
         >
-          {aboutList}
+          {aboutFilled.length ? (
+            <div className="space-y-2 text-[13px]">
+              {aboutFilled.slice(0, 5).map(({ icon: Icon, text, prompt }) => (
+                <p key={prompt} className="flex items-start gap-2.5 text-white/75">
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
+                  <span className="min-w-0 break-words">{text}</span>
+                </p>
+              ))}
+            </div>
+          ) : (
+            <Link href="/configuracoes/conta" className="text-[13px] text-white/45 hover:text-white/75">
+              Adicione cidade, interesses e um link.
+            </Link>
+          )}
+        </SideCard>
+      )}
+
+      {sortedCommunities.length > 0 && (
+        <SideCard title="Comunidades" count={sortedCommunities.length} action={seeAll("comunidades")}>
+          <ul className="space-y-1">
+            {sortedCommunities.slice(0, 4).map((c) => (
+              <li key={c.id}>
+                <Link href={`/comunidades/${c.slug}`} className="-mx-1.5 flex items-center gap-2.5 rounded-xl px-1.5 py-1.5 transition hover:bg-white/5">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-space-card">
+                    {c.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={c.avatarUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <OrbitIcon className="h-5 w-7" />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[13px] font-medium text-white">{c.name}</span>
+                    <span className="block text-[11px] text-white/45">
+                      {(ROLE_LABEL[c.role] ?? ROLE_LABEL.member).label}
+                      {isMe && hiddenSet.has(c.id) && " · oculta"}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </SideCard>
+      )}
+
+      {friends.length > 0 && (
+        <SideCard title="Amigos" count={stats.friends} action={seeAll("amigos", "Ver todos")}>
+          <div className="grid grid-cols-4 gap-x-2 gap-y-3">
+            {friends.slice(0, 8).map((f) => (
+              <Link key={f.id} href={`/perfil/${f.username}`} className="group flex min-w-0 flex-col items-center gap-1 text-center">
+                <span className="relative">
+                  <span className="flex h-12 w-12 items-end justify-center overflow-hidden rounded-full bg-space-card ring-1 ring-white/10 transition group-hover:ring-pa/60">
+                    {f.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={f.avatarUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <Silhouette className="h-[78%] w-[78%] text-orbit-blue/55" />
+                    )}
+                  </span>
+                  <PresenceDot value={f.presence} userId={f.id} className="absolute bottom-0 right-0 h-3 w-3 border-2 border-space-surface" />
+                </span>
+                <span className="max-w-full truncate text-[11px] text-white/70">{f.name.split(" ")[0]}</span>
+              </Link>
+            ))}
+          </div>
+        </SideCard>
+      )}
+
+      {photos.length > 0 && (
+        <SideCard title="Fotos" count={photos.length} action={seeAll("fotos")}>
+          <div className="grid grid-cols-3 gap-1.5">
+            {photos.slice(0, 6).map((m) => (
+              <a key={m.id} href={m.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={m.url} alt="" className="aspect-square w-full object-cover transition hover:scale-105" />
+              </a>
+            ))}
+          </div>
         </SideCard>
       )}
     </>
   );
 
-  // Coluna direita (tablet/desktop): status + demais módulos.
-  const aside = (
-    <>
-      {statusAside}
-      {restAside}
-    </>
-  );
-
-  const communitiesList = communities.length ? (
-    <div className="space-y-2">
-      {communities.map((c) => {
-        const role = ROLE_LABEL[c.role] ?? ROLE_LABEL.member;
-        const RoleIcon = role.icon;
-        return (
-          <Link
-            key={c.id}
-            href={`/comunidades/${c.slug}`}
-            className="flex items-center gap-3 rounded-2xl border border-white/10 bg-space-surface/80 p-3 transition hover:border-pa/50"
-          >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-space-card">
-              {c.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={c.avatarUrl} alt="" className="h-full w-full object-cover" />
-              ) : (
-                <OrbitIcon className="h-6 w-8" />
-              )}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-white">{c.name}</p>
-              {roleBadges[c.id]?.length ? (
-                <span className="mt-1 flex flex-wrap gap-1">
-                  {roleBadges[c.id].map((b, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
-                      style={{ color: b.color, borderColor: `${b.color}55`, background: `${b.color}1a` }}
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full" style={{ background: b.color }} /> {b.name}
-                    </span>
-                  ))}
+  // ---------- Conteúdo das abas ----------
+  const communityRow = (c: ProfileCommunity) => {
+    const role = ROLE_LABEL[c.role] ?? ROLE_LABEL.member;
+    const RoleIcon = role.icon;
+    return (
+      <Link
+        key={c.id}
+        href={`/comunidades/${c.slug}`}
+        className="flex items-center gap-3 rounded-2xl border border-white/10 bg-space-surface/80 p-3 transition hover:border-pa/50"
+      >
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-space-card">
+          {c.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={c.avatarUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <OrbitIcon className="h-6 w-8" />
+          )}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-2 truncate text-sm font-medium text-white">
+            <span className="truncate">{c.name}</span>
+            {isMe && hiddenSet.has(c.id) && (
+              <span className="shrink-0 rounded-full border border-white/15 px-1.5 py-0.5 text-[10px] font-normal text-white/50">Oculta no perfil</span>
+            )}
+          </p>
+          {roleBadges[c.id]?.length ? (
+            <span className="mt-1 flex flex-wrap gap-1">
+              {roleBadges[c.id].map((b, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                  style={{ color: b.color, borderColor: `${b.color}55`, background: `${b.color}1a` }}
+                >
+                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: b.color }} /> {b.name}
                 </span>
-              ) : (
-                <p className={`flex items-center gap-1 text-xs ${role.className}`}>
-                  <RoleIcon className="h-3.5 w-3.5" /> {role.label}
-                </p>
-              )}
-            </div>
-            <ChevronRight className="h-4 w-4 shrink-0 self-center text-white/40" />
-          </Link>
-        );
-      })}
-    </div>
-  ) : undefined;
+              ))}
+            </span>
+          ) : (
+            <p className={`flex items-center gap-1 text-xs ${role.className}`}>
+              <RoleIcon className="h-3.5 w-3.5" /> {role.label}
+            </p>
+          )}
+        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 self-center text-white/40" />
+      </Link>
+    );
+  };
 
-  const media = feed.flatMap((p) => p.media.filter((m) => m.type === "image" || m.type === "video"));
+  const staffCommunities = sortedCommunities.filter((c) => isStaff(c.role));
+  const memberCommunities = sortedCommunities.filter((c) => !isStaff(c.role));
+  const communitiesTab =
+    sortedCommunities.length || isMe ? (
+      <div className="space-y-4">
+        {isMe && (
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-space-surface/60 px-4 py-3 text-xs text-white/55">
+            <span>Você escolhe quais comunidades aparecem para quem visita seu perfil.</span>
+            <Link href="/configuracoes/comunidades" className="shrink-0 font-medium text-orbit-blue hover:underline">
+              Gerenciar
+            </Link>
+          </div>
+        )}
+        {isMe && <MyRpgsCard username={user.username} />}
+        {staffCommunities.length > 0 && (
+          <section>
+            <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-white/45">Administra</h3>
+            <div className="space-y-2">{staffCommunities.map(communityRow)}</div>
+          </section>
+        )}
+        {memberCommunities.length > 0 && (
+          <section>
+            <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-white/45">Participa</h3>
+            <div className="space-y-2">{memberCommunities.map(communityRow)}</div>
+          </section>
+        )}
+        {sortedCommunities.length === 0 && (
+          <div className="rounded-2xl border border-white/10 bg-space-surface/80 p-10 text-center text-sm text-white/50">
+            Você ainda não participa de comunidades.{" "}
+            <Link href="/comunidades" className="text-orbit-cyan hover:underline">
+              Explorar
+            </Link>
+          </div>
+        )}
+      </div>
+    ) : undefined;
 
-  const mediaGrid = media.length ? (
+  const photosTab = photos.length ? (
     <div className="grid grid-cols-3 gap-1.5 md:gap-2">
-      {media.map((m) =>
-        m.type === "image" ? (
-          <a key={m.id} href={m.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={m.url} alt="" className="aspect-square w-full object-cover transition hover:scale-105" />
-          </a>
-        ) : (
-          // eslint-disable-next-line jsx-a11y/media-has-caption
-          <video key={m.id} src={m.url} controls preload="metadata" className="aspect-square w-full rounded-xl bg-black object-cover" />
-        )
-      )}
+      {photos.map((m) => (
+        <a key={m.id} href={m.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={m.url} alt="" className="aspect-square w-full object-cover transition hover:scale-105" />
+        </a>
+      ))}
     </div>
   ) : undefined;
+
+  const videosTab = videos.length ? (
+    <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3 md:gap-2">
+      {videos.map((m) => (
+        // eslint-disable-next-line jsx-a11y/media-has-caption
+        <video key={m.id} src={m.url} controls preload="metadata" className="aspect-[9/12] w-full rounded-xl bg-black object-cover" />
+      ))}
+    </div>
+  ) : undefined;
+
+  const musicTab =
+    music || isMe || audioPosts.length ? (
+      <div className="space-y-3 md:space-y-4">
+        {(music || isMe) && (
+          <section className="rounded-2xl border border-white/10 bg-space-surface/80 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-white">Música do perfil</h3>
+            <ProfileMusic music={music} isMe={isMe} userId={user.id} />
+          </section>
+        )}
+        {audioPosts.map((post) => (
+          <PostCard key={post.id} post={post} currentUserId={current?.authId ?? ""} pinned={post.id === pinnedPostId} canPin={isMe} />
+        ))}
+      </div>
+    ) : undefined;
 
   const friendsList = friends.length ? (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
@@ -829,115 +832,141 @@ export function ProfileView({
     </div>
   ) : undefined;
 
+  const archiveBanner = showArchive ? (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-orbit-purple/30 bg-orbit-purple/[0.06] px-4 py-3">
+      <p className="flex items-center gap-2 text-sm text-white/80">
+        <Archive className="h-4 w-4 text-orbit-purple" /> Publicações arquivadas · só você vê
+      </p>
+      <Link href={`/perfil/${user.username}`} className="shrink-0 text-xs font-medium text-orbit-blue hover:underline">
+        Voltar ao perfil
+      </Link>
+    </div>
+  ) : null;
+
+  const statItems: { value: number; label: string; tab?: string }[] = [
+    { value: stats.friends, label: "amigos", tab: "amigos" },
+    { value: stats.followers, label: "seguidores" },
+    { value: stats.following, label: "seguindo" },
+    { value: stats.posts, label: "publicações", tab: "posts" },
+    { value: stats.communities, label: "comunidades", tab: "comunidades" },
+  ];
+  const statsRow = (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-white/55">
+      {statItems.map(({ value, label, tab }) => {
+        const content = (
+          <>
+            <span className="font-semibold text-white">{compact.format(value)}</span> {label}
+          </>
+        );
+        return tab ? (
+          <a key={label} href={`#tab-${tab}`} className="transition hover:text-white">
+            {content}
+          </a>
+        ) : (
+          <span key={label}>{content}</span>
+        );
+      })}
+    </div>
+  );
+
+  const ownerActions = (mobile: boolean) => (
+    <>
+      {editButton(mobile ? "h-10 flex-1" : "px-5 py-2.5")}
+      <ShareProfileButton username={user.username} compact={mobile} />
+    </>
+  );
+
   return (
-    <div className="mx-auto flex max-w-[1240px] gap-5 px-3 pt-3 md:px-5 md:py-5" style={profileAccentStyle(user.profileColor)}>
-      <div className="min-w-0 flex-1 space-y-3 md:space-y-4">
+    <div className="mx-auto max-w-[1180px] px-0 pt-0 sm:px-3 sm:pt-3 md:px-5 md:py-5" style={profileAccentStyle(user.profileColor)}>
+      <div className="min-w-0 space-y-3 md:space-y-4">
         <section
-          className={`rounded-2xl border bg-space-surface/80 ${
-            accent ? "border-pa/40 shadow-[0_0_40px_rgb(var(--pa)/0.14)]" : "border-white/10"
+          className={`overflow-hidden border-white/10 bg-space-surface/80 sm:rounded-2xl sm:border ${
+            accent ? "sm:border-pa/40 sm:shadow-[0_0_40px_rgb(var(--pa)/0.12)]" : ""
           }`}
         >
-          <div
-            className={`relative overflow-hidden rounded-t-2xl ${
-              !user.coverUrl && isMe ? "h-36 md:h-48" : "aspect-[8/2]"
-            }`}
-          >
+          {/* Capa compacta (7:2) — não domina o perfil. */}
+          <div className="relative aspect-[7/2] max-h-[230px] w-full overflow-hidden">
             {user.coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={user.coverUrl} alt="" className="h-full w-full object-cover" />
-            ) : isMe ? (
-              <div className={`flex h-full flex-col items-center justify-start border-b border-dashed border-white/15 bg-gradient-to-br ${accent ? "from-pa/20 via-space-card to-pa/5" : "from-orbit-blue/10 via-space-card to-orbit-purple/10"} px-6 pt-6 text-center md:justify-center md:pb-4 md:pt-0`}>
-                <ImagePlus className={`mb-3 h-9 w-9 ${accent ? "text-pa" : "text-orbit-blue/80"}`} />
-                <p className="text-sm font-semibold text-white">Adicione uma capa</p>
-                <p className="mt-1 max-w-xs text-xs text-white/55 md:max-w-none">
-                  A capa é totalmente livre e pode ser qualquer imagem que você quiser.
-                </p>
-              </div>
             ) : (
               <div
-                className={`h-full bg-gradient-to-br ${
-                  accent ? "from-pa/35 via-space-card to-pa/15" : "from-orbit-blue/25 via-space-card to-orbit-purple/25"
+                className={`flex h-full items-center justify-center bg-gradient-to-br ${
+                  accent ? "from-pa/30 via-space-card to-pa/10" : "from-orbit-blue/20 via-space-card to-orbit-purple/20"
                 }`}
-              />
+              >
+                {isMe && (
+                  <p className="flex items-center gap-2 text-xs text-white/50">
+                    <ImagePlus className="h-4 w-4" /> Adicione uma capa
+                  </p>
+                )}
+              </div>
             )}
             {isMe && (
-              <ProfileImageUpload
+              <CoverMenu
                 userId={user.id}
-                field="coverUrl"
-                ariaLabel="Editar capa"
-                className="absolute right-3 top-3 flex items-center gap-2 rounded-full border border-white/15 bg-space-bg/80 p-2 text-xs font-medium text-white backdrop-blur transition hover:bg-space-bg md:right-4 md:top-4 md:rounded-xl md:px-3.5 md:py-2 md:text-sm"
-              >
-                <Camera className="h-4 w-4" /> <span className="hidden md:inline">Editar capa</span>
-              </ProfileImageUpload>
+                coverUrl={user.coverUrl}
+                className="flex items-center gap-2 rounded-full border border-white/15 bg-space-bg/75 p-2 text-xs font-medium text-white backdrop-blur transition hover:bg-space-bg md:rounded-xl md:px-3 md:py-1.5"
+              />
             )}
           </div>
 
-          {/* Personal stories, above the identity so they are the first thing seen. */}
-          {current?.authId && <PersonalStories viewerId={current.authId} highlight={user.id} />}
-
-          {/* Desktop */}
-          <div className="hidden gap-6 px-6 pb-5 md:flex">
-            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} username={user.username} isMe={isMe} online={online} accent={accent} frame={frame} className={`-mt-12 h-32 w-32 ${frame ? "mx-8 mb-8" : ""}`} />
-            <div className="min-w-0 flex-1 pt-4">
+          {/* Desktop: avatar sobrepondo levemente a capa + identidade + ações principais */}
+          <div className="hidden gap-5 px-6 pb-4 md:flex">
+            <ProfileAvatar
+              name={user.name}
+              url={user.avatarUrl}
+              userId={user.id}
+              username={user.username}
+              isMe={isMe}
+              online={online}
+              accent={accent}
+              frame={frame}
+              className={`-mt-14 h-[120px] w-[120px] ${frame ? "mx-6 mb-6" : ""}`}
+            />
+            <div className="min-w-0 flex-1 pt-3">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">{identity}</div>
                 <div className="flex shrink-0 items-center gap-2">
-                  {isMe ? (
-                    <>
-                      {editButton("px-6 py-2.5")}
-                      {customizeButton(false)}
-                      <ShareProfileButton username={user.username} />
-                    </>
-                  ) : (
-                    visitorActions(false)
-                  )}
+                  {isMe ? ownerActions(false) : visitorActions(false)}
                   <ProfileMoreMenu username={user.username} userId={user.id} isMe={isMe} />
                 </div>
               </div>
               {bioAndMeta}
+              <div className="mt-3">{statsRow}</div>
             </div>
           </div>
 
-          {/* Mobile */}
-          <div className="px-4 pb-4 md:hidden">
-            <ProfileAvatar name={user.name} url={user.avatarUrl} userId={user.id} username={user.username} isMe={isMe} online={online} accent={accent} frame={frame} className={`-mt-10 h-24 w-24 ${frame ? "mb-6 ml-5" : ""}`} />
-            <div className="mt-3">{identity}</div>
+          {/* Mobile: layout próprio, não uma versão encolhida do desktop */}
+          <div className="px-4 pb-3 md:hidden">
+            <div className="flex items-end justify-between gap-3">
+              <ProfileAvatar
+                name={user.name}
+                url={user.avatarUrl}
+                userId={user.id}
+                username={user.username}
+                isMe={isMe}
+                online={online}
+                accent={accent}
+                frame={frame}
+                className={`-mt-10 h-[88px] w-[88px] ${frame ? "mb-5 ml-4" : ""}`}
+              />
+            </div>
+            <div className="mt-2.5">{identity}</div>
             {bioAndMeta}
-            <div className="mt-4 flex items-center gap-2">
-              {isMe ? (
-                <>
-                  {editButton("h-11 flex-1")}
-                  {customizeButton(true)}
-                  <ShareProfileButton username={user.username} compact />
-                </>
-              ) : (
-                visitorActions(true)
-              )}
+            <div className="mt-3">{statsRow}</div>
+            <div className="mt-3.5 flex items-center gap-2">
+              {isMe ? ownerActions(true) : visitorActions(true)}
               <ProfileMoreMenu username={user.username} userId={user.id} isMe={isMe} compact />
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-1.5 px-3 pb-3 md:gap-2.5 md:px-5 md:pb-5">
-            <StatBox value={stats.followers} label="Seguidores" />
-            <StatBox value={stats.following} label="Seguindo" />
-            <StatBox value={stats.posts} label="Publicações" />
-            <StatBox value={stats.communities} label="Comunidades" />
-          </div>
+          {current?.authId && <ProfileMoments viewerId={current.authId} userId={user.id} isMe={isMe} />}
         </section>
-
-        {/* Nível + Diamantes + Premium no topo do mobile (como a referência). */}
-        <div className="md:hidden">
-          <ProfileStatus
-            level={level}
-            coins={coins ?? null}
-            isPremium={!!user.isPremium}
-            isMe={isMe}
-            stats={{ posts: stats.posts, followers: stats.followers, friends: stats.friends, communities: stats.communities }}
-          />
-        </div>
 
         {friendRequestsCard}
         {onboarding}
+        {archiveBanner}
 
         <ProfileTabs
           accent={accent}
@@ -945,7 +974,7 @@ export function ProfileView({
           slots={{
             posts: (
               <div className="space-y-3 md:space-y-4">
-                {isMe && current && (
+                {isMe && current && !showArchive && (
                   <PostComposer
                     userId={current.authId}
                     name={current.profile.name}
@@ -953,16 +982,24 @@ export function ProfileView({
                     variant="profile"
                   />
                 )}
-                {feedList}
+                {showArchive && feed.length === 0 ? (
+                  <div className="rounded-2xl border border-white/10 bg-space-surface/80 p-10 text-center text-sm text-white/50">
+                    Nenhuma publicação arquivada.
+                  </div>
+                ) : (
+                  feedList
+                )}
               </div>
             ),
-            midia: mediaGrid,
             sobre: aboutList ? (
               <div className="rounded-2xl border border-white/10 bg-space-surface/80 p-5">{aboutList}</div>
             ) : undefined,
+            fotos: photosTab,
+            videos: videosTab,
+            musica: musicTab,
+            comunidades: communitiesTab,
             amigos: friendsList,
             familia: <ProfileFamily isMe={isMe} family={family} requests={familyRequests} />,
-            comunidades: communitiesList,
             conquistas: <AchievementsGrid achievements={achievements} isMe={isMe} name={user.name} />,
             depoimentos: (
               <ProfileTestimonials
@@ -977,12 +1014,7 @@ export function ProfileView({
             ),
           }}
         />
-
-        {/* Módulos secundários empilhados só no celular (status já aparece no topo). */}
-        <div className="space-y-3 md:hidden">{restAside}</div>
       </div>
-
-      <ProfileRightRail />
     </div>
   );
 }

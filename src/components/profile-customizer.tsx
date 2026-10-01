@@ -144,7 +144,7 @@ function Preview({ color, frameId, props }: { color: string; frameId: string | n
 
   return (
     <div style={style} className={clsx("overflow-hidden rounded-2xl border bg-space-surface", accent ? "border-pa/50 shadow-[0_0_36px_rgb(var(--pa)/0.18)]" : "border-white/10")}>
-      <div className="relative aspect-[8/3]">
+      <div className="relative aspect-[7/2]">
         {props.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={props.coverUrl} alt="" className="h-full w-full object-cover" />

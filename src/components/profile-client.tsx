@@ -10,7 +10,7 @@ import { PresenceDot } from "@/components/presence-picker";
 import { disablePush } from "@/lib/push-client";
 import { endPresenceForSignOut } from "@/components/presence-heartbeat";
 import { saveCover } from "@/lib/cover-upload";
-import { CoverCropDialog } from "@/components/cover-crop-dialog";
+import { COVER_RECOMMENDED, CoverCropDialog } from "@/components/cover-crop-dialog";
 import { saveAvatar } from "@/lib/avatar-upload";
 import { AvatarEditor } from "@/components/avatar-editor";
 import { verifyUpload } from "@/lib/upload-guard";
@@ -18,7 +18,11 @@ import {
   Archive,
   BarChart3,
   Camera,
+  Gem,
   Image as ImageIcon,
+  ImagePlus,
+  Move,
+  Trash2,
   Link2,
   Loader2,
   Lock,
@@ -33,6 +37,7 @@ import {
   Settings,
   Share2,
   ShieldCheck,
+  Star,
   UserPlus,
   UsersRound,
 } from "lucide-react";
@@ -168,6 +173,11 @@ export function ProfileMoreMenu({
           >
             <Link2 className="h-4 w-4" /> {copied ? "Link copiado" : "Copiar link"}
           </button>
+          {!isMe && (
+            <span title="Em breve" className={soon}>
+              <Star className="h-4 w-4" /> Adicionar aos favoritos
+            </span>
+          )}
           {isMe && (
             <>
               {divider}
@@ -177,9 +187,12 @@ export function ProfileMoreMenu({
               <span title="Em breve" className={soon}>
                 <Search className="h-4 w-4" /> Pesquisar publicações
               </span>
-              <span title="Em breve" className={soon}>
-                <Archive className="h-4 w-4" /> Arquivo
-              </span>
+              <Link href={`/perfil/${username}?arquivo=1`} className={item}>
+                <Archive className="h-4 w-4" /> Publicações arquivadas
+              </Link>
+              <Link href="/diamantes" className={item}>
+                <Gem className="h-4 w-4" /> Carteira de Diamantes
+              </Link>
               {divider}
               <Link href="/configuracoes" className={item}>
                 <Settings className="h-4 w-4" /> Configurações
@@ -501,6 +514,115 @@ export function ProfileImageUpload({
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={onPick} />
       {coverFile && <CoverCropDialog file={coverFile} onCancel={() => setCoverFile(null)} onConfirm={applyCover} />}
       {avatarFile && <AvatarEditor file={avatarFile} onCancel={() => setAvatarFile(null)} onConfirm={applyAvatar} />}
+      {error && (
+        <button
+          type="button"
+          role="alert"
+          onClick={() => setError(null)}
+          className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-red-500/95 px-4 py-2.5 text-sm font-medium text-white shadow-2xl md:bottom-6"
+        >
+          {error}
+        </button>
+      )}
+    </>
+  );
+}
+
+/**
+ * Botão discreto da capa no próprio perfil: trocar, reposicionar (reabre o editor com a capa
+ * atual) e remover, sempre mostrando a medida recomendada para quem vai preparar a imagem.
+ */
+export function CoverMenu({ userId, coverUrl, className }: { userId: string; coverUrl: string | null; className: string }) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = e.target.files?.[0];
+    e.target.value = "";
+    if (!picked) return;
+    if (!picked.type.startsWith("image/")) return setError("Escolha um arquivo de imagem.");
+    if (picked.size > 20 * 1024 * 1024) return setError("A imagem precisa ter no máximo 20 MB.");
+    try {
+      await verifyUpload(picked, ["image"], picked.name);
+    } catch (err) {
+      return setError(err instanceof Error ? err.message : "Imagem inválida.");
+    }
+    setError(null);
+    setFile(picked);
+  }
+
+  async function reposition() {
+    if (!coverUrl) return;
+    setOpen(false);
+    setBusy(true);
+    try {
+      const res = await fetch(coverUrl);
+      const blob = await res.blob();
+      setFile(new File([blob], "capa", { type: blob.type || "image/jpeg" }));
+    } catch {
+      setError("Não foi possível abrir a capa atual. Envie a imagem novamente.");
+    }
+    setBusy(false);
+  }
+
+  async function remove() {
+    setOpen(false);
+    setBusy(true);
+    const { error: err } = await createClient().from("User").update({ coverUrl: null }).eq("id", userId);
+    setBusy(false);
+    if (err) setError("Não foi possível remover a capa.");
+    else router.refresh();
+  }
+
+  const item = "flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-white/85 hover:bg-white/5";
+
+  return (
+    <>
+      <div className="absolute right-3 top-3 z-20 md:right-4 md:top-4">
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-label="Editar capa" aria-expanded={open} className={className}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+          <span className="hidden md:inline">Editar capa</span>
+        </button>
+        {open && (
+          <>
+            <button type="button" aria-hidden tabIndex={-1} className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
+            <div className="absolute right-0 top-11 z-20 w-60 overflow-hidden rounded-xl border border-white/10 bg-space-surface py-1 shadow-2xl">
+              <button type="button" className={item} onClick={() => { setOpen(false); inputRef.current?.click(); }}>
+                <ImagePlus className="h-4 w-4" /> {coverUrl ? "Trocar capa" : "Adicionar capa"}
+              </button>
+              {coverUrl && (
+                <>
+                  <button type="button" className={item} onClick={reposition}>
+                    <Move className="h-4 w-4" /> Reposicionar
+                  </button>
+                  <button type="button" className={clsx(item, "text-red-400 hover:bg-red-500/5")} onClick={remove}>
+                    <Trash2 className="h-4 w-4" /> Remover capa
+                  </button>
+                </>
+              )}
+              <p className="border-t border-white/10 px-4 py-2 text-[11px] leading-snug text-white/45">
+                Recomendado: {COVER_RECOMMENDED.w} × {COVER_RECOMMENDED.h} px (7:2)
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+      <input ref={inputRef} type="file" accept="image/*" hidden onChange={onPick} />
+      {file && (
+        <CoverCropDialog
+          file={file}
+          onCancel={() => setFile(null)}
+          onConfirm={async (blob) => {
+            await saveCover(userId, blob);
+            setFile(null);
+            router.refresh();
+          }}
+        />
+      )}
       {error && (
         <button
           type="button"
