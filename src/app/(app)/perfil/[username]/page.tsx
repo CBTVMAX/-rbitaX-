@@ -131,7 +131,7 @@ export default async function ProfilePage(props: {
   });
 
   const postSelect =
-    "id, content, createdAt, editedAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, position), sharedPostId, visibility, isArchived, publishAt" as const;
+    "id, content, createdAt, editedAt, kind, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, position), sharedPostId, visibility, isArchived" as const;
 
   // "Publicações arquivadas" (menu Mais): só o dono vê, e o perfil mostra apenas o arquivo.
   const showArchive = !!current && current.authId === user.id && search.arquivo === "1";
@@ -190,7 +190,6 @@ export default async function ProfilePage(props: {
     commentCount: commentCountByPost.get(p.id) ?? 0,
     likedByMe: likedSet.has(p.id),
     visibility: p.visibility,
-    publishAt: p.publishAt,
     isArchived: p.isArchived,
     ...(p.sharedPostId ? { shared: shared.get(p.sharedPostId) ?? null } : {}),
   }));

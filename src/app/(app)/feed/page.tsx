@@ -14,7 +14,7 @@ import { ChevronDown, Check } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 const POST_SELECT =
-  "id, content, createdAt, editedAt, kind, location, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, position), sharedPostId, visibility, publishAt" as const;
+  "id, content, createdAt, editedAt, kind, location, author:User!Post_authorId_fkey(id, name, username, avatarUrl, isVerified), media:Media(id, type, url, position), sharedPostId, visibility" as const;
 
 const KIND_OF: Record<Exclude<FeedType, "todos">, string> = { fotos: "image", videos: "video", texto: "text", musica: "music" };
 
@@ -91,7 +91,6 @@ export default async function FeedPage(props: { searchParams: Promise<{ aba?: st
     commentCount: commentCountByPost.get(p.id) ?? 0,
     likedByMe: likedSet.has(p.id),
     visibility: p.visibility,
-    publishAt: p.publishAt,
     ...(p.sharedPostId ? { shared: shared.get(p.sharedPostId) ?? null } : {}),
   }));
 

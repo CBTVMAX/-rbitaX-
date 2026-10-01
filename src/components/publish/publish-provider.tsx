@@ -190,6 +190,9 @@ export function PublishProvider({ me, children }: { me: Me; children: React.Reac
 }
 
 const MAX_FILES = 10;
+// "Quando publicar" depende da coluna Post.publishAt (migração 20261001020000_post_scheduling).
+// Fica desligado até a migração ser aplicada no banco.
+const SCHEDULING_ENABLED = false;
 const kindOf = (f: { type: string }): Item["kind"] => (f.type.startsWith("video") ? "video" : f.type.startsWith("audio") ? "audio" : "image");
 
 function PostEditor({
@@ -433,7 +436,8 @@ function PostEditor({
               {row(<MapPin className="h-6 w-6" />, "Local", location || null, () => setPanel("location"))}
               {row(<Music2 className="h-6 w-6" />, "Música", audio.length ? audio.map((a) => a.file.name).join(", ") : null, () => audioInput.current?.click())}
               <div className="mx-5 border-t border-white/10" />
-              {row(<CalendarClock className="h-6 w-6" />, "Quando publicar", publishAt ? scheduleLabel(publishAt) : "Agora", () => setScheduleOpen(true))}
+              {SCHEDULING_ENABLED &&
+                row(<CalendarClock className="h-6 w-6" />, "Quando publicar", publishAt ? scheduleLabel(publishAt) : "Agora", () => setScheduleOpen(true))}
               {row(<vis.icon className="h-6 w-6" />, "Quem verá este post", vis.label, () => setPanel("visibility"))}
               {visual.length > 0 && (
                 <>
