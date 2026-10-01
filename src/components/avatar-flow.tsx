@@ -97,13 +97,14 @@ export function AvatarFlow({
 
   async function publish() {
     if (!file) return setError("Algo deu errado. Tente selecionar a foto novamente.");
+    if (!cropped) return setError("Edite a foto antes de publicar.");
     if (!asProfile && !asStory) return setError("Escolha onde publicar a foto.");
     setBusy(true);
     setError(null);
     const supabase = createClient();
     try {
-      // Upload the original file (the crop/rotate info is stored in ratio metadata)
-      const mediaUrl = await uploadAvatarFile(supabase, userId, file, ratio);
+      // Upload the cropped file (the crop/rotate info is stored in ratio metadata)
+      const mediaUrl = await uploadAvatarFile(supabase, userId, cropped, ratio);
       if (asProfile) {
         await saveAvatarUrl(supabase, userId, mediaUrl);
       }
