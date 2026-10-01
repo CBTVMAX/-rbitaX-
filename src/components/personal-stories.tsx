@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Loader2, Plus, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { verifyUpload } from "@/lib/upload-guard";
-import { deletePersonalStory, groupPersonalStories, loadPersonalStories, markStorySeen, type PersonalStory } from "@/lib/personal-stories";
+import { deletePersonalStory, groupPersonalStories, loadMyArchivedStories, loadPersonalStories, markStorySeen, saveStoryToProfile, type PersonalStory } from "@/lib/personal-stories";
 import { avatarAspect } from "@/lib/avatar-aspect";
 import { clsx } from "clsx";
 
@@ -116,6 +116,20 @@ export function PersonalStoryViewer({
     return () => cancelAnimationFrame(raf);
   }, [story?.id, paused, busy, next]);
 
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  async function onSave() {
+    if (!story || savedIds.has(story.id)) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await saveStoryToProfile(story, viewerId);
+      setSavedIds((prev) => new Set(prev).add(story.id));
+    } catch (err) {
+      setError(err instanceof Error && err.message ? err.message : "Não foi possível salvar no perfil.");
+    }
+    setBusy(false);
+  }
+
   async function onDelete() {
     if (!story) return;
     setBusy(true);
@@ -195,12 +209,23 @@ export function PersonalStoryViewer({
             </span>
           )}
           <span className="text-sm font-semibold text-white drop-shadow">{story.user.name}</span>
+          {mine && story.mediaUrl && (
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={busy || savedIds.has(story.id)}
+              title="Guardar como publicação permanente no seu perfil"
+              className="ml-auto rounded-full bg-black/40 px-3 py-1 text-xs font-medium text-snow/90 hover:bg-black/60 disabled:opacity-70"
+            >
+              {savedIds.has(story.id) ? "Salvo no perfil ✓" : "Salvar no perfil"}
+            </button>
+          )}
           {mine && (
             <button
               type="button"
               onClick={onDelete}
               disabled={busy}
-              className="ml-auto rounded-full bg-black/40 px-3 py-1 text-xs font-medium text-white/90 hover:bg-black/60 disabled:opacity-60"
+              className={clsx("rounded-full bg-black/40 px-3 py-1 text-xs font-medium text-snow/90 hover:bg-black/60 disabled:opacity-60", !story.mediaUrl && "ml-auto")}
             >
               {busy ? <Loader2 className="mx-auto h-3.5 w-3.5 animate-spin" /> : "Excluir"}
             </button>
@@ -315,6 +340,8 @@ export function ProfileMoments({
   frameClassName?: string;
 }) {
   const [stories, setStories] = useState<PersonalStory[] | null>(null);
+  const [archive, setArchive] = useState<PersonalStory[]>([]);
+  const [archiveStart, setArchiveStart] = useState<number | null>(null);
   const [start, setStart] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -329,6 +356,10 @@ export function ProfileMoments({
   useEffect(() => {
     reload();
   }, [reload]);
+
+  useEffect(() => {
+    if (variant === "grid" && isMe) loadMyArchivedStories(userId).then(setArchive).catch(() => {});
+  }, [variant, isMe, userId]);
 
   async function create(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -373,6 +404,9 @@ export function ProfileMoments({
   const fileInput = <input ref={inputRef} type="file" accept="image/*,video/*" hidden onChange={create} />;
 
   if (variant === "grid") {
+    const archiveGroup: PersonalGroup | null = archive.length
+      ? { key: `${userId}-arquivo`, name: archive[0].user.name, avatarUrl: archive[0].user.avatarUrl, stories: archive, seen: true }
+      : null;
     return (
       <>
         {stories.length === 0 && !isMe ? (
@@ -409,6 +443,32 @@ export function ProfileMoments({
               </button>
             ))}
           </div>
+        )}
+        {isMe && archive.length > 0 && (
+          <section className="mt-6">
+            <h3 className="text-sm font-semibold text-white">
+              Arquivo de histórias <span className="font-normal text-white/45">· só você vê</span>
+            </h3>
+            <p className="mt-0.5 text-xs text-white/45">Histórias que já saíram do ar. Abra uma e toque em “Salvar no perfil” para mantê-la como publicação.</p>
+            <div className="mt-3 grid grid-cols-4 gap-1.5 md:grid-cols-6">
+              {archive.map((s, i) => (
+                <button key={s.id} type="button" onClick={() => setArchiveStart(i)} aria-label={`Ver história arquivada ${i + 1}`} className="relative aspect-[9/14] overflow-hidden rounded-lg bg-space-card opacity-90 transition hover:opacity-100">
+                  {s.type === "video" ? (
+                    <video src={s.mediaUrl ?? undefined} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={s.mediaUrl ?? ""} alt="" className="h-full w-full object-cover" />
+                  )}
+                  <span className="absolute bottom-1 left-1 rounded bg-black/55 px-1 text-[9px] text-snow">
+                    {new Date(s.createdAt).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+        {archiveGroup && archiveStart !== null && (
+          <PersonalStoryViewer groups={[archiveGroup]} start={{ g: 0, i: archiveStart }} viewerId={viewerId} onClose={() => setArchiveStart(null)} onDeleted={() => { setArchiveStart(null); loadMyArchivedStories(userId).then(setArchive).catch(() => {}); }} />
         )}
         {isMe && (
           <p className="mt-3 text-[11px] text-white/40">

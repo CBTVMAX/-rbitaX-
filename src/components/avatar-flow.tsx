@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
@@ -48,8 +48,9 @@ export function AvatarFlow({
   const [cropped, setCropped] = useState<Blob | null>(null);
   const [ratio, setRatio] = useState(1);
   const [asProfile, setAsProfile] = useState(true);
-  const [asStory, setAsStory] = useState(false);
-  const [asPost, setAsPost] = useState(false);
+  // Nova foto de perfil: post e história já vêm marcados (a pessoa desmarca o que não quiser).
+  const [asStory, setAsStory] = useState(true);
+  const [asPost, setAsPost] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -103,7 +104,7 @@ export function AvatarFlow({
   async function publish() {
     if (!file) return setError("Algo deu errado. Tente selecionar a foto novamente.");
     if (!cropped) return setError("Edite a foto antes de publicar.");
-    if (!asProfile && !asStory && !asPost) return setError("Escolha onde publicar a foto.");
+    if (!asProfile && !asStory) return setError("Ative a história para publicar.");
     setBusy(true);
     setError(null);
     const supabase = createClient();
@@ -119,7 +120,7 @@ export function AvatarFlow({
         });
         if (storyError) throw new Error("STORY_FAILED");
       }
-      if (asPost) {
+      if (asPost && asProfile) {
         // Mesma estrutura do composer: um Post de imagem com a foto como Media.
         const postId = crypto.randomUUID();
         const { error: postError } = await supabase.from("Post").insert({
@@ -228,58 +229,97 @@ export function AvatarFlow({
         {step === "edit" && file && <AvatarEditor file={file} onCancel={close} onConfirm={onEditDone} />}
 
         {step === "publish" && (
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-white/10 bg-space-bg/40 p-3">
-              <p className="mb-2 text-xs font-medium text-white/70">Onde publicar?</p>
-              <label className="flex cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 hover:bg-white/5">
-                <input
-                  type="checkbox"
-                  checked={asProfile}
-                  onChange={(e) => setAsProfile(e.target.checked)}
-                  className="h-4 w-4 accent-orbit-purple"
-                />
-                <span className="text-sm font-medium text-white/90">Foto do perfil</span>
-              </label>
-              <label className="flex cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 hover:bg-white/5">
-                <input
-                  type="checkbox"
-                  checked={asStory}
-                  onChange={(e) => setAsStory(e.target.checked)}
-                  className="h-4 w-4 accent-orbit-purple"
-                />
-                <span className="text-sm font-medium text-white/90">História</span>
-                <span className="ml-auto text-[11px] text-white/45">24h</span>
-              </label>
-              <label className="flex cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 hover:bg-white/5">
-                <input
-                  type="checkbox"
-                  checked={asPost}
-                  onChange={(e) => setAsPost(e.target.checked)}
-                  className="h-4 w-4 accent-orbit-purple"
-                />
-                <span className="text-sm font-medium text-white/90">Publicação no perfil</span>
-                <span className="ml-auto text-[11px] text-white/45">Post</span>
-              </label>
-            </div>
-
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button type="button" onClick={close} className="rounded-xl border border-white/15 px-5 py-2.5 text-sm font-medium text-white/80 hover:bg-white/5">
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={publish}
-                disabled={busy}
-                className="flex items-center justify-center gap-2 rounded-xl bg-orbit-gradient px-6 py-2.5 text-sm font-semibold text-snow shadow-glow disabled:opacity-60"
-              >
-                {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-                {busy ? "Publicando..." : "Publicar"}
-              </button>
-            </div>
-          </div>
+          <PublishChoice
+            blob={cropped}
+            storyOnly={!asProfile}
+            asPost={asPost}
+            asStory={asStory}
+            setAsPost={setAsPost}
+            setAsStory={setAsStory}
+            busy={busy}
+            error={error}
+            onBack={close}
+            onContinue={publish}
+          />
         )}
       </div>
     </div>,
     document.body
+  );
+}
+
+/** Tela depois do recorte (estilo app): foto em círculo e as chaves de post/história. */
+function PublishChoice({
+  blob,
+  storyOnly,
+  asPost,
+  asStory,
+  setAsPost,
+  setAsStory,
+  busy,
+  error,
+  onBack,
+  onContinue,
+}: {
+  blob: Blob | null;
+  storyOnly: boolean;
+  asPost: boolean;
+  asStory: boolean;
+  setAsPost: (v: boolean) => void;
+  setAsStory: (v: boolean) => void;
+  busy: boolean;
+  error: string | null;
+  onBack: () => void;
+  onContinue: () => void;
+}) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!blob) return;
+    const u = URL.createObjectURL(blob);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [blob]);
+
+  const toggle = (label: string, hint: string | null, on: boolean, set: (v: boolean) => void) => (
+    <label className="flex cursor-pointer items-center gap-4 py-3">
+      <span className="min-w-0 flex-1">
+        <span className="block text-[17px] text-snow">{label}</span>
+        {hint && <span className="block text-sm text-snow/50">{hint}</span>}
+      </span>
+      <input type="checkbox" checked={on} onChange={(e) => set(e.target.checked)} className="peer sr-only" />
+      <span className="relative h-8 w-14 shrink-0 rounded-full bg-snow/20 transition after:absolute after:left-1 after:top-1 after:h-6 after:w-6 after:rounded-full after:bg-snow after:transition peer-checked:bg-orbit-blue peer-checked:after:translate-x-6 peer-focus-visible:ring-2 peer-focus-visible:ring-orbit-blue/60" />
+    </label>
+  );
+
+  return (
+    <div className="fixed inset-0 z-[60] flex flex-col bg-black px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] text-snow md:items-center md:justify-center md:bg-black/90">
+      <div className="flex w-full max-w-md flex-1 flex-col md:flex-none md:rounded-3xl md:bg-[#0b0e1c] md:p-6">
+        <button type="button" onClick={onBack} aria-label="Cancelar" className="self-start rounded-full p-1.5 text-snow/70 hover:bg-snow/10">
+          <X className="h-6 w-6" />
+        </button>
+        <div className="flex flex-1 flex-col items-center justify-center py-6">
+          <span className="block aspect-square w-[min(68vw,300px)] overflow-hidden rounded-full bg-snow/10">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {url && <img src={url} alt="Nova foto" className="h-full w-full object-cover" />}
+          </span>
+          <p className="mt-6 max-w-xs text-center text-[15px] leading-relaxed text-snow/60">
+            {storyOnly ? "Sua foto vai aparecer nas histórias por 24h." : "Publique o post e a história para os amigos opinarem sobre a nova fotografia"}
+          </p>
+        </div>
+        {error && <p className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>}
+        <div className="mb-4">
+          {!storyOnly && toggle("Publicar post", null, asPost, setAsPost)}
+          {toggle("Publicar história", "Fica 24h nas histórias; curtidas e visualizações aparecem lá", asStory, setAsStory)}
+        </div>
+        <button
+          type="button"
+          onClick={onContinue}
+          disabled={busy || (storyOnly && !asStory)}
+          className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-snow text-[17px] font-semibold text-[#05060f] transition active:scale-[0.99] disabled:opacity-60"
+        >
+          {busy && <Loader2 className="h-5 w-5 animate-spin" />} {busy ? "Publicando..." : "Continuar"}
+        </button>
+      </div>
+    </div>
   );
 }

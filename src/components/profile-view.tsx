@@ -355,7 +355,8 @@ export function ProfileView({
     </>
   );
 
-  const bioAndMeta = (center = false) => (
+  // compact: só a bio (sem a linha de cidade/idade/signo e sem interesses), usado no celular.
+  const bioAndMeta = (center = false, compact = center) => (
     <>
       {user.bio ? (
         <p className={`mt-3 whitespace-pre-line text-[15px] leading-relaxed text-white/85 md:max-w-xl md:text-sm ${center ? "mx-auto text-center" : ""}`}>{user.bio}</p>
@@ -366,10 +367,10 @@ export function ProfileView({
           </Link>
         )
       )}
-      {!center && (age !== null || sign || location || website) && (
+      {!compact && (age !== null || sign || location || website) && (
         <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-white/65">{metaItems}</div>
       )}
-      {!center && (interests.length > 0 || isMe) && (
+      {!compact && (interests.length > 0 || isMe) && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {interests.map((i) => (
             <span key={i} className="rounded-lg border border-pa/40 bg-pa/10 px-3 py-1 text-xs text-white/85">
@@ -1031,8 +1032,9 @@ export function ProfileView({
             </div>
           </div>
 
-          <div className="ox-card relative -mt-7 rounded-t-[28px] bg-space-surface px-4 pb-5 text-center">
-            <div className="flex justify-center">
+          <div className="ox-card relative -mt-7 rounded-t-[28px] bg-space-surface px-4 pb-5">
+            {/* Avatar à esquerda, sobrepondo só o canto da capa (no centro ele cobria a capa). */}
+            <div className="flex justify-start">
               <ProfileAvatar
                 name={user.name}
                 url={user.avatarUrl}
@@ -1042,13 +1044,13 @@ export function ProfileView({
                 online={online}
                 accent={accent}
                 frame={frame}
-                className={`-mt-14 h-[112px] w-[112px] ${frame ? "mb-5" : ""}`}
+                className={`-mt-12 h-[104px] w-[104px] ${frame ? "mb-5 ml-5" : ""}`}
               />
             </div>
-            <div className="mt-3">{identity(true)}</div>
-            {bioAndMeta(true)}
+            <div className="mt-3">{identity()}</div>
+            {bioAndMeta(false, true)}
             {(location || aboutFilled.length > 0) && (
-              <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[13px] text-white/55">
+              <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-white/55">
                 {location && (
                   <span className="flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5" /> {location}
