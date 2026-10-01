@@ -38,6 +38,48 @@ export async function markStorySeen(storyId: string) {
   await supabase.rpc("story_view", { p_moment: storyId });
 }
 
+export const STORY_REACTIONS = ["❤️", "🔥", "😂", "😮", "😢", "👏"] as const;
+
+export type StoryViewer = { userId: string; name: string; username: string; avatarUrl: string | null; emoji: string | null; viewedAt: string };
+
+/** Quem viu (e como reagiu). Só o autor consegue ler — o banco recusa para os outros. */
+export async function loadStoryViewers(storyId: string): Promise<StoryViewer[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("story_viewers", { p_moment: storyId });
+  if (error) throw error;
+  return (data ?? []) as StoryViewer[];
+}
+
+export async function loadMyStoryReaction(storyId: string, userId: string): Promise<string | null> {
+  const supabase = createClient();
+  const { data } = await supabase.from("MomentReaction").select("emoji").eq("momentId", storyId).eq("userId", userId).maybeSingle();
+  return data?.emoji ?? null;
+}
+
+/** Reage (ou tira a reação com `null`). O autor recebe uma notificação. */
+export async function reactToStory(storyId: string, emoji: string | null) {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("story_react", { p_moment: storyId, p_emoji: emoji as string });
+  if (error) throw error;
+}
+
+/** Responde em mensagem direta, com a miniatura da história junto (como no Messenger das comunidades). */
+export async function replyToStory(story: PersonalStory, senderId: string, text: string) {
+  const supabase = createClient();
+  const conv = await supabase.rpc("get_or_create_dm", { other_user_id: story.userId });
+  if (conv.error || !conv.data) throw new Error("Você só pode responder histórias de amigos. Envie um pedido de amizade primeiro.");
+  const preview = story.text?.slice(0, 80) || (story.type === "video" ? "Vídeo" : story.type === "text" ? "Texto" : "Foto");
+  const { error } = await supabase.from("Message").insert({
+    id: crypto.randomUUID(),
+    conversationId: conv.data as string,
+    senderId,
+    content: text,
+    type: "text",
+    meta: { storyReply: { id: story.id, preview, thumb: story.type === "image" ? story.mediaUrl : null } },
+  });
+  if (error) throw new Error("Não foi possível enviar a resposta.");
+}
+
 export async function deletePersonalStory(storyId: string) {
   const supabase = createClient();
   const { error } = await supabase.rpc("story_delete", { p_moment: storyId });

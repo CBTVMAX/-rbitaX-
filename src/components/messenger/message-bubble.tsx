@@ -226,23 +226,35 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
     </span>
   );
 
-  const story = m.meta.storyReply && !deleted && (
-    <a
-      href={`/comunidades/${m.meta.storyReply.slug}?story=${m.meta.storyReply.id}`}
-      className={clsx("mb-1.5 flex max-w-[260px] items-center gap-2 rounded-xl px-2 py-1.5 text-[11px]", mine ? "bg-black/15 text-snow/85" : "bg-white/[0.06] text-white/60")}
-    >
-      {m.meta.storyReply.thumb ? (
+  const sr = m.meta.storyReply;
+  // Histórias de comunidade abrem de novo pelo link; as do perfil expiram, então o cartão é só contexto.
+  const storyInner = sr && (
+    <>
+      {sr.thumb ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={m.meta.storyReply.thumb} alt="" className="h-9 w-6 shrink-0 rounded object-cover" />
+        <img src={sr.thumb} alt="" className="h-9 w-6 shrink-0 rounded object-cover" />
       ) : (
         <BookOpen className="h-4 w-4 shrink-0" />
       )}
       <span className="min-w-0">
-        <span className="block font-semibold">Respondeu à história · {m.meta.storyReply.community}</span>
-        <span className="block truncate opacity-80">{m.meta.storyReply.preview}</span>
+        <span className="block font-semibold">
+          {sr.community ? `Respondeu à história · ${sr.community}` : mine ? "Você respondeu à história" : "Respondeu à sua história"}
+        </span>
+        <span className="block truncate opacity-80">{sr.preview}</span>
       </span>
-    </a>
+    </>
   );
+  const storyClass = clsx("mb-1.5 flex max-w-[260px] items-center gap-2 rounded-xl px-2 py-1.5 text-[11px]", mine ? "bg-black/15 text-snow/85" : "bg-white/[0.06] text-white/60");
+  const story =
+    sr && !deleted ? (
+      sr.slug ? (
+        <a href={`/comunidades/${sr.slug}?story=${sr.id}`} className={storyClass}>
+          {storyInner}
+        </a>
+      ) : (
+        <div className={storyClass}>{storyInner}</div>
+      )
+    ) : null;
 
   let body: React.ReactNode;
   if (deleted) {

@@ -18,8 +18,9 @@
   <main>
     <img src="/icons/icon-192.png" alt="ÓrbitaX" />
     <h1>Você está sem conexão</h1>
-    <p>Assim que a internet voltar, seu universo continua de onde parou.</p>
+    <p>Esta tela ainda não tinha sido aberta neste aparelho. Assim que a internet voltar, ela carrega sozinha.</p>
     <button onclick="location.reload()">Tentar novamente</button>
   </main>
+  <script>addEventListener("online", function () { location.reload(); });</script>
 </body>
 </html>
