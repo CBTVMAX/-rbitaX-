@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { clsx } from "clsx";
 import { Bookmark, Users, X } from "lucide-react";
@@ -211,10 +211,23 @@ export function Popover({
       document.removeEventListener("keydown", onKey);
     };
   }, [open, onClose]);
+  // Nunca passa da borda da área da conversa (importa na janela pequena do chat flutuante).
+  const [shift, setShift] = useState(0);
+  useLayoutEffect(() => {
+    if (!open) return setShift(0);
+    const el = ref.current;
+    const area = el?.closest(".orbit-scrollbar, section")?.getBoundingClientRect();
+    if (!el || !area) return;
+    const r = el.getBoundingClientRect();
+    const pad = 8;
+    if (r.left < area.left + pad) setShift(area.left + pad - r.left);
+    else if (r.right > area.right - pad) setShift(area.right - pad - r.right);
+  }, [open]);
   if (!open) return null;
   return (
     <div
       ref={ref}
+      style={shift ? { translate: `${shift}px 0` } : undefined}
       className={clsx(
         "animate-pop-in absolute z-40 overflow-hidden rounded-2xl border border-white/10 bg-space-surface py-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.45)]",
         className

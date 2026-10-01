@@ -74,7 +74,13 @@ export function ChatView({
   showBack,
   onBack,
   jumpToMessageId = null,
+  compact = false,
+  headerActions,
 }: {
+  /** Janela pequena (chat flutuante do computador): sem coluna lateral, cabeçalho enxuto. */
+  compact?: boolean;
+  /** Botões extras no fim do cabeçalho (ex.: expandir e fechar a janela). */
+  headerActions?: React.ReactNode;
   c: Conversation;
   /** The chat is on screen (on phones the list and the chat are separate screens). */
   visible: boolean;
@@ -127,10 +133,10 @@ export function ChatView({
       /* private mode */
     }
   }, []);
-  const infoColumn = wide && (infoPref ?? true);
+  const infoColumn = !compact && wide && (infoPref ?? true);
 
   function toggleInfo() {
-    if (wide) {
+    if (wide && !compact) {
       const next = !infoColumn;
       setInfoPref(next);
       try {
@@ -876,6 +882,8 @@ export function ChatView({
             )
           }
           onDelete={() => setConfirmLeave(true)}
+          compact={compact}
+          extra={headerActions}
         />
 
         <div className={clsx("contents", guard.className)} onContextMenu={guard.onContextMenu}>
@@ -920,7 +928,7 @@ export function ChatView({
         </div>
 
         {c.sendStatus === "ok" ? (
-          <MessageComposer conversationId={c.id} replyTo={replyTo} replyName={replyName} onCancelReply={() => setReplyTo(null)} api={api} inSaved={c.isSaved} isGroup={!!c.isGroup} mentionMembers={c.isGroup ? members : undefined} meId={me.id} />
+          <MessageComposer conversationId={c.id} replyTo={replyTo} replyName={replyName} onCancelReply={() => setReplyTo(null)} api={api} inSaved={c.isSaved} isGroup={!!c.isGroup} mentionMembers={c.isGroup ? members : undefined} meId={me.id} compact={compact} />
         ) : (
           <ComposerLocked status={c.sendStatus} username={c.otherUser?.username} name={c.otherUser?.name} />
         )}

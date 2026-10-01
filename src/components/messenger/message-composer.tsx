@@ -105,7 +105,10 @@ export function MessageComposer({
   isGroup = false,
   mentionMembers,
   meId,
+  compact = false,
 }: {
+  /** Janela pequena do chat flutuante: os painéis ocupam a largura toda. */
+  compact?: boolean;
   conversationId: string;
   replyTo: ChatMessage | null;
   replyName: string | null;
@@ -411,7 +414,7 @@ export function MessageComposer({
   return (
     <div ref={wrap} className="relative z-10 border-t border-white/10 bg-space-surface/80 px-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-xl md:px-4">
       {panel && (
-        <div className="animate-sheet-up absolute bottom-full left-0 right-0 md:bottom-full md:left-auto md:right-4 md:mb-2 md:w-[400px]">
+        <div className={clsx("animate-sheet-up absolute bottom-full left-0 right-0", !compact && "md:bottom-full md:left-auto md:right-4 md:mb-2 md:w-[400px]")}>
           <StickerPanel
             initialTab={panel}
             onTabChange={(t) => (lastTab = t)}
@@ -488,7 +491,7 @@ export function MessageComposer({
       {diceOpen && <DiceSheet onPick={rollFromSheet} onClose={() => setDiceOpen(false)} />}
 
       {mentionOptions.length > 0 && (
-        <div className="animate-sheet-up absolute bottom-full left-2 right-2 mb-2 md:left-auto md:right-4 md:w-[340px]">
+        <div className={clsx("animate-sheet-up absolute bottom-full left-2 right-2 mb-2", !compact && "md:left-auto md:right-4 md:w-[340px]")}>
           <div className="overflow-hidden rounded-2xl border border-white/10 bg-space-surface/95 py-1 shadow-2xl backdrop-blur-xl">
             <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/40">Marcar no grupo</p>
             <div className="max-h-64 overflow-y-auto orbit-scrollbar">
