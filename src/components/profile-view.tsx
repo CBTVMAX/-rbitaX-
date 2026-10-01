@@ -5,6 +5,7 @@ import { FollowButton } from "@/components/follow-button";
 import { FriendButton, FriendRequestActions } from "@/components/friend-button";
 import { BlockedProfileNotice } from "@/components/block-user";
 import { ProfileAboutButton, ProfileAboutContent, type AboutData } from "@/components/profile-about";
+import { ProfileGiftsCard, ProfileMediaShowcase } from "@/components/profile-showcase";
 import { ProfileGiftButton } from "@/components/profile-gift-button";
 import { ProfileFamily, type FamilyMember, type FamilyRequest } from "@/components/profile-family";
 import { ProfileTestimonials, type Testimonial, type PendingTestimonial } from "@/components/profile-testimonials";
@@ -686,18 +687,26 @@ export function ProfileView({
         </SideCard>
       )}
 
-      {photos.length > 0 && (
-        <SideCard title="Fotos" count={photoTotal} action={seeAll("fotos")}>
-          <div className="grid grid-cols-3 gap-1.5">
-            {photos.slice(0, 6).map((m) => (
-              <a key={m.id} href={m.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={m.url} alt="" className="aspect-square w-full object-cover transition hover:scale-105" />
-              </a>
-            ))}
+      {current?.authId && <ProfileMoments viewerId={current.authId} userId={user.id} isMe={isMe} frameClassName={`${cardClass} p-4`} />}
+
+      {stats.followers > 0 && (
+        <SideCard title="Seguidores" count={stats.followers}>
+          <div className="flex items-center gap-3">
+            {avatarStack(followerPreview)}
+            {!isMe && mutual.count > 0 && (
+              <span className="text-[12px] leading-snug text-white/55">
+                {mutual.preview
+                  .slice(0, 2)
+                  .map((m) => m.name.split(" ")[0])
+                  .join(", ")}
+                {mutual.count > 2 ? ` e mais ${mutual.count - 2}` : ""} {mutual.count === 1 ? "amigo em comum" : "amigos em comum"}
+              </span>
+            )}
           </div>
         </SideCard>
       )}
+
+      <ProfileGiftsCard user={{ id: user.id, name: user.name, username: user.username, avatarUrl: user.avatarUrl }} isMe={isMe} viewerId={current?.authId ?? null} />
 
       {friends.length > 0 && (
         <SideCard title="Amigos" count={stats.friends} action={seeAll("amigos")}>
@@ -1091,7 +1100,8 @@ export function ProfileView({
               </div>
             </div>
           </div>
-          {moments}
+          {/* Telas médias (sem a coluna lateral): os Momentos ficam no cabeçalho. */}
+          <div className="lg:hidden">{moments}</div>
         </section>
 
         {/* ================= CELULAR ================= */}
@@ -1207,6 +1217,7 @@ export function ProfileView({
             slots={{
               posts: (
                 <div className="space-y-3 md:space-y-4">
+                  {!showArchive && <ProfileMediaShowcase photos={photos} videos={videos} isMe={isMe} />}
                   {showArchive && feed.length === 0 ? (
                     <div className={`${cardClass} p-10 text-center text-sm text-white/50`}>Nenhuma publicação arquivada.</div>
                   ) : (
