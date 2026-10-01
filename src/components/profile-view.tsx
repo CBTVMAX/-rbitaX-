@@ -20,6 +20,7 @@ import { AvatarImage } from "@/components/avatar";
 import { ProfileMoments } from "@/components/personal-stories";
 import { AvatarMenu } from "@/components/avatar-menu-button";
 import { NavBack } from "@/components/nav-back";
+import { PublishButton } from "@/components/publish/publish-provider";
 import { relationshipLabel } from "@/lib/profile-options";
 import { MyRpgsCard } from "@/components/my-rpgs-card";
 import { ProfileMusic, type ProfileMusicData } from "@/components/profile-music";
@@ -1085,14 +1086,13 @@ export function ProfileView({
             <div className={`${cardClass} flex items-center gap-2 p-2.5`}>
               {isMe ? (
                 <>
-                  <a
-                    href="#tab-posts"
+                  <PublishButton
                     className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold transition active:scale-[0.99] ${
                       accent ? "bg-pa text-snow shadow-[0_0_24px_rgb(var(--pa)/0.35)]" : "bg-orbit-gradient text-snow shadow-glow"
                     }`}
                   >
                     <PlusCircle className="h-5 w-5" /> Publicar
-                  </a>
+                  </PublishButton>
                   <Link
                     href="/configuracoes/conta"
                     aria-label="Editar perfil"

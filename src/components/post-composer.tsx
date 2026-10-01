@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { verifyUpload } from "@/lib/upload-guard";
+import { publishPost } from "@/lib/publish-post";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/post-card";
 import {
@@ -188,47 +188,7 @@ export function PostComposer({
     setError(null);
 
     try {
-      const postId = crypto.randomUUID();
-      // Confirma o tipo real de cada arquivo antes de criar qualquer coisa (um "png" falso não passa).
-      const verified: string[] = [];
-      for (const f of files) {
-        const mime = await verifyUpload(f.file, ["image", "video", "audio"]);
-        verified.push(mime);
-      }
-      const hasImage = verified.some((m) => m.startsWith("image"));
-      const hasVideo = verified.some((m) => m.startsWith("video"));
-      const kind = files.length === 0 ? "text" : hasImage ? "image" : hasVideo ? "video" : "music";
-
-      const { error: postError } = await supabase.from("Post").insert({
-        id: postId,
-        authorId: userId,
-        content: content.trim(),
-        kind,
-        updatedAt: new Date().toISOString(),
-      });
-      if (postError) throw postError;
-
-      // Sobe cada arquivo e grava a Media na ordem escolhida (position), para o carrossel/grade.
-      for (let i = 0; i < files.length; i++) {
-        const { file } = files[i];
-        const mime = verified[i];
-        const mediaType = mime.startsWith("video") ? "video" : mime.startsWith("audio") ? "audio" : "image";
-        const fallbackExt = mediaType === "video" ? "mp4" : mediaType === "audio" ? "mp3" : "jpg";
-        const ext = file.name.split(".").pop() || fallbackExt;
-        const path = `${userId}/posts/${postId}-${i}.${ext}`;
-        const { error: uploadError } = await supabase.storage.from("media").upload(path, file, { upsert: true, contentType: mime });
-        if (uploadError) throw uploadError;
-        const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
-        const { error: mediaError } = await supabase.from("Media").insert({
-          id: crypto.randomUUID(),
-          postId,
-          type: mediaType,
-          url: pub.publicUrl,
-          mimeType: mime,
-          position: i,
-        });
-        if (mediaError) throw mediaError;
-      }
+      await publishPost({ userId, content, files: files.map((f) => f.file) });
 
       setContent("");
       clearFiles();

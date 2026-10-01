@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { FEED_TABS } from "@/lib/feed";
+import { usePublish } from "@/components/publish/publish-provider";
 import { DiamondIcon, formatDiamonds } from "@/components/diamonds";
 import { useCoinBalance } from "@/components/store/coin-balance";
 import { clsx } from "clsx";
@@ -446,19 +447,10 @@ export function MobileHeader({
   );
 }
 
-const CREATE_OPTIONS: { href: string; label: string; hint: string; icon: Icon }[] = [
-  { href: "/feed?novo=1#composer", label: "Publicação", hint: "Texto, foto ou vídeo", icon: Newspaper },
-  { href: "/feed?novo=1#composer", label: "Foto ou vídeo", hint: "Adicionar mídia", icon: ImageIcon },
-  { href: "/comunidades", label: "Comunidade", hint: "Criar ou participar", icon: Users },
-  { href: "/mensagens", label: "Mensagem", hint: "Nova conversa", icon: MessageCircle },
-];
-
 export function MobileTabBar({ username }: { username: string }) {
   const pathname = usePathname();
   const { counts } = useLiveCounts();
-  const [createOpen, setCreateOpen] = useState(false);
-  // Fecha o menu de criação em qualquer troca de rota.
-  useEffect(() => setCreateOpen(false), [pathname]);
+  const { openPublish } = usePublish();
   const items: { href: string; label: string; icon: Icon; badge?: keyof LiveCounts }[] = [
     { href: "/feed", label: "Início", icon: Home },
     { href: "/explorar", label: "Explorar", icon: Compass },
@@ -493,13 +485,12 @@ export function MobileTabBar({ username }: { username: string }) {
       <nav className="fixed inset-x-0 bottom-0 z-30 flex items-end border-t border-white/10 bg-space-bg/95 px-2 pb-2 pt-2 backdrop-blur md:hidden">
         {items.slice(0, 2).map(tab)}
         <div className="flex flex-1 justify-center">
-          {/* O "+" abre o menu de criação (não navega para uma rota) — §2/§8 */}
+          {/* O "+" abre o menu "Publicar" (História, Post, Foto, Vídeos, Clipe) */}
           <button
             type="button"
-            aria-label="Criar"
-            aria-haspopup="menu"
-            aria-expanded={createOpen}
-            onClick={() => setCreateOpen(true)}
+            aria-label="Publicar"
+            aria-haspopup="dialog"
+            onClick={openPublish}
             className="-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-orbit-gradient text-snow shadow-glow transition active:scale-95"
           >
             <Plus className="h-7 w-7" />
@@ -508,39 +499,6 @@ export function MobileTabBar({ username }: { username: string }) {
         {items.slice(2).map(tab)}
       </nav>
 
-      {createOpen && (
-        <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="Criar">
-          {/* Tocar fora fecha o menu */}
-          <button type="button" aria-label="Fechar" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setCreateOpen(false)} />
-          <div className="animate-sheet-up absolute inset-x-0 bottom-0 rounded-t-3xl border-t border-white/10 bg-space-surface p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-            <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-white/20" />
-            <div className="mb-3 flex items-center justify-between">
-              <p className="px-1 text-sm font-semibold text-white">Criar</p>
-              <button type="button" aria-label="Fechar" onClick={() => setCreateOpen(false)} className="rounded-full p-1.5 text-white/55 hover:bg-white/5 hover:text-white">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {CREATE_OPTIONS.map((o) => (
-                <Link
-                  key={o.href + o.label}
-                  href={o.href}
-                  onClick={() => setCreateOpen(false)}
-                  className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3 transition active:scale-[0.98] hover:border-orbit-purple/40 hover:bg-orbit-purple/[0.06]"
-                >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orbit-gradient text-snow">
-                    <o.icon className="h-5 w-5" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-white">{o.label}</span>
-                    <span className="block truncate text-[11px] text-white/45">{o.hint}</span>
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }
