@@ -68,6 +68,8 @@ export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Par
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [community.id]);
 
+  // A capa do atalho é recortada em 2:1 (ex.: 1774×887) antes de subir, para todos os quadros ficarem iguais.
+  const [tileFile, setTileFile] = useState<File | null>(null);
   async function uploadLinkImage(file: File | undefined) {
     const i = linkTarget.current;
     if (!file || !viewer) return;
@@ -254,7 +256,7 @@ export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Par
 
       {show("info") && (
       <div id="links" className="scroll-mt-24">
-      <Card title="Atalhos com capa" desc="Aparecem como quadros clicáveis no topo da comunidade (ex.: Inscrição, Regras, Hierarquia). Até 8.">
+      <Card title="Atalhos com capa" desc="Quadros clicáveis no topo da comunidade (ex.: Inscrição, Regras, Hierarquia). Capa no formato 2:1, como 1800×900 px, e um título em cada um. Até 8.">
         <div className="space-y-2">
           {f.links.map((l, i) => (
             <div key={i} className="flex gap-3 rounded-2xl bg-white/[0.02] p-2">
@@ -262,7 +264,7 @@ export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Par
                 type="button"
                 onClick={() => ((linkTarget.current = i), linkInput.current?.click())}
                 aria-label="Escolher capa do atalho"
-                className="relative flex aspect-[3/2] w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed border-white/20 bg-white/[0.03] text-white/50 hover:text-white sm:w-28"
+                className="relative flex aspect-[2/1] w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed border-white/20 bg-white/[0.03] text-white/50 hover:text-white sm:w-28"
               >
                 {l.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -318,7 +320,27 @@ export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Par
             </button>
           )}
         </div>
-        <input ref={linkInput} type="file" accept={ACCEPT.image} hidden onChange={(e) => (uploadLinkImage(e.target.files?.[0]), (e.target.value = ""))} />
+        <input ref={linkInput} type="file" accept={ACCEPT.image} hidden onChange={(e) => {
+            const f0 = e.target.files?.[0];
+            e.target.value = "";
+            if (f0 && f0.type.startsWith("image/")) setTileFile(f0);
+          }} />
+        {tileFile && (
+          <CoverCropDialog
+            file={tileFile}
+            ratio={2}
+            ratioLabel="2:1"
+            recommended={{ w: 1800, h: 900 }}
+            title="Capa do atalho"
+            confirmLabel="Usar esta capa"
+            onCancel={() => setTileFile(null)}
+            onConfirm={async (blob) => {
+              setTileFile(null);
+              const ext = blob.type === "image/webp" ? "webp" : "jpg";
+              await uploadLinkImage(new File([blob], `atalho.${ext}`, { type: blob.type }));
+            }}
+          />
+        )}
       </Card>
       </div>
       )}
