@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { rememberCommunityVisit } from "@/lib/recent-communities";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import {
@@ -158,6 +159,10 @@ export function CommunityView(props: {
   const base = `/comunidades/${community.slug}`;
 
   useEffect(() => setPinned(props.pinned), [props.pinned]);
+  // Entra em "Visitadas recentemente" na lista de comunidades (só neste navegador).
+  useEffect(() => {
+    rememberCommunityVisit({ slug: community.slug, name: community.name, avatarUrl: community.avatarUrl });
+  }, [community.slug, community.name, community.avatarUrl]);
   useEffect(() => {
     const onScroll = () => setFab(window.scrollY > 520);
     onScroll();
@@ -280,10 +285,11 @@ function Hub(p: HubProps) {
     </>
   );
 
+  // Mesmas proporções do perfil: capa 7:2 inteira (é como ela é salva) e foto redonda na beirada.
   const header = (
-    <div className="relative">
+    <div className="relative mx-auto max-w-6xl lg:px-10 lg:pt-4">
       <div
-        className="relative h-36 overflow-hidden sm:h-48 md:h-56 md:rounded-b-[32px] lg:mx-6 lg:mt-4 lg:rounded-[32px]"
+        className="relative aspect-[7/2] w-full overflow-hidden md:rounded-b-[28px] lg:rounded-[28px]"
         style={{ background: `linear-gradient(135deg, ${accent.from}, rgb(${accent.rgb}) 55%, ${accent.to})` }}
       >
         {community.coverUrl ? (
@@ -292,15 +298,18 @@ function Hub(p: HubProps) {
         ) : (
           <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.25),transparent_45%),radial-gradient(circle_at_80%_80%,rgba(0,0,0,0.35),transparent_55%)]" />
         )}
-        <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-space-bg via-transparent to-transparent" />
+        <div aria-hidden className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/40 to-transparent md:hidden" />
         <Link href="/comunidades" aria-label="Voltar para comunidades" className="absolute left-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur md:hidden">
           <ArrowLeft className="h-5 w-5" />
         </Link>
       </div>
-      <div className="mx-auto max-w-6xl px-4 md:px-6 lg:px-10">
-        <div className="-mt-10 flex items-end gap-3 sm:-mt-12">
-          <span className="relative shrink-0 rounded-[26px] p-[3px] shadow-[0_0_28px_rgb(var(--app-accent,139_92_246)/0.45)]" style={{ background: `linear-gradient(135deg, ${accent.from}, ${accent.to})` }}>
-            <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-[23px] bg-space-card text-2xl font-bold text-white sm:h-24 sm:w-24">
+      <div className="px-4 md:px-6">
+        <div className="flex items-end gap-4">
+          <span
+            className="relative z-10 -mt-[clamp(28px,7.5vw,32px)] shrink-0 rounded-full p-[3px] shadow-[0_0_28px_rgb(var(--app-accent,139_92_246)/0.45)] md:-mt-12 lg:-mt-14"
+            style={{ background: `linear-gradient(135deg, ${accent.from}, ${accent.to})` }}
+          >
+            <span className="flex h-[clamp(100px,29vw,118px)] w-[clamp(100px,29vw,118px)] items-center justify-center overflow-hidden rounded-full border-4 border-space-bg bg-space-card text-3xl font-bold text-white md:h-[136px] md:w-[136px] lg:h-[156px] lg:w-[156px]">
               {community.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={community.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -309,7 +318,7 @@ function Hub(p: HubProps) {
               )}
             </span>
           </span>
-          <div className="hidden min-w-0 flex-1 pb-1 md:block">
+          <div className="hidden min-w-0 flex-1 pb-2 md:block">
             <div className="flex flex-wrap items-center justify-end gap-2">{actions}</div>
           </div>
         </div>
@@ -333,7 +342,7 @@ function Hub(p: HubProps) {
             )}
           </p>
           <Link href={`${base}/membros`} className="mt-1.5 inline-flex items-center gap-1.5 text-sm text-white/75 hover:text-white">
-            <Users className="h-4 w-4 text-orbit-cyan" /> <strong className="font-semibold text-white">{compactNumber(community.memberCount)}</strong> {community.memberCount === 1 ? "membro" : "membros"}
+            <Users className="h-4 w-4 text-orbit-cyan" /> {role && <span>Você participa ·</span>} <strong className="font-semibold text-white">{compactNumber(community.memberCount)}</strong> {community.memberCount === 1 ? "membro" : "membros"}
             {role && <RoleBadge role={role} className="ml-1" />}
           </Link>
           {community.description && (

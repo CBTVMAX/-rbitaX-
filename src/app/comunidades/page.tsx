@@ -12,6 +12,7 @@ import { Search, Users, Plus, Star, Lock } from "lucide-react";
 import { clsx } from "clsx";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { OfficialBadge } from "@/components/community/ui";
+import { CommunitiesHome, type FriendFace, type Suggestion } from "@/components/communities-home";
 
 export const dynamic = "force-dynamic";
 
@@ -268,11 +269,64 @@ export default async function ComunidadesPage(
   if (current) {
     const { profile } = current;
     const accent = appAccentVars(profile.profileColor);
+    // Início no estilo VK (sem busca nem filtro): assinaturas, visitadas e sugestões dos amigos.
+    let home: React.ReactNode = null;
+    if (showDiscoveryExtras) {
+      const byId = new Map((allCommunities ?? []).map((c) => [c.id, c]));
+      const roleOf = new Map(myMemberships.map((m) => [m.communityId, m.role]));
+      const mine = myMemberships
+        .map((m) => byId.get(m.communityId))
+        .filter((c): c is NonNullable<typeof c> => !!c)
+        .sort((a, b) => Number(favoriteIds.includes(b.id)) - Number(favoriteIds.includes(a.id)))
+        .map((c) => ({ ...c, role: roleOf.get(c.id) ?? "member" }));
+
+      // Comunidades em que meus amigos estão (as privadas não aparecem: o banco esconde esses membros).
+      const { data: friendRows } = await supabase
+        .from("Friendship")
+        .select("requesterId, addresseeId")
+        .eq("status", "accepted")
+        .or(`requesterId.eq.${current.authId},addresseeId.eq.${current.authId}`)
+        .limit(2000);
+      const friendIds = (friendRows ?? []).map((f) => (f.requesterId === current.authId ? f.addresseeId : f.requesterId));
+      const friendsByCommunity = new Map<string, string[]>();
+      let faces = new Map<string, FriendFace>();
+      if (friendIds.length) {
+        const [{ data: friendMemberships }, { data: friendUsers }] = await Promise.all([
+          supabase.from("CommunityMember").select("communityId, userId").in("userId", friendIds.slice(0, 500)).limit(5000),
+          supabase.from("User").select("id, name, avatarUrl").in("id", friendIds.slice(0, 500)),
+        ]);
+        faces = new Map((friendUsers ?? []).map((u) => [u.id, u]));
+        for (const m of friendMemberships ?? []) {
+          if (myCommunityIds.has(m.communityId)) continue;
+          friendsByCommunity.set(m.communityId, [...(friendsByCommunity.get(m.communityId) ?? []), m.userId]);
+        }
+      }
+      const notMine = (allCommunities ?? []).filter((c) => !myCommunityIds.has(c.id));
+      const fromFriends: Suggestion[] = [...friendsByCommunity.entries()]
+        .map(([id, users]) => ({ c: byId.get(id), users }))
+        .filter((x): x is { c: NonNullable<typeof x.c>; users: string[] } => !!x.c)
+        .sort((a, b) => b.users.length - a.users.length || (b.c.memberCount ?? 0) - (a.c.memberCount ?? 0))
+        .map(({ c, users }) => ({
+          ...c,
+          friendCount: users.length,
+          friends: users.map((u) => faces.get(u)).filter((f): f is FriendFace => !!f).slice(0, 2),
+          pending: pendingIds.has(c.id),
+        }));
+      const taken = new Set(fromFriends.map((c) => c.id));
+      const byPopularity = [...notMine].sort((a, b) => (b.memberCount ?? 0) - (a.memberCount ?? 0));
+      const suggestions: Suggestion[] = [
+        ...fromFriends,
+        ...byPopularity.filter((c) => !taken.has(c.id)).map((c) => ({ ...c, friendCount: 0, friends: [], pending: pendingIds.has(c.id) })),
+      ].slice(0, 12);
+      const popular = byPopularity.slice(0, 6).map((c) => ({ ...c, pending: pendingIds.has(c.id) }));
+
+      home = <CommunitiesHome userId={current.authId} mine={mine} ownedCount={myOwnedIds.size} suggestions={suggestions} popular={popular} />;
+    }
     return (
       <div className="min-h-screen bg-space-bg bg-stars" style={accent as React.CSSProperties | undefined}>
         <AppAccentSync vars={accent} />
         <AppSidebar username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} />
-        <main className="min-h-screen pb-20 md:ml-64 md:pb-0">{content}</main>
+        <main className="min-h-screen pb-20 md:ml-64 md:pb-0">{home ?? content}</main>
         <MobileTabBar username={profile.username} />
       </div>
     );
