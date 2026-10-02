@@ -268,8 +268,9 @@ export function StickerPanel({
 
   useEffect(() => {
     setRecentEmojiList(recentEmoji());
+    // Biblioteca primeiro (busca de novo, com os packs): o que foi liberado/comprado já aparece sem cadeado.
+    loadLibrary(supabase, me.id, true).then(setLib, () => setLib({ owned: new Set(), installed: new Set(), favoritePacks: new Set() }));
     loadPacks(supabase).then(setPacks, () => setPacks([]));
-    loadLibrary(supabase, me.id).then(setLib, () => setLib({ owned: new Set(), installed: new Set(), favoritePacks: new Set() }));
     loadFavoriteStickers(supabase).then(
       (ids) => {
         setFavoriteIds(ids);

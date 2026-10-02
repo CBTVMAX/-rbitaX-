@@ -52,6 +52,7 @@ import { MediaViewer } from "./media-viewer";
 import { useMediaGuard } from "@/lib/use-media-guard";
 import { ProfileCard } from "./profile-card";
 import { PinnedBanner } from "./pinned-banner";
+import { WallpaperSelector } from "./theme-selector";
 import { GhostButton, Modal } from "./ui";
 
 const PAGE = 40;
@@ -123,6 +124,7 @@ export function ChatView({
   const [forwardFor, setForwardFor] = useState<ChatMessage | null>(null);
   const [dialog, setDialog] = useState<null | "poll" | "location" | "contact" | "link" | "gift" | "save">(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [wallpaperOpen, setWallpaperOpen] = useState(false);
   // Group and community chats protect shared photos and videos (see useMediaGuard).
   const guard = useMediaGuard(!!c.isGroup && !c.isSaved);
   const [viewer, setViewer] = useState<{ items: Attachment[]; locals?: string[]; index: number; caption?: string } | null>(null);
@@ -948,6 +950,7 @@ export function ChatView({
             )
           }
           onDelete={() => setConfirmLeave(true)}
+          onWallpaper={() => setWallpaperOpen(true)}
           compact={compact}
           extra={headerActions}
         />
@@ -1109,6 +1112,12 @@ export function ChatView({
             ? "Você não vai mais receber as mensagens deste grupo."
             : `O histórico será apagado só para você. ${c.otherUser?.name.split(" ")[0] ?? "A outra pessoa"} continua com as mensagens.`}
         </p>
+      </Modal>
+      <Modal open={wallpaperOpen} onClose={() => setWallpaperOpen(false)} title="Papel de parede">
+        <WallpaperSelector
+          value={c.wallpaper}
+          onChange={(id) => setSetting({ wallpaper: id }, { wallpaper: id }, "Fundo da conversa atualizado.")}
+        />
       </Modal>
       {viewer && <MediaViewer {...viewer} protect={guard.active} onClose={() => setViewer(null)} />}
     </div>

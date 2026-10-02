@@ -13,6 +13,16 @@ export const WALLPAPERS = [
   { id: "aneis", label: "Anéis" },
 ] as const;
 
+/** Fundos lisos, sem imagem: a conversa toda preta ou toda branca. */
+export const PLAIN_WALLPAPERS = [
+  { id: "liso-preto", label: "Preto", color: "rgb(0 0 0)" },
+  { id: "liso-branco", label: "Branco", color: "rgb(255 255 255)" },
+] as const;
+
+export function isPlainWallpaper(id: string | null | undefined) {
+  return !!id && PLAIN_WALLPAPERS.some((w) => w.id === id);
+}
+
 /**
  * Foto da própria pessoa como papel de parede: "custom:<id>/wallpapers/<arquivo>" no bucket público
  * "media". Só quem escolheu vê (a escolha fica na configuração da conversa de cada um).
@@ -40,7 +50,7 @@ export function wallpaperSrc(id: string, thumb = false) {
 }
 
 export function isWallpaper(id: string | null | undefined): id is string {
-  return !!id && (WALLPAPERS.some((w) => w.id === id) || CUSTOM.test(id));
+  return !!id && (WALLPAPERS.some((w) => w.id === id) || isPlainWallpaper(id) || CUSTOM.test(id));
 }
 
 /**
@@ -48,12 +58,41 @@ export function isWallpaper(id: string | null | undefined): id is string {
  * text in any app appearance), with a soft shade to keep messages in focus.
  */
 /** Papéis de parede claros: a conversa fica com superfícies claras e tinta escura em cima deles. */
-const LIGHT = new Set(["orbita-clara"]);
+const LIGHT = new Set(["orbita-clara", "liso-branco"]);
 export function isLightWallpaper(id: string | null | undefined) {
   return !!id && LIGHT.has(id);
 }
 
 export function wallpaperStyle(id: string): CSSProperties {
+  if (id === "liso-branco")
+    return {
+      "--c-ink": "17 20 43",
+      "--c-space-bg": "242 243 250",
+      "--c-space-surface": "255 255 255",
+      "--c-space-card": "234 236 246",
+      "--c-space-border": "218 222 236",
+      "--c-body": "30 34 62",
+      "--chat-bar": "255 255 255",
+      // Sobre o branco, a bolha recebida fica cinza-clara para não sumir no fundo.
+      "--chat-recv": "238 239 244",
+      colorScheme: "light",
+      color: "rgb(30 34 62)",
+      backgroundColor: "rgb(255 255 255)",
+    } as CSSProperties;
+  if (id === "liso-preto")
+    return {
+      "--c-ink": "255 255 255",
+      "--c-space-bg": "0 0 0",
+      "--c-space-surface": "12 12 14",
+      "--c-space-card": "20 20 24",
+      "--c-space-border": "38 38 44",
+      "--c-body": "229 231 245",
+      "--chat-bar": "14 14 16",
+      "--chat-recv": "38 38 42",
+      colorScheme: "dark",
+      color: "rgb(229 231 245)",
+      backgroundColor: "rgb(0 0 0)",
+    } as CSSProperties;
   if (LIGHT.has(id))
     return {
       "--c-ink": "17 20 43",

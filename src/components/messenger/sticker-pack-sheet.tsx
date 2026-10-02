@@ -34,7 +34,7 @@ export function StickerPackSheet({ stickerId, onClose }: { stickerId: string; on
 
   useEffect(() => {
     let alive = true;
-    Promise.all([loadStickers(supabase, [stickerId]), loadPacks(supabase), loadLibrary(supabase, me.id)]).then(
+    Promise.all([loadStickers(supabase, [stickerId]), loadPacks(supabase), loadLibrary(supabase, me.id, true)]).then(
       ([[s], packs, library]) => {
         if (!alive) return;
         setSticker(s ?? null);

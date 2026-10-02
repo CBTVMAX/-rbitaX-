@@ -110,9 +110,13 @@ export function isAvailable(pack: Pick<Pack, "availableUntil">) {
 
 // ── Packs ───────────────────────────────────────────────────────────────────
 let packsCache: Promise<Pack[]> | null = null;
+let packsAt = 0;
+const PACKS_TTL = 5 * 60_000;
 
 export function loadPacks(supabase: Client) {
-  if (!packsCache) {
+  // Packs novos (ou que mudaram de preço/visibilidade) aparecem sem precisar recarregar a página.
+  if (!packsCache || Date.now() - packsAt > PACKS_TTL) {
+    packsAt = Date.now();
     packsCache = Promise.all([
       supabase.from("StickerPack").select(PACK_COLUMNS).eq("active", true).order("sortOrder"),
       supabase.from("StoreProduct").select("refId, image").eq("kind", "sticker_pack"),
@@ -131,9 +135,19 @@ export function loadPacks(supabase: Client) {
 
 // ── The person's library ─────────────────────────────────────────────────────
 let libraryCache: Promise<Library> | null = null;
+let libraryAt = 0;
+let libraryUser = "";
+const LIBRARY_TTL = 30_000;
 
-export function loadLibrary(supabase: Client, userId: string) {
-  if (!libraryCache) {
+/**
+ * Packs da pessoa (comprados, ganhos, instalados). `fresh` busca de novo — o painel de adesivos faz
+ * isso ao abrir, para um pack liberado/comprado em outro lugar não continuar aparecendo com cadeado.
+ */
+export function loadLibrary(supabase: Client, userId: string, fresh = false) {
+  if (fresh || !libraryCache || libraryUser !== userId || Date.now() - libraryAt > LIBRARY_TTL) {
+    if (fresh) packsCache = null;
+    libraryAt = Date.now();
+    libraryUser = userId;
     libraryCache = Promise.all([
       loadPacks(supabase),
       supabase.from("UserStickerPack").select("packId, installed, source").eq("userId", userId),
