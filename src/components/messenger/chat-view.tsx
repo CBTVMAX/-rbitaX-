@@ -102,6 +102,8 @@ export function ChatView({
   useTypingChannels(supabase, useMemo(() => (c.isSaved ? [] : [c.id]), [c.isSaved, c.id]));
   const { refresh: refreshCounts } = useLiveCounts();
   const wide = useMediaQuery("(min-width: 1280px)");
+  // Abre sozinho só em telas bem largas; em notebook a conversa fica com o espaço todo até a pessoa abrir.
+  const huge = useMediaQuery("(min-width: 1536px)");
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -144,7 +146,7 @@ export function ChatView({
       /* private mode */
     }
   }, []);
-  const infoColumn = !compact && wide && (infoPref ?? true);
+  const infoColumn = !compact && wide && (infoPref ?? huge);
 
   function toggleInfo() {
     if (wide && !compact) {

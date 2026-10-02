@@ -470,27 +470,19 @@ export function MusicCard({ message, mine, meta }: { message: ChatMessage; mine:
 export function DiceCard({ message, mine }: { message: ChatMessage; mine: boolean }) {
   const roll = message.meta.roll;
   if (!roll) return <span className="text-[15px]">{message.content}</span>;
-  const dice = roll.dice.toUpperCase();
+  // Como o rolador do VK: duas linhas curtas, sem cartão grande.
   return (
-    <div className="w-[min(230px,62vw)] p-0.5">
-      <div className="flex items-center gap-2.5">
-        <span className={clsx("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", mine ? "bg-white/15" : "bg-chat/15")}>
-          <Dices className={clsx("h-5 w-5", mine ? "text-snow" : "text-chat")} />
+    <div className="max-w-[min(280px,70vw)] py-0.5">
+      <p className="flex items-center gap-1.5 text-[14px] font-semibold leading-snug">
+        <Dices className={clsx("h-4 w-4 shrink-0", mine ? "text-snow" : "text-chat")} />
+        <span className="min-w-0 truncate">
+          {roll.player} <span className={clsx("font-normal", mine ? "text-snow/80" : "text-white/70")}>rolou {roll.dice}</span>
         </span>
-        <div className="min-w-0">
-          <span className="block truncate text-[13px] font-semibold leading-tight">{roll.player}</span>
-          <span className={clsx("block text-[11px] uppercase tracking-wider", mine ? "text-snow/70" : "text-chat")}>rolou {dice}</span>
-        </div>
-      </div>
-      {roll.reason && <p className="mt-1.5 whitespace-pre-wrap break-words text-[14px] leading-snug">{roll.reason}</p>}
-      {/* Como o rolador do VK: os dados e o resultado. */}
-      <div className={clsx("mt-2 flex items-center justify-between gap-3 rounded-xl px-3 py-2", mine ? "bg-white/10" : "bg-white/[0.04]")}>
-        <span className={clsx("text-[13px] tabular-nums", mine ? "text-snow/80" : "text-white/65")}>Dados: [{roll.rolls.join(", ")}]</span>
-        <span className="flex items-baseline gap-1.5">
-          <span className={clsx("text-[11px] uppercase tracking-wide", mine ? "text-snow/70" : "text-white/50")}>Resultado</span>
-          <span className="text-2xl font-extrabold tabular-nums leading-none">{roll.total}</span>
-        </span>
-      </div>
+      </p>
+      {roll.reason && <p className="mt-0.5 whitespace-pre-wrap break-words text-[14px] leading-snug">{roll.reason}</p>}
+      <p className={clsx("mt-0.5 text-[13.5px] tabular-nums leading-snug", mine ? "text-snow/85" : "text-white/75")}>
+        Dados: [{roll.rolls.join(", ")}] · Resultado: <strong className={clsx("text-[15px] font-bold", mine ? "text-snow" : "text-white")}>{roll.total}</strong>
+      </p>
     </div>
   );
 }
