@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 
 /** Chat wallpapers (Messenger → Tema da conversa → Papel de parede), in public/wallpapers. */
 export const WALLPAPERS = [
+  { id: "doodles", label: "Doodles Órbita" },
   { id: "universo", label: "Universo" },
   { id: "horizonte", label: "Horizonte" },
   { id: "lua", label: "Lua e Estrelas" },
@@ -53,7 +54,10 @@ export function wallpaperStyle(id: string): CSSProperties {
     color: "rgb(229 231 245)",
     backgroundColor: "rgb(5 6 15)",
     // Foto própria pode ser clara: um véu um pouco mais forte mantém as mensagens legíveis.
-    backgroundImage: isCustomWallpaper(id)
+    // Doodles já é um fundo calmo: quase sem véu, para ficar azul vivo como no app.
+    backgroundImage: id === "doodles"
+      ? `linear-gradient(180deg, rgb(5 6 15 / 0.12) 0%, rgb(5 6 15 / 0.05) 50%, rgb(5 6 15 / 0.18) 100%), url(${wallpaperSrc(id)})`
+      : isCustomWallpaper(id)
       ? `linear-gradient(180deg, rgb(5 6 15 / 0.5) 0%, rgb(5 6 15 / 0.32) 40%, rgb(5 6 15 / 0.58) 100%), url("${wallpaperSrc(id)}")`
       : `linear-gradient(180deg, rgb(5 6 15 / 0.35) 0%, rgb(5 6 15 / 0.18) 40%, rgb(5 6 15 / 0.45) 100%), url(${wallpaperSrc(id)})`,
     backgroundSize: "cover",
