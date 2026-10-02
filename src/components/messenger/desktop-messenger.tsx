@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { clsx } from "clsx";
-import { AlertCircle, CheckCircle2, PenSquare } from "lucide-react";
+import { AlertCircle, CheckCircle2, MessagesSquare, PenSquare } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useLiveCounts } from "@/components/live-activity";
 import type { ChatUser, Conversation } from "@/lib/messenger/types";
@@ -199,10 +199,10 @@ export function DesktopMessenger({
 
   return (
     <MessengerContext.Provider value={ctx}>
-      <div className="flex h-[calc(100dvh-7.75rem-env(safe-area-inset-bottom))] overflow-hidden md:h-[calc(100dvh-3.5rem)]">
+      <div className="flex h-[calc(100dvh-7.75rem-env(safe-area-inset-bottom))] overflow-hidden md:h-[calc(100dvh-3.5rem)] lg:m-4 lg:h-[calc(100dvh-5.5rem)] lg:rounded-xl lg:border lg:border-white/10 lg:bg-space-surface min-[1480px]:mx-auto min-[1480px]:max-w-[1180px]">
         <aside
           className={clsx(
-            "h-full min-h-0 w-full shrink-0 border-white/10 bg-space-bg/60 lg:flex lg:w-[288px] lg:flex-col lg:border-r xl:w-[320px]",
+            "h-full min-h-0 w-full shrink-0 border-white/10 bg-space-bg/60 lg:flex lg:w-[300px] lg:flex-col lg:border-r lg:bg-transparent xl:w-[320px]",
             active && !split ? "hidden" : "flex flex-col"
           )}
         >
@@ -226,7 +226,18 @@ export function DesktopMessenger({
                   <EmptyUniverse onFind={() => setNewOpen(true)} />
                 </div>
               ) : (
-                <WelcomeScene onNew={() => setNewOpen(true)} />
+                // Como no VK: nenhuma conversa aberta = só o convite simples para escolher ou criar.
+                <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+                  <MessagesSquare className="h-12 w-12 text-white/30" strokeWidth={1.5} />
+                  <p className="mt-3 text-[13.5px] leading-relaxed text-white/50">
+                    Escolha um chat
+                    <br />
+                    ou{" "}
+                    <button type="button" onClick={() => setNewOpen(true)} className="font-medium text-chat hover:underline">
+                      crie um novo
+                    </button>
+                  </p>
+                </div>
               ))}
           </main>
         )}

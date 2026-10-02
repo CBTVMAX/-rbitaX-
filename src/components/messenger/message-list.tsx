@@ -52,7 +52,10 @@ export function MessageList({
   intro,
   handlers,
   savedSpace = false,
+  flat = false,
 }: {
+  /** Computador: mensagens em lista (sem balão), como no VK. */
+  flat?: boolean;
   conversationKey: string;
   messages: ChatMessage[];
   meId: string;
@@ -198,6 +201,7 @@ export function MessageList({
                   </div>
                 )}
                 <MessageBubble
+                  flat={flat}
                   m={m}
                   mine={m.senderId === meId}
                   meId={meId}
