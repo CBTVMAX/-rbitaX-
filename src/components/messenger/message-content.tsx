@@ -483,14 +483,14 @@ export function DiceCard({ message, mine }: { message: ChatMessage; mine: boolea
         </div>
       </div>
       {roll.reason && <p className="mt-1.5 whitespace-pre-wrap break-words text-[14px] leading-snug">{roll.reason}</p>}
-      <div className={clsx("mt-2 flex items-end justify-center rounded-xl py-2", mine ? "bg-white/10" : "bg-white/[0.04]")}>
-        <span className="text-3xl font-extrabold tabular-nums leading-none">{roll.total}</span>
+      {/* Como o rolador do VK: os dados e o resultado. */}
+      <div className={clsx("mt-2 flex items-center justify-between gap-3 rounded-xl px-3 py-2", mine ? "bg-white/10" : "bg-white/[0.04]")}>
+        <span className={clsx("text-[13px] tabular-nums", mine ? "text-snow/80" : "text-white/65")}>Dados: [{roll.rolls.join(", ")}]</span>
+        <span className="flex items-baseline gap-1.5">
+          <span className={clsx("text-[11px] uppercase tracking-wide", mine ? "text-snow/70" : "text-white/50")}>Resultado</span>
+          <span className="text-2xl font-extrabold tabular-nums leading-none">{roll.total}</span>
+        </span>
       </div>
-      {roll.count > 1 && (
-        <p className={clsx("mt-1.5 text-center text-[11px]", mine ? "text-snow/70" : "text-white/50")}>
-          Dados: [{roll.rolls.join(", ")}]
-        </p>
-      )}
     </div>
   );
 }

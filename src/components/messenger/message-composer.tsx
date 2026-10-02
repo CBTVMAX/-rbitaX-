@@ -57,7 +57,8 @@ const DICE = [
   { d: "d100", sides: 100 },
 ] as const;
 
-const DICE_CMD = /^\/(?:r|roll)\s+([\s\S]+)$/i;
+const DICE_ANYWHERE = /(?:^|\s)\/(?:r|roll)\s+([0-9]{0,2}d[0-9]{1,3})(?=$|[\s.,!?;:)])/i;
+const VALID_DICE = /^(?:[1-9]|1[0-9]|20)?d(?:4|6|8|10|12|20|100)$/i;
 
 const drafts = new Map<string, string>();
 let lastTab: PanelTab = "stickers";
@@ -254,23 +255,11 @@ export function MessageComposer({
     }
     const t = text.trim();
     if (!t) return;
-    // Comando de rolagem de dados (grupos): /r d20, /roll 2d10…
-    const dm = t.match(DICE_CMD);
-    if (dm) {
-      if (!isGroup) {
-        setHint("🎲 A rolagem de dados funciona só em grupos.");
-        return;
-      }
-      void api.dice(dm[1].trim()).then((res) => {
-        if (res.ok) {
-          setText("");
-          input.current?.focus();
-        } else if (res.error === "invalid") {
-          setHint("🎲 Use /r d20 e, se quiser, o motivo depois: /r d20 ataque no dragão. Dados: D4, D6, D8, D10, D12, D20 e D100.");
-        } else {
-          setHint("🎲 Não foi possível rolar agora. Tente de novo.");
-        }
-      });
+    // Dados no grupo (como o rolador do VK): "/r d20" em qualquer parte da mensagem. A mensagem vai
+    // como está e o servidor responde citando-a com o resultado. Aqui só avisamos se o dado não existe.
+    const dm = isGroup ? t.match(DICE_ANYWHERE) : null;
+    if (dm && !VALID_DICE.test(dm[1])) {
+      setHint("🎲 Dado inválido. Use D4, D6, D8, D10, D12, D20 ou D100 (ex.: /r d20 ou /r 2d6).");
       return;
     }
     api.text(t.slice(0, 4000));
@@ -280,9 +269,9 @@ export function MessageComposer({
 
   function rollFromSheet(d: string) {
     setDiceOpen(false);
-    // Fica "/r d20 " com o cursor no fim: dá para escrever o motivo antes de enviar.
-    setText(`/r ${d} `);
-    setHint("🎲 Escreva o motivo depois do dado (opcional) e envie.");
+    // O comando entra junto do que já foi escrito (antes ou depois do texto, como no VK).
+    setText((cur) => (cur.trim() ? `${cur.trimEnd()} /r ${d}` : `/r ${d} `));
+    setHint("🎲 Escreva o que quiser junto (ex.: Pedir ajuda. /r d20) e envie.");
     requestAnimationFrame(() => {
       const el = input.current;
       if (!el) return;
@@ -768,7 +757,7 @@ function DiceSheet({ onPick, onClose }: { onPick: (d: string) => void; onClose: 
           </button>
         </div>
         <p className="mb-2 px-1 text-[11px] leading-snug text-white/50">
-          Escolha o dado e escreva o motivo depois, se quiser: <span className="text-white/75">/r d20 ataque no dragão</span>
+          Escreva junto, antes ou depois: <span className="text-white/75">Pedir ajuda. /r d20</span> — a mensagem vai inteira e o resultado sai logo abaixo.
         </p>
         <button
           type="button"
