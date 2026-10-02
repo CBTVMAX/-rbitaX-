@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { clsx } from "clsx";
 import {
+  Archive,
+  ArchiveRestore,
+  Check,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -15,7 +18,10 @@ import {
   Link2,
   Loader2,
   MessageCircle,
+  ListChecks,
   MoreHorizontal,
+  Pin,
+  PinOff,
   Plus,
   Share2,
   Trash2,
@@ -40,16 +46,70 @@ type Photo = {
   height: number | null;
   createdAt: string;
   post: { id: string; content: string | null; createdAt: string };
+  pinnedAt?: string | null;
+  archivedAt?: string | null;
 };
 
-type AlbumId = "all" | "avatar" | "wall";
+type AlbumId = "all" | "avatar" | "wall" | "archive";
+type PhotoAction = "pin" | "unpin" | "archive" | "unarchive" | "remove";
 
 const PAGE = 48;
 const COLUMNS = "id, url, width, height, createdAt, post:Post!inner(id, content, createdAt, authorId, communityId, isArchived)";
+const PIN_COLUMNS = ", pinnedAt, archivedAt";
 // Fotos de perfil ficam em ".../avatar/..." (envio antigo) ou ".../posts/avatar-..." (editor novo).
 const AVATAR_PATTERNS = ["%/avatar/%", "%/posts/avatar-%"];
 
-const ALBUM_LABEL: Record<AlbumId, string> = { all: "Todas as fotos", avatar: "Fotos do perfil", wall: "Fotos no muro" };
+const ALBUM_LABEL: Record<AlbumId, string> = { all: "Todas as fotos", avatar: "Fotos do perfil", wall: "Fotos no muro", archive: "Arquivo" };
+
+type Client = ReturnType<typeof createClient>;
+
+// Fixar/arquivar dependem das colunas pinnedAt/archivedAt (migração profile_photo_actions).
+// Sem elas, a seção funciona igual, só sem essas opções.
+let actionsProbe: Promise<boolean> | null = null;
+function hasPhotoActions(supabase: Client) {
+  actionsProbe ??= Promise.resolve(supabase.from("Media").select("pinnedAt, archivedAt").limit(1)).then(
+    ({ error }) => !error,
+    () => false
+  );
+  return actionsProbe;
+}
+
+/** As 6 fotos da vitrine dos posts: fixadas primeiro e sem as arquivadas (null = usar as do feed). */
+export function useProfilePhotoPreview(ownerId: string | undefined) {
+  const supabase = useMemo(() => createClient(), []);
+  const [list, setList] = useState<{ id: string; type: string; url: string; pinnedAt: string | null }[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    if (!ownerId) return;
+    hasPhotoActions(supabase).then(async (ok) => {
+      if (!ok) return;
+      const { data, error } = await supabase
+        .from("Media")
+        .select("id, type, url, pinnedAt, post:Post!inner(authorId, communityId, isArchived)")
+        .eq("type", "image")
+        .eq("post.authorId", ownerId)
+        .is("post.communityId", null)
+        .eq("post.isArchived", false)
+        .is("archivedAt", null)
+        .order("pinnedAt", { ascending: false, nullsFirst: false })
+        .order("createdAt", { ascending: false })
+        .limit(6);
+      if (alive && !error) setList((data ?? []) as unknown as { id: string; type: string; url: string; pinnedAt: string | null }[]);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [supabase, ownerId]);
+  return list;
+}
+
+const ACTION_DONE: Record<PhotoAction, [string, string]> = {
+  pin: ["Foto fixada no topo do perfil.", "fotos fixadas no topo do perfil."],
+  unpin: ["Foto desafixada.", "fotos desafixadas."],
+  archive: ["Foto arquivada: só você vê no Arquivo.", "fotos arquivadas."],
+  unarchive: ["Foto de volta aos álbuns.", "fotos de volta aos álbuns."],
+  remove: ["Foto removida.", "fotos removidas."],
+};
 
 const isAvatarPhoto = (url: string) => url.includes("/avatar/") || url.includes("/posts/avatar-");
 
@@ -69,13 +129,32 @@ function longDate(iso: string) {
  */
 export function ProfilePhotos({ owner, isMe, viewerId, total }: { owner: Owner; isMe: boolean; viewerId: string | null; total?: number | null }) {
   const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
+  const [actions, setActions] = useState<boolean | null>(null);
+  const [version, setVersion] = useState(0);
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirmBulk, setConfirmBulk] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const dirty = useRef(false);
   const [album, setAlbum] = useState<AlbumId>("all");
   const [photos, setPhotos] = useState<Photo[] | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [counts, setCounts] = useState<{ all: number; avatar: number } | null>(null);
-  const [covers, setCovers] = useState<{ avatar: string | null; wall: string | null }>({ avatar: null, wall: null });
-  const [open, setOpen] = useState<{ list: Photo[]; index: number } | null>(null);
+  const [counts, setCounts] = useState<{ all: number; avatar: number; archive: number } | null>(null);
+  const [covers, setCovers] = useState<{ avatar: string | null; wall: string | null; archive: string | null }>({ avatar: null, wall: null, archive: null });
+  const [open, setOpen] = useState<{ list: Photo[]; index: number; fromGrid: boolean } | null>(null);
+  const manage = isMe && actions === true;
+
+  useEffect(() => {
+    hasPhotoActions(supabase).then(setActions);
+  }, [supabase]);
+
+  const flash = (text: string) => {
+    setNote(text);
+    window.setTimeout(() => setNote(null), 2400);
+  };
   const sentinel = useRef<HTMLDivElement>(null);
   // Formato medido no carregamento (as fotos antigas não têm largura/altura salvas no banco).
   const [ratios, setRatios] = useState<Record<string, number>>({});
@@ -84,54 +163,113 @@ export function ProfilePhotos({ owner, isMe, viewerId, total }: { owner: Owner; 
     (which: AlbumId, head = false) => {
       let q = supabase
         .from("Media")
-        .select(head ? "id, post:Post!inner(authorId, communityId, isArchived)" : COLUMNS, head ? { count: "exact", head: true } : undefined)
+        .select(head ? "id, post:Post!inner(authorId, communityId, isArchived)" : COLUMNS + (actions ? PIN_COLUMNS : ""), head ? { count: "exact", head: true } : undefined)
         .eq("type", "image")
         .eq("post.authorId", owner.id)
         .is("post.communityId", null)
         .eq("post.isArchived", false);
       if (which === "avatar") q = q.or(AVATAR_PATTERNS.map((p) => `url.ilike.${p}`).join(","));
       if (which === "wall") for (const p of AVATAR_PATTERNS) q = q.not("url", "ilike", p);
+      if (actions) q = which === "archive" ? q.not("archivedAt", "is", null) : q.is("archivedAt", null);
       return q;
     },
-    [supabase, owner.id]
+    [supabase, owner.id, actions]
   );
 
   // Contagens e capas dos álbuns.
   useEffect(() => {
+    if (actions === null) return;
+    const withArchive = isMe && actions;
     (async () => {
-      const [all, avatar, avatarCover, wallCover] = await Promise.all([
+      const [all, avatar, avatarCover, wallCover, archive, archiveCover] = await Promise.all([
         query("all", true),
         query("avatar", true),
         query("avatar").order("createdAt", { ascending: false }).limit(1),
         query("wall").order("createdAt", { ascending: false }).limit(1),
+        withArchive ? query("archive", true) : Promise.resolve({ count: 0 }),
+        withArchive ? query("archive").order("archivedAt", { ascending: false }).limit(1) : Promise.resolve({ data: [] }),
       ]);
-      setCounts({ all: all.count ?? total ?? 0, avatar: avatar.count ?? 0 });
+      setCounts({ all: all.count ?? total ?? 0, avatar: avatar.count ?? 0, archive: archive.count ?? 0 });
       const first = (r: { data: unknown }) => ((r.data as Photo[] | null) ?? [])[0]?.url ?? null;
-      setCovers({ avatar: first(avatarCover) ?? owner.avatarUrl, wall: first(wallCover) });
+      setCovers({ avatar: first(avatarCover) ?? owner.avatarUrl, wall: first(wallCover), archive: first(archiveCover) });
     })();
-  }, [query, total, owner.avatarUrl]);
+  }, [query, total, owner.avatarUrl, actions, isMe, version]);
 
   const loadPage = useCallback(
     async (which: AlbumId, from: number) => {
-      const { data } = await query(which)
-        .order("createdAt", { ascending: false })
+      let q = query(which);
+      // Fixadas primeiro, como no VK.
+      if (actions && which !== "archive") q = q.order("pinnedAt", { ascending: false, nullsFirst: false });
+      const { data } = await q
+        .order(which === "archive" ? "archivedAt" : "createdAt", { ascending: false })
         .order("id", { ascending: false })
         .range(from, from + PAGE - 1);
       const rows = (data ?? []) as unknown as Photo[];
       setHasMore(rows.length === PAGE);
       return rows;
     },
-    [query]
+    [query, actions]
   );
 
   useEffect(() => {
+    if (actions === null) return;
     let alive = true;
-    setPhotos(null);
     loadPage(album, 0).then((rows) => alive && setPhotos(rows));
     return () => {
       alive = false;
     };
-  }, [album, loadPage]);
+  }, [album, loadPage, actions, version]);
+
+  // Trocar de álbum mostra o esqueleto; recarregar depois de uma ação, não.
+  useEffect(() => {
+    setPhotos(null);
+    setSelecting(false);
+    setSelected(new Set());
+  }, [album]);
+
+  const reload = () => setVersion((v) => v + 1);
+
+  async function act(kind: PhotoAction, ids: string[]) {
+    if (!ids.length) return false;
+    const { error } =
+      kind === "remove"
+        ? await supabase.rpc("photo_remove" as never, { p_ids: ids } as never)
+        : kind === "pin" || kind === "unpin"
+          ? await supabase.rpc("photo_set_pin" as never, { p_ids: ids, p_pin: kind === "pin" } as never)
+          : await supabase.rpc("photo_set_archived" as never, { p_ids: ids, p_archive: kind === "archive" } as never);
+    return !error;
+  }
+
+  async function bulk(kind: PhotoAction) {
+    const ids = [...selected];
+    setBulkBusy(true);
+    const ok = await act(kind, ids);
+    setBulkBusy(false);
+    setConfirmBulk(false);
+    if (!ok) return flash("Não foi possível concluir. Tente de novo.");
+    flash(ids.length === 1 ? ACTION_DONE[kind][0] : `${ids.length} ${ACTION_DONE[kind][1]}`);
+    setSelecting(false);
+    setSelected(new Set());
+    reload();
+    if (kind === "remove") router.refresh();
+  }
+
+  /** Ações do visualizador: atualiza na hora e reorganiza a grade quando ele fechar. */
+  async function viewerAct(kind: PhotoAction, photo: Photo) {
+    const ok = await act(kind, [photo.id]);
+    if (!ok) return false;
+    dirty.current = true;
+    if (kind === "pin" || kind === "unpin") {
+      const pinnedAt = kind === "pin" ? new Date().toISOString() : null;
+      const upd = (l: Photo[]) => l.map((x) => (x.id === photo.id ? { ...x, pinnedAt } : x));
+      setPhotos((p) => (p ? upd(p) : p));
+      setOpen((o) => (o ? { ...o, list: upd(o.list) } : o));
+    } else {
+      removed(photo.id);
+      if (kind === "remove") router.refresh();
+    }
+    return true;
+  }
 
   const more = useCallback(async () => {
     if (!photos || !hasMore || loadingMore) return;
@@ -157,29 +295,32 @@ export function ProfilePhotos({ owner, isMe, viewerId, total }: { owner: Owner; 
     if (!id) return;
     deepLinked.current = true;
     const index = photos.findIndex((p) => p.id === id);
-    if (index >= 0) return setOpen({ list: photos, index });
+    if (index >= 0) return setOpen({ list: photos, index, fromGrid: true });
     query("all")
       .eq("id", id)
       .maybeSingle()
-      .then(({ data }) => data && setOpen({ list: [data as unknown as Photo], index: 0 }));
+      .then(({ data }) => data && setOpen({ list: [data as unknown as Photo], index: 0, fromGrid: false }));
   }, [photos, query]);
 
-  const albumCount = (a: AlbumId) => (counts ? (a === "all" ? counts.all : a === "avatar" ? counts.avatar : Math.max(0, counts.all - counts.avatar)) : null);
+  const albumCount = (a: AlbumId) =>
+    counts ? (a === "all" ? counts.all : a === "avatar" ? counts.avatar : a === "archive" ? counts.archive : Math.max(0, counts.all - counts.avatar)) : null;
   const currentTotal = albumCount(album) ?? photos?.length ?? 0;
 
   function removed(id: string) {
+    dirty.current = true;
     setPhotos((p) => p?.filter((x) => x.id !== id) ?? p);
-    setCounts((c) => (c ? { all: Math.max(0, c.all - 1), avatar: c.avatar - (open?.list.find((x) => x.id === id && isAvatarPhoto(x.url)) ? 1 : 0) } : c));
     setOpen((o) => {
       if (!o) return o;
+      if (o.fromGrid) return o;
       const list = o.list.filter((x) => x.id !== id);
-      return list.length ? { list, index: Math.min(o.index, list.length - 1) } : null;
+      return list.length ? { ...o, list, index: Math.min(o.index, list.length - 1) } : null;
     });
   }
 
   const albums: { id: Exclude<AlbumId, "all">; cover: string | null }[] = [
     { id: "avatar", cover: covers.avatar },
     { id: "wall", cover: covers.wall },
+    ...(manage && ((counts?.archive ?? 0) > 0 || album === "archive") ? [{ id: "archive" as const, cover: covers.archive }] : []),
   ];
 
   const byYear = useMemo(() => {
@@ -193,9 +334,24 @@ export function ProfilePhotos({ owner, isMe, viewerId, total }: { owner: Owner; 
     return groups;
   }, [photos]);
 
-  const openAt = (p: Photo) => photos && setOpen({ list: photos, index: photos.findIndex((x) => x.id === p.id) });
+  const openAt = (p: Photo) => photos && setOpen({ list: photos, index: photos.findIndex((x) => x.id === p.id), fromGrid: true });
+  const toggle = (id: string) =>
+    setSelected((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const tile = (p: Photo, className: string, style?: React.CSSProperties) => (
-    <button key={p.id} type="button" onClick={() => openAt(p)} style={style} className={clsx("group relative block overflow-hidden bg-space-card", className)} aria-label="Abrir foto">
+    <button
+      key={p.id}
+      type="button"
+      onClick={() => (selecting ? toggle(p.id) : openAt(p))}
+      style={style}
+      aria-pressed={selecting ? selected.has(p.id) : undefined}
+      className={clsx("group relative block overflow-hidden bg-space-card", className)}
+      aria-label={selecting ? "Selecionar foto" : "Abrir foto"}
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={p.url}
@@ -208,9 +364,43 @@ export function ProfilePhotos({ owner, isMe, viewerId, total }: { owner: Owner; 
         }}
         className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.04]"
       />
-      <span className="absolute inset-0 bg-black/0 transition group-hover:bg-black/10" />
+      <span className={clsx("absolute inset-0 transition", selecting && selected.has(p.id) ? "bg-black/35 ring-[3px] ring-inset ring-orbit-blue" : "bg-black/0 group-hover:bg-black/10")} />
+      {p.pinnedAt && album !== "archive" && (
+        <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-snow backdrop-blur-sm" title="Fixada">
+          <Pin className="h-3.5 w-3.5 fill-snow" />
+        </span>
+      )}
+      {selecting && (
+        <span
+          className={clsx(
+            "absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 transition",
+            selected.has(p.id) ? "border-orbit-blue bg-orbit-blue text-snow" : "border-snow/90 bg-black/25"
+          )}
+        >
+          {selected.has(p.id) && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+        </span>
+      )}
     </button>
   );
+  const allSelected = !!photos?.length && photos.every((p) => selected.has(p.id));
+  // Aberto pela grade, o visualizador segue a lista viva (carregar mais, remover, fixar).
+  const viewList = open ? (open.fromGrid && photos ? photos : open.list) : [];
+  const viewIndex = open ? Math.min(open.index, viewList.length - 1) : 0;
+  const closeViewer = () => {
+    setOpen(null);
+    if (dirty.current) {
+      dirty.current = false;
+      reload();
+    }
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("foto")) {
+      url.searchParams.delete("foto");
+      window.history.replaceState(null, "", url.toString());
+    }
+  };
+  useEffect(() => {
+    if (open && !viewList.length) closeViewer();
+  });
 
   const empty = photos !== null && photos.length === 0;
 
@@ -266,12 +456,28 @@ export function ProfilePhotos({ owner, isMe, viewerId, total }: { owner: Owner; 
           <h3 className="text-[15px] font-semibold text-white">
             {album === "all" ? "Fotografias" : ALBUM_LABEL[album]} <span className="ml-1 font-normal text-white/45">{currentTotal > 0 && currentTotal.toLocaleString("pt-BR")}</span>
           </h3>
-          {isMe && (
-            <PublishButton className="hidden items-center gap-1.5 rounded-lg bg-white/[0.06] px-3 py-1.5 text-[13px] font-medium text-white transition hover:bg-white/[0.1] md:flex">
-              <Plus className="h-4 w-4" /> Carregar foto
-            </PublishButton>
-          )}
+          <div className="flex items-center gap-1.5">
+            {manage && !!photos?.length && (
+              <button
+                type="button"
+                onClick={() => (setSelecting((v) => !v), setSelected(new Set()))}
+                aria-pressed={selecting}
+                className={clsx(
+                  "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium transition",
+                  selecting ? "bg-orbit-blue/15 text-orbit-blue" : "bg-white/[0.06] text-white hover:bg-white/[0.1]"
+                )}
+              >
+                <ListChecks className="h-4 w-4" /> {selecting ? "Cancelar" : "Escolher várias"}
+              </button>
+            )}
+            {isMe && album !== "archive" && !selecting && (
+              <PublishButton className="hidden items-center gap-1.5 rounded-lg bg-white/[0.06] px-3 py-1.5 text-[13px] font-medium text-white transition hover:bg-white/[0.1] md:flex">
+                <Plus className="h-4 w-4" /> Carregar foto
+              </PublishButton>
+            )}
+          </div>
         </div>
+        {album === "archive" && <p className="-mt-1 mb-3 px-1 text-[12px] text-white/50">Só você vê estas fotos. Elas não aparecem nos álbuns nem na vitrine do perfil.</p>}
 
         {photos === null ? (
           <div className="grid grid-cols-3 gap-0.5 overflow-hidden rounded-xl md:grid-cols-4 md:gap-1">
@@ -282,7 +488,7 @@ export function ProfilePhotos({ owner, isMe, viewerId, total }: { owner: Owner; 
         ) : empty ? (
           <div className="flex flex-col items-center px-6 py-12 text-center">
             <ImageOff className="mb-3 h-9 w-9 text-white/25" />
-            <p className="text-sm font-medium text-white/80">{album === "all" ? "Nenhuma foto ainda" : "Nenhuma foto neste álbum"}</p>
+            <p className="text-sm font-medium text-white/80">{album === "all" ? "Nenhuma foto ainda" : album === "archive" ? "O arquivo está vazio" : "Nenhuma foto neste álbum"}</p>
             <p className="mt-1 text-xs text-white/45">{isMe ? "As fotos das suas publicações aparecem aqui." : `As fotos que ${owner.name.split(" ")[0]} publicar aparecem aqui.`}</p>
           </div>
         ) : (
@@ -316,33 +522,86 @@ export function ProfilePhotos({ owner, isMe, viewerId, total }: { owner: Owner; 
       </section>
 
       {/* "+ Adicionar" flutuante no celular, como no VK. */}
-      {isMe && (
+      {isMe && !selecting && (
         <PublishButton className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-1/2 z-30 flex -translate-x-1/2 items-center gap-2 rounded-full bg-orbit-blue px-5 py-3 text-sm font-semibold text-snow shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition active:scale-95 md:hidden">
           <Plus className="h-5 w-5" /> Adicionar foto
         </PublishButton>
       )}
 
-      {open && (
+      {selecting && (
+        <div className="fixed inset-x-2 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 md:sticky md:inset-x-auto md:bottom-3">
+          <div className="animate-pop-in mx-auto flex max-w-xl flex-wrap items-center gap-1.5 rounded-2xl border border-white/10 bg-space-card/95 p-2 shadow-[0_14px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+            <button
+              type="button"
+              onClick={() => setSelected(allSelected ? new Set() : new Set(photos?.map((p) => p.id)))}
+              className="rounded-lg px-2.5 py-2 text-[13px] font-medium text-orbit-blue hover:bg-white/[0.05]"
+            >
+              {allSelected ? "Limpar" : "Todas"}
+            </button>
+            <span className="flex-1 text-[13px] text-white/70">{selected.size ? plural(selected.size, "selecionada", "selecionadas") : "Toque nas fotos"}</span>
+            {(album === "archive"
+              ? ([["unarchive", ArchiveRestore, "Desarquivar"]] as const)
+              : ([
+                  ["pin", Pin, "Fixar"],
+                  ["archive", Archive, "Arquivar"],
+                ] as const)
+            ).map(([kind, Icon, label]) => (
+              <button
+                key={kind}
+                type="button"
+                disabled={!selected.size || bulkBusy}
+                onClick={() => bulk(kind)}
+                className="flex items-center gap-1.5 rounded-lg bg-white/[0.06] px-3 py-2 text-[13px] font-medium text-white transition hover:bg-white/[0.1] disabled:opacity-40"
+              >
+                <Icon className="h-4 w-4" /> <span className="hidden sm:inline">{label}</span>
+              </button>
+            ))}
+            <button
+              type="button"
+              disabled={!selected.size || bulkBusy}
+              onClick={() => setConfirmBulk(true)}
+              aria-label="Remover selecionadas"
+              className="flex items-center gap-1.5 rounded-lg bg-red-500/15 px-3 py-2 text-[13px] font-medium text-red-300 transition hover:bg-red-500/25 disabled:opacity-40"
+            >
+              {bulkBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} <span className="hidden sm:inline">Remover</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {confirmBulk && (
+        <div className="fixed inset-0 z-[95] flex items-end justify-center bg-black/60 p-3 md:items-center" onClick={() => !bulkBusy && setConfirmBulk(false)} role="presentation">
+          <div role="alertdialog" aria-label="Remover fotos" onClick={(e) => e.stopPropagation()} className="animate-pop-in w-full max-w-sm rounded-2xl border border-white/10 bg-space-card p-5 text-center shadow-2xl">
+            <p className="text-[16px] font-semibold text-white">Remover {plural(selected.size, "foto", "fotos")}?</p>
+            <p className="mt-1.5 text-[13px] text-white/60">Elas saem dos álbuns e das publicações. Isso não pode ser desfeito.</p>
+            <div className="mt-5 flex gap-2">
+              <button type="button" disabled={bulkBusy} onClick={() => setConfirmBulk(false)} className="h-11 flex-1 rounded-xl bg-white/[0.07] text-sm font-medium text-white hover:bg-white/[0.12]">Cancelar</button>
+              <button type="button" disabled={bulkBusy} onClick={() => bulk("remove")} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-red-500 text-sm font-semibold text-snow hover:bg-red-500/90 disabled:opacity-60">
+                {bulkBusy && <Loader2 className="h-4 w-4 animate-spin" />} Remover
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {note && <p className="fixed left-1/2 top-20 z-[95] -translate-x-1/2 rounded-full bg-space-card/95 px-4 py-2 text-[13px] font-medium text-white shadow-xl backdrop-blur">{note}</p>}
+
+      {open && viewList.length > 0 && (
         <PhotoViewer
           owner={owner}
           isMe={isMe}
           viewerId={viewerId}
-          list={open.list}
-          index={open.index}
-          total={open.list === photos ? currentTotal : open.list.length}
+          list={viewList}
+          index={viewIndex}
+          total={open.fromGrid ? currentTotal : open.list.length}
           albumLabel={ALBUM_LABEL[album]}
+          manage={manage}
+          onAct={viewerAct}
           onIndex={(index) => {
             setOpen((o) => (o ? { ...o, index } : o));
-            if (open.list === photos && index >= photos.length - 6) more();
+            if (open.fromGrid && index >= viewList.length - 6) more();
           }}
-          onClose={() => {
-            setOpen(null);
-            const url = new URL(window.location.href);
-            if (url.searchParams.has("foto")) {
-              url.searchParams.delete("foto");
-              window.history.replaceState(null, "", url.toString());
-            }
-          }}
+          onClose={closeViewer}
           onAlbum={(a) => {
             setOpen(null);
             setAlbum(a);
@@ -364,6 +623,8 @@ function PhotoViewer({
   index,
   total,
   albumLabel,
+  manage,
+  onAct,
   onIndex,
   onClose,
   onAlbum,
@@ -376,6 +637,9 @@ function PhotoViewer({
   index: number;
   total: number;
   albumLabel: string;
+  /** Dono com a migração aplicada: fixar, arquivar e remover pelo banco. */
+  manage: boolean;
+  onAct: (kind: PhotoAction, photo: Photo) => Promise<boolean>;
   onIndex: (i: number) => void;
   onClose: () => void;
   onAlbum: (a: AlbumId) => void;
@@ -515,7 +779,18 @@ function PhotoViewer({
     setBusy(false);
   }
 
+  async function run(kind: PhotoAction) {
+    if (busy) return;
+    setMenu(false);
+    setBusy(true);
+    const ok = await onAct(kind, photo);
+    setBusy(false);
+    setConfirm(false);
+    flash(ok ? ACTION_DONE[kind][0] : "Não foi possível concluir. Tente de novo.");
+  }
+
   async function remove() {
+    if (manage) return run("remove");
     if (busy) return;
     setBusy(true);
     const { error } = await supabase.from("Media").delete().eq("id", photo.id);
@@ -537,9 +812,15 @@ function PhotoViewer({
   const caption = photo.post.content?.trim();
 
   const menuItems: { icon: React.ComponentType<{ className?: string }>; label: string; onClick: () => void; danger?: boolean; hide?: boolean }[] = [
-    { icon: UserCircle2, label: "Instalar no perfil", onClick: setAsAvatar, hide: !isMe },
+    { icon: UserCircle2, label: "Instalar no perfil", onClick: setAsAvatar, hide: !isMe || !!photo.archivedAt },
+    photo.pinnedAt
+      ? { icon: PinOff, label: "Desafixar", onClick: () => run("unpin"), hide: !manage }
+      : { icon: Pin, label: "Fixar no perfil", onClick: () => run("pin"), hide: !manage || !!photo.archivedAt },
+    photo.archivedAt
+      ? { icon: ArchiveRestore, label: "Tirar do arquivo", onClick: () => run("unarchive"), hide: !manage }
+      : { icon: Archive, label: "Arquivar", onClick: () => run("archive"), hide: !manage },
     { icon: Download, label: "Baixar", onClick: download },
-    { icon: FolderOpen, label: "Ir para o álbum", onClick: () => onAlbum(avatarAlbum ? "avatar" : "wall") },
+    { icon: FolderOpen, label: "Ir para o álbum", onClick: () => onAlbum(photo.archivedAt ? "archive" : avatarAlbum ? "avatar" : "wall") },
     { icon: Link2, label: "Copiar link", onClick: copy },
     { icon: Share2, label: "Compartilhar", onClick: share },
     { icon: Trash2, label: "Remover foto", onClick: () => (setMenu(false), setConfirm(true)), danger: true, hide: !isMe },
