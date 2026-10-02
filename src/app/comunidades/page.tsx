@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
-import { AppSidebar, MobileTabBar } from "@/components/app-sidebar";
-import { AppAccentSync } from "@/components/app-theme";
-import { appAccentVars } from "@/lib/profile-colors";
 import { PublicHeader } from "@/components/public-header";
+import { CommunityShell } from "@/components/community/community-shell";
 import { CreateCommunityDialog } from "@/components/create-community-dialog";
 import { CommunityJoinButton } from "@/components/community-join-button";
 import { COMMUNITY_CATEGORIES, categoryLabel } from "@/lib/community-categories";
@@ -267,8 +265,6 @@ export default async function ComunidadesPage(
   );
 
   if (current) {
-    const { profile } = current;
-    const accent = appAccentVars(profile.profileColor);
     // Início no estilo VK (sem busca nem filtro): assinaturas, visitadas e sugestões dos amigos.
     let home: React.ReactNode = null;
     if (showDiscoveryExtras) {
@@ -322,14 +318,8 @@ export default async function ComunidadesPage(
 
       home = <CommunitiesHome userId={current.authId} mine={mine} ownedCount={myOwnedIds.size} suggestions={suggestions} popular={popular} />;
     }
-    return (
-      <div className="min-h-screen bg-space-bg bg-stars" style={accent as React.CSSProperties | undefined}>
-        <AppAccentSync vars={accent} />
-        <AppSidebar username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} />
-        <main className="min-h-screen pb-20 md:ml-64 md:pb-0">{home ?? content}</main>
-        <MobileTabBar username={profile.username} />
-      </div>
-    );
+    // Mesma moldura das outras telas (barra do topo, menu, abas e o chat do Messenger).
+    return <CommunityShell current={current}>{home ?? content}</CommunityShell>;
   }
 
   const officialCommunity = (allCommunities ?? []).find((c) => c.slug === "orbitax-oficial") ?? null;

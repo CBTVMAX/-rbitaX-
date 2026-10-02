@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PublicHeader } from "@/components/public-header";
+import { ChatDock } from "@/components/chat-dock";
 import { NotifyMeButton } from "@/components/notify-me-button";
 import { PeopleResults, type PersonResult } from "@/components/people-results";
 import { Avatar } from "@/components/post-card";
@@ -96,9 +97,8 @@ export default async function ExplorarPage(
     data: { user },
   } = await supabase.auth.getUser();
   // Signed-in members see Explorar in their own color (visitors keep the default look).
-  const accent = user
-    ? appAccentVars((await supabase.from("User").select("profileColor").eq("id", user.id).maybeSingle()).data?.profileColor)
-    : undefined;
+  const meRow = user ? (await supabase.from("User").select("profileColor, name, username, avatarUrl").eq("id", user.id).maybeSingle()).data : null;
+  const accent = user ? appAccentVars(meRow?.profileColor) : undefined;
 
   const q = (searchParams.q ?? "").trim();
   const tab: Tab = (["para-voce", "pessoas", "publicacoes", "comunidades", "musica"] as Tab[]).includes(
@@ -550,6 +550,8 @@ export default async function ExplorarPage(
           </div>
         )}
       </main>
+      {/* O chat do Messenger também acompanha a pessoa no Explorar. */}
+      {user && meRow && <ChatDock me={{ id: user.id, name: meRow.name, username: meRow.username, avatarUrl: meRow.avatarUrl }} />}
     </div>
   );
 }

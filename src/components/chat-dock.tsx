@@ -15,6 +15,8 @@ import { ChatAvatar, ConversationAvatar } from "@/components/messenger/ui";
 import { loadFriends } from "@/components/messenger/dialogs";
 
 const RAIL_KEY = "orbitax:chat-rail";
+// A conversa aberta continua aberta ao trocar de página (feed → comunidade → perfil…).
+const OPEN_KEY = "orbitax:chat-open";
 const RAIL_SIZE = 9; // conversas mostradas na faixa lateral
 
 type Toast = { id: number; text: string; tone: "info" | "error" };
@@ -50,7 +52,16 @@ export function ChatDock({ me }: { me: ChatUser }) {
   const [desktop, setDesktop] = useState(false);
   const [rail, setRail] = useState(true);
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeId, setActiveIdState] = useState<string | null>(null);
+  const setActiveId = useCallback((id: string | null) => {
+    setActiveIdState(id);
+    try {
+      if (id) sessionStorage.setItem(OPEN_KEY, id);
+      else sessionStorage.removeItem(OPEN_KEY);
+    } catch {
+      // sem armazenamento: só não lembra entre páginas
+    }
+  }, []);
   const [jump, setJump] = useState<{ conversationId: string; messageId: string } | null>(null);
   const [listOpen, setListOpen] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -63,6 +74,8 @@ export function ChatDock({ me }: { me: ChatUser }) {
     mq.addEventListener("change", on);
     try {
       setRail(localStorage.getItem(RAIL_KEY) !== "0");
+      const open = sessionStorage.getItem(OPEN_KEY);
+      if (open) setActiveIdState(open);
     } catch {
       // storage indisponível: faixa aberta
     }
@@ -109,7 +122,7 @@ export function ChatDock({ me }: { me: ChatUser }) {
     setJump(messageId ? { conversationId: id, messageId } : null);
     setActiveId(id);
     setListOpen(false);
-  }, []);
+  }, [setActiveId]);
 
   const startDirect = useCallback(
     async (user: ChatUser) => {
