@@ -37,7 +37,7 @@ import { Avatar } from "@/components/post-card";
 import { CommunityJoinButton } from "@/components/community-join-button";
 import { useStoreToast } from "@/components/store/store-view";
 import { categoryLabel } from "@/lib/community-categories";
-import { accentOf, ago, categoryOf, compactNumber, rank, type Album, type Community, type CommunityPost, type Discussion, type Membership, type Role, type Viewer } from "@/lib/communities";
+import { accentOf, ago, can, categoryOf, compactNumber, rank, type Album, type Community, type CommunityPost, type Discussion, type Membership, type Role, type Viewer } from "@/lib/communities";
 import { CommunityContext, useCommunity, type CommunityCtx } from "./context";
 import { CommunityPostCard } from "./post-card";
 import { useCreateOptions } from "./composer";
@@ -239,6 +239,7 @@ function Hub(p: HubProps) {
     p.bump();
   }
   const flow = useCreateFlow({ albums: p.albums, onCreated });
+  const canDiscuss = !!viewer && canSee && can(community, role, "discussion") && !membership.muted;
 
   const iconBtn = "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-white transition hover:bg-white/[0.08]";
   const actions = (
@@ -378,6 +379,61 @@ function Hub(p: HubProps) {
 
   const staffMembers = p.members.filter((m) => m.role !== "member").sort((a, b) => rank(b.role) - rank(a.role));
 
+  // Como no VK: tópicos fixados em destaque, as discussões recentes e "Adicionar discussão" / "Mostrar tudo".
+  const pinnedTopics = p.discussions.filter((d) => d.isPinned);
+  const discussionsCard = canSee && (p.discussions.length > 0 || canDiscuss) && (
+    <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
+      {pinnedTopics.length > 0 && (
+        <div className="-mx-4 mb-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+          {pinnedTopics.map((d) => (
+            <Link key={d.id} href={`${base}/discussoes/${d.id}`} className="w-[132px] shrink-0">
+              <span className="block aspect-[3/2] overflow-hidden rounded-2xl bg-space-bg">
+                {d.imageUrl || community.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={(d.imageUrl ?? community.avatarUrl)!} alt="" loading="lazy" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center text-2xl">{categoryOf(d.category).emoji}</span>
+                )}
+              </span>
+              <span className="mt-1.5 block truncate text-center text-[12px] font-medium uppercase tracking-wide text-white/80">{d.title}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+      <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+        <MessagesSquare className="h-4 w-4 text-orbit-cyan" /> Discussões
+        {p.counts.discussions > 0 && <span className="font-normal text-white/45">{p.counts.discussions}</span>}
+      </h2>
+      {p.discussions.length === 0 ? (
+        <p className="py-2 text-sm text-white/50">Nenhuma discussão ainda. Comece a primeira!</p>
+      ) : (
+        <ul className="divide-y divide-white/[0.06]">
+          {p.discussions.slice(0, 3).map((d) => (
+            <li key={d.id}>
+              <Link href={`${base}/discussoes/${d.id}`} className="block py-2.5 transition hover:opacity-80">
+                <span className="line-clamp-1 text-[15px] font-semibold text-white">{d.title}</span>
+                <span className="text-xs text-white/45">
+                  {d.replyCount} {d.replyCount === 1 ? "comentário" : "comentários"} ·{" "}
+                  {new Date(d.createdAt).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: tz })}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className={clsx("mt-3 grid gap-2", canDiscuss ? "grid-cols-2" : "grid-cols-1")}>
+        {canDiscuss && (
+          <button type="button" onClick={() => flow.start("discussion")} className="flex h-10 items-center justify-center gap-1.5 rounded-xl bg-white/[0.06] text-sm font-medium text-orbit-cyan transition hover:bg-white/[0.1]">
+            <Plus className="h-4 w-4" /> Adicionar discussão
+          </button>
+        )}
+        <Link href={`${base}/discussoes`} className="flex h-10 items-center justify-center rounded-xl bg-white/[0.06] text-sm font-medium text-orbit-cyan transition hover:bg-white/[0.1]">
+          Mostrar tudo{p.counts.discussions > 0 ? ` ${p.counts.discussions}` : ""}
+        </Link>
+      </div>
+    </section>
+  );
+
   const sidebar = (
     <aside className="hidden space-y-3 lg:block">
       {staff && (
@@ -450,30 +506,6 @@ function Hub(p: HubProps) {
           </div>
         </section>
       )}
-      {canSee && p.discussions.length > 0 && (
-        <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-white">Discussões ativas</h2>
-            <Link href={`${base}/discussoes`} className="text-xs font-semibold text-orbit-cyan">
-              Ver todas
-            </Link>
-          </div>
-          <ul className="space-y-1">
-            {p.discussions.slice(0, 5).map((d) => (
-              <li key={d.id}>
-                <Link href={`${base}/discussoes/${d.id}`} className="block rounded-xl px-2 py-1.5 hover:bg-white/[0.04]">
-                  <span className="line-clamp-2 text-sm text-white/85">
-                    {categoryOf(d.category).emoji} {d.title}
-                  </span>
-                  <span className="text-[11px] text-white/40">
-                    {d.replyCount} {d.replyCount === 1 ? "resposta" : "respostas"} · {ago(d.lastActivityAt)}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
       {community.links.length > 0 && (
         <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
           <h2 className="mb-2 text-sm font-semibold text-white">Links</h2>
@@ -527,6 +559,7 @@ function Hub(p: HubProps) {
             />
           ) : (
             <>
+              {discussionsCard}
               {p.nextEvent && <NextEvent e={p.nextEvent.event} rsvp={p.nextEvent.rsvp} slug={community.slug} />}
               {p.focus && !p.pinned.some((x) => x.id === p.focus!.id) && <CommunityPostCard post={p.focus} highlight />}
               {p.pinned.map((x) => (
