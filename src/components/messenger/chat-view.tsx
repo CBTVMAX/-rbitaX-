@@ -104,7 +104,7 @@ export function ChatView({
   const wide = useMediaQuery("(min-width: 1280px)");
   // Abre sozinho só em telas bem largas; em notebook a conversa fica com o espaço todo até a pessoa abrir.
   const huge = useMediaQuery("(min-width: 1536px)");
-  // Computador: mensagens em lista, como no VK (o chat flutuante continua com balões).
+  // Computador: fundo liso por padrão, como no VK (as mensagens continuam em balões).
   const desktop = useMediaQuery("(min-width: 1024px)");
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -990,7 +990,6 @@ export function ChatView({
           highlightId={highlightId}
           unreadFromId={unreadFromId}
           savedSpace={c.isSaved}
-          flat={desktop && !compact}
           intro={
             c.isSaved ? (
               <SavedIntro />
