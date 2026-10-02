@@ -1,18 +1,24 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { Gift, Image as ImageIcon, Pin, Play, PlaySquare, X } from "lucide-react";
+import { Archive, Gift, Image as ImageIcon, Loader2, Maximize2, MoreHorizontal, Pin, PinOff, Play, PlaySquare, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/post-card";
 import { ProfileGiftButton } from "@/components/profile-gift-button";
 import { PublishButton } from "@/components/publish/publish-provider";
 import { commentDate } from "@/components/comments/comment-kit";
-import { useProfilePhotoPreview } from "@/components/profile-photos";
+import { runPhotoAction, useProfilePhotoPreview, type PhotoAction } from "@/components/profile-photos";
 
-type Media = { id: string; type: string; url: string };
+type Media = { id: string; type: string; url: string; pinnedAt?: string | null };
+
+/** Cantos arredondados só nos quadros das pontas da grade 3×N. */
+function corner(i: number, n: number) {
+  const lastRow = Math.floor((n - 1) / 3) * 3;
+  return clsx(i === 0 && "rounded-tl-xl", i === Math.min(2, n - 1) && "rounded-tr-xl", i === lastRow && "rounded-bl-xl", i === n - 1 && "rounded-br-xl");
+}
 
 /** Abre a foto no visualizador da aba Fotos (sem recarregar a página). */
 function openPhoto(e: React.MouseEvent, id: string) {
@@ -37,8 +43,37 @@ export function ProfileMediaShowcase({
   userId?: string;
   className?: string;
 }) {
-  const preview = useProfilePhotoPreview(userId);
+  const supabase = useMemo(() => createClient(), []);
+  const { list: preview, reload } = useProfilePhotoPreview(userId);
   const photos: (Media & { pinnedAt?: string | null })[] = preview ?? feedPhotos;
+  // Menu rápido do dono em cada foto (como o ⋯ do VK no computador). Só com a migração aplicada.
+  const manage = isMe && preview !== null;
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuFor) return;
+    const close = (e: MouseEvent) => !menuRef.current?.contains(e.target as Node) && setMenuFor(null);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenuFor(null);
+    document.addEventListener("mousedown", close);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [menuFor]);
+
+  async function quick(kind: PhotoAction, id: string) {
+    setMenuFor(null);
+    setBusy(id);
+    const ok = await runPhotoAction(supabase, kind, [id]);
+    setBusy(null);
+    setNote(ok ? (kind === "pin" ? "Foto fixada no perfil." : kind === "unpin" ? "Foto desafixada." : "Foto arquivada.") : "Não foi possível concluir. Tente de novo.");
+    window.setTimeout(() => setNote(null), 2200);
+    if (ok) reload();
+  }
   const [tab, setTab] = useState<"foto" | "video">(feedPhotos.length || !videos.length ? "foto" : "video");
   const items = (tab === "foto" ? photos : videos).slice(0, 6);
   const hasMedia = photos.length > 0 || videos.length > 0;
@@ -68,10 +103,11 @@ export function ProfileMediaShowcase({
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-3 gap-0.5 overflow-hidden rounded-xl">
-            {items.map((m) =>
+          {/* Sem overflow-hidden na grade (cortaria o menu ⋯): os cantos arredondados vão nos quadros. */}
+          <div className="grid grid-cols-3 gap-0.5">
+            {items.map((m, i) =>
               m.type === "video" ? (
-                <a key={m.id} href="#tab-videos" className="relative block aspect-square bg-black">
+                <a key={m.id} href="#tab-videos" className={clsx("relative block aspect-square overflow-hidden bg-black", corner(i, items.length))}>
                   {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
                   <video src={m.url} preload="metadata" muted className="h-full w-full object-cover" />
                   <span className="absolute inset-0 flex items-center justify-center bg-black/20">
@@ -79,24 +115,73 @@ export function ProfileMediaShowcase({
                   </span>
                 </a>
               ) : (
-                <a key={m.id} href={`?foto=${m.id}#tab-fotos`} onClick={(e) => openPhoto(e, m.id)} className="relative block aspect-square overflow-hidden bg-space-card">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={m.url} alt="" loading="lazy" className="h-full w-full object-cover transition hover:scale-105" />
-                  {!!(m as { pinnedAt?: string | null }).pinnedAt && (
-                    <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-snow backdrop-blur-sm" title="Fixada">
-                      <Pin className="h-3.5 w-3.5 fill-snow" />
+                <div key={m.id} className={clsx("group relative aspect-square bg-space-card", corner(i, items.length))}>
+                  <a href={`?foto=${m.id}#tab-fotos`} onClick={(e) => openPhoto(e, m.id)} className={clsx("block h-full w-full overflow-hidden", corner(i, items.length))} aria-label="Abrir foto">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={m.url} alt="" loading="lazy" className="h-full w-full object-cover transition duration-200 group-hover:brightness-90" />
+                  </a>
+                  {m.pinnedAt && (
+                    <Pin aria-label="Fixada" className="pointer-events-none absolute right-2 top-2 h-4 w-4 fill-snow text-snow drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]" />
+                  )}
+                  {busy === m.id && (
+                    <span className="absolute inset-0 flex items-center justify-center bg-black/40">
+                      <Loader2 className="h-6 w-6 animate-spin text-snow" />
                     </span>
                   )}
-                </a>
+                  {manage && (
+                    <div ref={menuFor === m.id ? menuRef : undefined} className="absolute left-1.5 top-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setMenuFor((v) => (v === m.id ? null : m.id))}
+                        aria-label="Opções da foto"
+                        aria-expanded={menuFor === m.id}
+                        className={clsx(
+                          "flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-snow backdrop-blur-sm transition hover:bg-black/75",
+                          menuFor === m.id ? "opacity-100" : "opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+                        )}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+                      {menuFor === m.id && (
+                        <div role="menu" className="animate-pop-in absolute left-0 top-9 z-20 w-52 overflow-hidden rounded-xl border border-white/10 bg-space-card py-1 shadow-2xl">
+                          {(
+                            [
+                              m.pinnedAt ? (["unpin", PinOff, "Remover pin"] as const) : (["pin", Pin, "Fixar no perfil"] as const),
+                              ["archive", Archive, "Arquivar"] as const,
+                            ] as const
+                          ).map(([kind, Icon, label]) => (
+                            <button key={kind} type="button" role="menuitem" onClick={() => quick(kind, m.id)} className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm text-white/85 hover:bg-white/[0.06]">
+                              <Icon className="h-4 w-4 opacity-75" /> {label}
+                            </button>
+                          ))}
+                          <a href={`?foto=${m.id}#tab-fotos`} onClick={(e) => (setMenuFor(null), openPhoto(e, m.id))} role="menuitem" className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm text-white/85 hover:bg-white/[0.06]">
+                            <Maximize2 className="h-4 w-4 opacity-75" /> Abrir foto
+                          </a>
+                          <a href="#tab-fotos" onClick={() => setMenuFor(null)} role="menuitem" className="flex w-full items-center gap-2.5 px-3.5 py-2 text-left text-sm text-white/85 hover:bg-white/[0.06]">
+                            <ImageIcon className="h-4 w-4 opacity-75" /> Escolher quais fixar
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               )
             )}
           </div>
-          <a
-            href={tab === "foto" ? "#tab-fotos" : "#tab-videos"}
-            className="mt-3 flex w-full items-center justify-center rounded-xl bg-white/[0.05] py-2 text-sm font-medium text-orbit-blue transition hover:bg-white/[0.08]"
-          >
-            Mostrar tudo
-          </a>
+          <div className={clsx("mt-3 grid gap-2", isMe && tab === "foto" && "grid-cols-2")}>
+            {isMe && tab === "foto" && (
+              <PublishButton className="flex items-center justify-center rounded-xl bg-white/[0.05] py-2 text-sm font-medium text-orbit-blue transition hover:bg-white/[0.08]">
+                Carregar foto
+              </PublishButton>
+            )}
+            <a
+              href={tab === "foto" ? "#tab-fotos" : "#tab-videos"}
+              className="flex items-center justify-center rounded-xl bg-white/[0.05] py-2 text-sm font-medium text-orbit-blue transition hover:bg-white/[0.08]"
+            >
+              Mostrar tudo
+            </a>
+          </div>
+          {note && <p className="mt-2 text-center text-xs text-emerald-400">{note}</p>}
         </section>
       )}
       {isMe && (

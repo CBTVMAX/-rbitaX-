@@ -51,7 +51,7 @@ type Photo = {
 };
 
 type AlbumId = "all" | "avatar" | "wall" | "archive";
-type PhotoAction = "pin" | "unpin" | "archive" | "unarchive" | "remove";
+export type PhotoAction = "pin" | "unpin" | "archive" | "unarchive" | "remove";
 
 const PAGE = 48;
 const COLUMNS = "id, url, width, height, createdAt, post:Post!inner(id, content, createdAt, authorId, communityId, isArchived)";
@@ -78,6 +78,7 @@ function hasPhotoActions(supabase: Client) {
 export function useProfilePhotoPreview(ownerId: string | undefined) {
   const supabase = useMemo(() => createClient(), []);
   const [list, setList] = useState<{ id: string; type: string; url: string; pinnedAt: string | null }[] | null>(null);
+  const [version, setVersion] = useState(0);
   useEffect(() => {
     let alive = true;
     if (!ownerId) return;
@@ -91,7 +92,7 @@ export function useProfilePhotoPreview(ownerId: string | undefined) {
         .is("post.communityId", null)
         .eq("post.isArchived", false)
         .is("archivedAt", null)
-        .order("pinnedAt", { ascending: false, nullsFirst: false })
+        .order("pinnedAt", { ascending: true, nullsFirst: false })
         .order("createdAt", { ascending: false })
         .limit(6);
       if (alive && !error) setList((data ?? []) as unknown as { id: string; type: string; url: string; pinnedAt: string | null }[]);
@@ -99,8 +100,30 @@ export function useProfilePhotoPreview(ownerId: string | undefined) {
     return () => {
       alive = false;
     };
-  }, [supabase, ownerId]);
-  return list;
+  }, [supabase, ownerId, version]);
+  return { list, reload: () => setVersion((v) => v + 1) };
+}
+
+/**
+ * Fixar, desafixar, arquivar e remover pelo banco. Ao fixar várias, vai uma por vez na ordem
+ * escolhida: a primeira fixada fica no primeiro quadro (dá para montar um mosaico 3×2, como no VK).
+ */
+export async function runPhotoAction(supabase: Client, kind: PhotoAction, ids: string[]) {
+  if (!ids.length) return false;
+  if (kind === "pin") {
+    for (const id of ids) {
+      const { error } = await supabase.rpc("photo_set_pin" as never, { p_ids: [id], p_pin: true } as never);
+      if (error) return false;
+    }
+    return true;
+  }
+  const { error } =
+    kind === "remove"
+      ? await supabase.rpc("photo_remove" as never, { p_ids: ids } as never)
+      : kind === "unpin"
+        ? await supabase.rpc("photo_set_pin" as never, { p_ids: ids, p_pin: false } as never)
+        : await supabase.rpc("photo_set_archived" as never, { p_ids: ids, p_archive: kind === "archive" } as never);
+  return !error;
 }
 
 const ACTION_DONE: Record<PhotoAction, [string, string]> = {
@@ -198,8 +221,8 @@ export function ProfilePhotos({ owner, isMe, viewerId, total }: { owner: Owner; 
   const loadPage = useCallback(
     async (which: AlbumId, from: number) => {
       let q = query(which);
-      // Fixadas primeiro, como no VK.
-      if (actions && which !== "archive") q = q.order("pinnedAt", { ascending: false, nullsFirst: false });
+      // Fixadas primeiro, na ordem em que foram fixadas (como no VK).
+      if (actions && which !== "archive") q = q.order("pinnedAt", { ascending: true, nullsFirst: false });
       const { data } = await q
         .order(which === "archive" ? "archivedAt" : "createdAt", { ascending: false })
         .order("id", { ascending: false })
@@ -229,16 +252,7 @@ export function ProfilePhotos({ owner, isMe, viewerId, total }: { owner: Owner; 
 
   const reload = () => setVersion((v) => v + 1);
 
-  async function act(kind: PhotoAction, ids: string[]) {
-    if (!ids.length) return false;
-    const { error } =
-      kind === "remove"
-        ? await supabase.rpc("photo_remove" as never, { p_ids: ids } as never)
-        : kind === "pin" || kind === "unpin"
-          ? await supabase.rpc("photo_set_pin" as never, { p_ids: ids, p_pin: kind === "pin" } as never)
-          : await supabase.rpc("photo_set_archived" as never, { p_ids: ids, p_archive: kind === "archive" } as never);
-    return !error;
-  }
+  const act = (kind: PhotoAction, ids: string[]) => runPhotoAction(supabase, kind, ids);
 
   async function bulk(kind: PhotoAction) {
     const ids = [...selected];
