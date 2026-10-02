@@ -113,13 +113,13 @@ function MenuTiles({ community, staff, base, discussions }: { community: Communi
   };
   // Só mostramos imagens do próprio armazenamento do ÓrbitaX.
   const safeImage = (src?: string | null) => (src && /^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\//.test(src) ? src : null);
-  const tile = "w-[132px] shrink-0 md:w-[148px]";
+  const tile = "w-[168px] shrink-0 md:w-[188px]";
   return (
     <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
       <div className="-mx-4 flex gap-3 overflow-x-auto px-4 [scrollbar-width:none]">
         {staff && (
           <Link href={`${base}/gerenciar?secao=geral#links`} className={tile}>
-            <span className="flex aspect-[3/2] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/60 transition hover:text-white">
+            <span className="flex aspect-[2/1] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/60 transition hover:text-white">
               <Settings className="h-7 w-7" />
             </span>
             <span className="mt-1.5 block truncate text-center text-[13px] text-white/75">{links.length ? "Configurar" : "Adicionar atalhos"}</span>
@@ -129,7 +129,7 @@ function MenuTiles({ community, staff, base, discussions }: { community: Communi
           const img = safeImage(l.image) ?? community.avatarUrl ?? community.coverUrl;
           const inner = (
             <>
-              <span className="relative block aspect-[3/2] overflow-hidden rounded-2xl bg-space-bg">
+              <span className="relative block aspect-[2/1] overflow-hidden rounded-2xl bg-space-bg">
                 {img ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={img} alt="" loading="lazy" className="h-full w-full object-cover transition hover:scale-105" />
@@ -426,27 +426,9 @@ function Hub(p: HubProps) {
 
   const staffMembers = p.members.filter((m) => m.role !== "member").sort((a, b) => rank(b.role) - rank(a.role));
 
-  // Como no VK: tópicos fixados em destaque, as discussões recentes e "Adicionar discussão" / "Mostrar tudo".
-  const pinnedTopics = p.discussions.filter((d) => d.isPinned);
+  // Como no VK: as discussões recentes e "Adicionar discussão" / "Mostrar tudo" (os tópicos já aparecem como quadros no topo).
   const discussionsCard = canSee && (p.discussions.length > 0 || canDiscuss) && (
     <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
-      {pinnedTopics.length > 0 && (
-        <div className="-mx-4 mb-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
-          {pinnedTopics.map((d) => (
-            <Link key={d.id} href={`${base}/discussoes/${d.id}`} className="w-[132px] shrink-0">
-              <span className="block aspect-[3/2] overflow-hidden rounded-2xl bg-space-bg">
-                {d.imageUrl || community.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={(d.imageUrl ?? community.avatarUrl)!} alt="" loading="lazy" className="h-full w-full object-cover" />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center text-2xl">{categoryOf(d.category).emoji}</span>
-                )}
-              </span>
-              <span className="mt-1.5 block truncate text-center text-[12px] font-medium uppercase tracking-wide text-white/80">{d.title}</span>
-            </Link>
-          ))}
-        </div>
-      )}
       <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
         <MessagesSquare className="h-4 w-4 text-orbit-cyan" /> Discussões
         {p.counts.discussions > 0 && <span className="font-normal text-white/45">{p.counts.discussions}</span>}

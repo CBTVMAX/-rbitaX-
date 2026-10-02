@@ -13,13 +13,13 @@ const MAX_ZOOM = 3;
 
 type Crop = { x: number; y: number; w: number };
 
-function baseWidth(natW: number, natH: number) {
-  return Math.min(natW, natH * COVER_RATIO);
+function baseWidth(natW: number, natH: number, ratio = COVER_RATIO) {
+  return Math.min(natW, natH * ratio);
 }
 
-function clampCrop(c: Crop, natW: number, natH: number): Crop {
-  const w = Math.min(Math.max(c.w, baseWidth(natW, natH) / MAX_ZOOM), baseWidth(natW, natH));
-  const h = w / COVER_RATIO;
+function clampCrop(c: Crop, natW: number, natH: number, ratio = COVER_RATIO): Crop {
+  const w = Math.min(Math.max(c.w, baseWidth(natW, natH, ratio) / MAX_ZOOM), baseWidth(natW, natH, ratio));
+  const h = w / ratio;
   return {
     w,
     x: Math.min(Math.max(c.x, 0), natW - w),
@@ -28,7 +28,7 @@ function clampCrop(c: Crop, natW: number, natH: number): Crop {
 }
 
 /** Renders the chosen crop inside a frame of any width (same math for editor and previews). */
-function CroppedImage({ src, nat, crop }: { src: string; nat: { w: number; h: number }; crop: Crop }) {
+function CroppedImage({ src, nat, crop, ratio = COVER_RATIO }: { src: string; nat: { w: number; h: number }; crop: Crop; ratio?: number }) {
   const scale = 100 / crop.w; // % of frame width per source pixel
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -40,7 +40,7 @@ function CroppedImage({ src, nat, crop }: { src: string; nat: { w: number; h: nu
       style={{
         width: `${nat.w * scale}%`,
         left: `${-crop.x * scale}%`,
-        top: `${(-crop.y * scale * COVER_RATIO)}%`,
+        top: `${(-crop.y * scale * ratio)}%`,
       }}
     />
   );
@@ -50,11 +50,23 @@ export function CoverCropDialog({
   file,
   onCancel,
   onConfirm,
+  ratio = COVER_RATIO,
+  recommended = COVER_RECOMMENDED,
+  title = "Ajustar capa",
+  confirmLabel = "Aplicar capa",
+  ratioLabel = "7:2",
 }: {
   file: File;
   onCancel: () => void;
   onConfirm: (blob: Blob) => Promise<void>;
+  /** Outra proporção (ex.: 2:1 dos atalhos da comunidade); sem as prévias de computador/celular do perfil. */
+  ratio?: number;
+  recommended?: { w: number; h: number };
+  title?: string;
+  confirmLabel?: string;
+  ratioLabel?: string;
 }) {
+  const isProfileCover = ratio === COVER_RATIO;
   const [src, setSrc] = useState<string | null>(null);
   const [nat, setNat] = useState<{ w: number; h: number } | null>(null);
   const [crop, setCrop] = useState<Crop>({ x: 0, y: 0, w: 1 });
@@ -73,8 +85,8 @@ export function CoverCropDialog({
       imgRef.current = img;
       const n = { w: img.naturalWidth, h: img.naturalHeight };
       setNat(n);
-      const w = baseWidth(n.w, n.h);
-      setCrop({ w, x: (n.w - w) / 2, y: (n.h - w / COVER_RATIO) / 2 });
+      const w = baseWidth(n.w, n.h, ratio);
+      setCrop({ w, x: (n.w - w) / 2, y: (n.h - w / ratio) / 2 });
     };
     img.onerror = () => setError("Não foi possível abrir essa imagem. Use JPG, PNG ou WebP.");
     img.src = url;
@@ -87,10 +99,10 @@ export function CoverCropDialog({
       const z = Math.min(Math.max(next, 1), MAX_ZOOM);
       setZoom(z);
       setCrop((c) => {
-        const w = baseWidth(nat.w, nat.h) / z;
+        const w = baseWidth(nat.w, nat.h, ratio) / z;
         const cx = c.x + c.w / 2;
-        const cy = c.y + c.w / COVER_RATIO / 2;
-        return clampCrop({ w, x: cx - w / 2, y: cy - w / COVER_RATIO / 2 }, nat.w, nat.h);
+        const cy = c.y + c.w / ratio / 2;
+        return clampCrop({ w, x: cx - w / 2, y: cy - w / ratio / 2 }, nat.w, nat.h, ratio);
       });
     },
     [nat]
@@ -106,7 +118,7 @@ export function CoverCropDialog({
     const perPx = drag.current.crop.w / frameRef.current.clientWidth;
     const dx = (e.clientX - drag.current.px) * perPx;
     const dy = (e.clientY - drag.current.py) * perPx;
-    setCrop(clampCrop({ w: drag.current.crop.w, x: drag.current.crop.x - dx, y: drag.current.crop.y - dy }, nat.w, nat.h));
+    setCrop(clampCrop({ w: drag.current.crop.w, x: drag.current.crop.x - dx, y: drag.current.crop.y - dy }, nat.w, nat.h, ratio));
   }
 
   function onWheel(e: React.WheelEvent) {
@@ -119,7 +131,7 @@ export function CoverCropDialog({
     setSaving(true);
     setError(null);
     const outW = Math.round(Math.min(OUTPUT_MAX_WIDTH, crop.w));
-    const outH = Math.round(outW / COVER_RATIO);
+    const outH = Math.round(outW / ratio);
     const canvas = document.createElement("canvas");
     canvas.width = outW;
     canvas.height = outH;
@@ -129,7 +141,7 @@ export function CoverCropDialog({
       return setError("Seu navegador não conseguiu preparar a imagem.");
     }
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(img, crop.x, crop.y, crop.w, crop.w / COVER_RATIO, 0, 0, outW, outH);
+    ctx.drawImage(img, crop.x, crop.y, crop.w, crop.w / ratio, 0, 0, outW, outH);
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob((b) => (b ? resolve(b) : canvas.toBlob(resolve, "image/jpeg", 0.9)), "image/webp", 0.9)
     );
@@ -148,16 +160,16 @@ export function CoverCropDialog({
   const lowRes = nat && crop.w < 1000;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 backdrop-blur-sm md:items-center md:p-6" role="dialog" aria-modal="true" aria-label="Ajustar capa">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 backdrop-blur-sm md:items-center md:p-6" role="dialog" aria-modal="true" aria-label={title}>
       <div className="max-h-[100dvh] w-full max-w-4xl overflow-y-auto rounded-t-3xl border border-white/10 bg-space-surface p-4 shadow-2xl md:rounded-3xl md:p-6">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
-            <h2 className="font-display text-lg font-bold text-white md:text-xl">Ajustar capa</h2>
+            <h2 className="font-display text-lg font-bold text-white md:text-xl">{title}</h2>
             <p className="text-xs text-white/55 md:text-sm">
               Arraste para enquadrar e use o zoom. É assim que a capa vai aparecer no computador e no celular.
             </p>
             <p className="mt-1 text-[11px] text-white/45 md:text-xs">
-              Tamanho recomendado: <span className="font-semibold text-white/70">{COVER_RECOMMENDED.w} × {COVER_RECOMMENDED.h} px</span> (proporção 7:2) · JPG, PNG ou WebP até 20 MB
+              Tamanho recomendado: <span className="font-semibold text-white/70">{recommended.w} × {recommended.h} px</span> (proporção {ratioLabel}) · JPG, PNG ou WebP até 20 MB
             </p>
           </div>
           <button type="button" onClick={onCancel} aria-label="Fechar" className="rounded-full p-1.5 text-white/60 hover:bg-white/5 hover:text-white">
@@ -174,10 +186,11 @@ export function CoverCropDialog({
           onPointerUp={() => (drag.current = null)}
           onPointerCancel={() => (drag.current = null)}
           onWheel={onWheel}
-          className="relative aspect-[7/2] w-full cursor-grab touch-none overflow-hidden rounded-2xl border border-white/15 bg-space-card active:cursor-grabbing"
+          style={{ aspectRatio: String(ratio) }}
+          className="relative w-full cursor-grab touch-none overflow-hidden rounded-2xl border border-white/15 bg-space-card active:cursor-grabbing"
         >
           {src && nat ? (
-            <CroppedImage src={src} nat={nat} crop={crop} />
+            <CroppedImage src={src} nat={nat} crop={crop} ratio={ratio} />
           ) : (
             !error && <Loader2 className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 animate-spin text-white/50" />
           )}
@@ -206,11 +219,11 @@ export function CoverCropDialog({
         </div>
         {lowRes && (
           <p className="mt-2 text-xs text-amber-300/90">
-            A imagem ficou com pouca resolução nesse enquadramento. Para melhor qualidade, use uma imagem de pelo menos {COVER_RECOMMENDED.w}×{COVER_RECOMMENDED.h} px.
+            A imagem ficou com pouca resolução nesse enquadramento. Para melhor qualidade, use uma imagem de pelo menos {recommended.w}×{recommended.h} px.
           </p>
         )}
 
-        {src && nat && (
+        {src && nat && isProfileCover && (
           <div className="mt-5 grid gap-4 md:grid-cols-[minmax(0,1fr)_200px] md:items-end">
             <div>
               <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-white/70">
@@ -218,7 +231,7 @@ export function CoverCropDialog({
               </p>
               <div className="rounded-2xl border border-white/10 bg-space-bg/60 p-2">
                 <div className="relative aspect-[7/2] w-full overflow-hidden rounded-xl">
-                  <CroppedImage src={src} nat={nat} crop={crop} />
+                  <CroppedImage src={src} nat={nat} crop={crop} ratio={ratio} />
                 </div>
                 <div className="flex items-end gap-3 px-3 pb-2">
                   <span className="relative z-10 -mt-8 flex h-16 w-16 shrink-0 items-end justify-center overflow-hidden rounded-full border-4 border-space-bg bg-space-card ring-2 ring-orbit-purple/70">
@@ -237,7 +250,7 @@ export function CoverCropDialog({
               </p>
               <div className="rounded-[1.6rem] border-4 border-white/15 bg-space-bg p-1.5">
                 <div className="relative aspect-[7/2] w-full overflow-hidden rounded-lg">
-                  <CroppedImage src={src} nat={nat} crop={crop} />
+                  <CroppedImage src={src} nat={nat} crop={crop} ratio={ratio} />
                 </div>
                 <div className="px-2 pb-3">
                   <span className="relative z-10 -mt-6 flex h-12 w-12 items-end justify-center overflow-hidden rounded-full border-[3px] border-space-bg bg-space-card ring-2 ring-orbit-purple/70">
@@ -262,7 +275,7 @@ export function CoverCropDialog({
             className="flex items-center justify-center gap-2 rounded-xl bg-orbit-gradient px-6 py-2.5 text-sm font-semibold text-snow shadow-glow disabled:opacity-60"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            {saving ? "Salvando..." : "Aplicar capa"}
+            {saving ? "Salvando..." : confirmLabel}
           </button>
         </div>
       </div>
