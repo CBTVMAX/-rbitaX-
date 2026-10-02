@@ -20,26 +20,34 @@ export function useCreateFlow({ albums = [], onCreated }: { albums?: Album[]; on
   const [kind, setKind] = useState<CreateKind | null>(null);
   const [albumTarget, setAlbumTarget] = useState<string | null>(null);
   const [albumEdit, setAlbumEdit] = useState<Album | null>(null);
+  const [suggest, setSuggest] = useState(false);
 
   const start = (k: CreateKind, opts?: { album?: string | null; editAlbum?: Album | null }) => {
     setMenu(false);
     setAlbumTarget(opts?.album ?? null);
     setAlbumEdit(opts?.editAlbum ?? null);
+    setSuggest(false);
     setKind(k);
   };
-  const close = () => setKind(null);
+  /** "Sugerir post": o editor de publicação, enviando para a administração aprovar. */
+  const startSuggest = () => {
+    setMenu(false);
+    setSuggest(true);
+    setKind("post");
+  };
+  const close = () => (setKind(null), setSuggest(false));
   const composerKind = kind && kind !== "story" && kind !== "event" && kind !== "album" ? kind : null;
 
   const element = (
     <>
       <CreateMenu open={menu} onClose={() => setMenu(false)} onPick={(k) => start(k)} />
-      <Composer kind={composerKind} onClose={close} onCreated={onCreated} albums={albums} defaultAlbum={albumTarget} />
+      <Composer kind={composerKind} suggest={suggest} onClose={close} onCreated={onCreated} albums={albums} defaultAlbum={albumTarget} />
       <StoryComposer open={kind === "story"} onClose={close} onCreated={() => onCreated({ id: "", status: "visible", kind: "story" })} />
       <EventForm open={kind === "event"} onClose={close} onSaved={(id) => onCreated({ id, status: "visible", kind: "event" })} />
       <AlbumForm open={kind === "album"} album={albumEdit} onClose={close} onSaved={(id) => onCreated({ id, status: "visible", kind: "album" })} />
     </>
   );
-  return { openMenu: () => setMenu(true), start, element };
+  return { openMenu: () => setMenu(true), start, startSuggest, element };
 }
 
 export function AlbumForm({ open, album, onClose, onSaved }: { open: boolean; album?: Album | null; onClose: () => void; onSaved: (id: string) => void }) {

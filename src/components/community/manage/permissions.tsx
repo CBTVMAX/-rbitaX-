@@ -8,9 +8,9 @@ import { useCommunity } from "../context";
 import { Card, ReadOnlyNote, SaveButton } from "./fields";
 
 const KEYS: { key: PermissionKey; hint: string }[] = [
-  { key: "post", hint: "Publicações de texto, links, músicas e arquivos" },
+  { key: "post", hint: "Publicar direto no mural. Quem não pode usa \"Sugerir post\" e a moderação aprova (como no VK)" },
   { key: "comment", hint: "Comentários em posts e respostas em discussões" },
-  { key: "discussion", hint: "Abrir novos tópicos" },
+  { key: "discussion", hint: "Abrir novos tópicos. Padrão: só a administração; libere para Membros se quiser" },
   { key: "photo", hint: "Fotos e álbuns" },
   { key: "video", hint: "Vídeos e clipes verticais" },
   { key: "poll", hint: "Enquetes" },

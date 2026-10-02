@@ -300,6 +300,8 @@ function Hub(p: HubProps) {
   const chat = useCommunityChat();
   const options = useCreateOptions();
   const canCreate = options.length > 0 && canSee;
+  // Como no VK: quem participa mas não pode publicar no mural sugere o post para a administração.
+  const canSuggest = canSee && !!viewer && rank(role) >= 1 && !membership.muted && !can(community, role, "post");
   const accent = accentOf(community.accentColor);
   const tz = useTimeZone();
 
@@ -650,11 +652,18 @@ function Hub(p: HubProps) {
           </Link>
         )}
         {canSee && <MenuTiles community={community} staff={rank(role) >= 3} base={base} discussions={p.discussions} />}
-        {canCreate && (
-          <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-3">
-            <button type="button" onClick={flow.openMenu} className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-[16px] font-semibold text-white transition hover:bg-white/[0.1]">
-              <Plus className="h-5 w-5" /> Criar
-            </button>
+        {(canCreate || canSuggest) && (
+          <section className={clsx("grid gap-2 rounded-3xl border border-white/[0.08] bg-space-card/70 p-3", canCreate && canSuggest && "grid-cols-2")}>
+            {canSuggest && (
+              <button type="button" onClick={flow.startSuggest} className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-[16px] font-semibold text-white transition hover:bg-white/[0.1]">
+                <Plus className="h-5 w-5" /> Sugerir post
+              </button>
+            )}
+            {canCreate && (
+              <button type="button" onClick={flow.openMenu} className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-[16px] font-semibold text-white transition hover:bg-white/[0.1]">
+                <Plus className="h-5 w-5" /> Criar
+              </button>
+            )}
           </section>
         )}
         {canSee && <Highlights slug={community.slug} counts={p.counts} isRpg={community.isRpg} staff={rank(role) >= 3} sheets={p.hasSheets} />}

@@ -168,8 +168,11 @@ export function Composer({
   albums = [],
   defaultAlbum = null,
   defaultTag = null,
+  suggest = false,
 }: {
   kind: ComposerKind | null;
+  /** "Sugerir post" (VK): quem não pode publicar envia para a administração aprovar. */
+  suggest?: boolean;
   onClose: () => void;
   onCreated: (result: { id: string; status: string; kind: CreateKind }) => void;
   albums?: Album[];
@@ -338,7 +341,23 @@ export function Composer({
         setProgress("Enviando capa…");
         thumbnailUrl = (await uploadCommunityFile(supabase, viewer.id, community.id, thumb.file, "image")).url;
       }
-      setProgress("Publicando…");
+      setProgress(suggest ? "Enviando sugestão…" : "Publicando…");
+      if (suggest) {
+        const hasImages = uploaded.some((u) => u.type === "image");
+        const payload: Record<string, unknown> = {
+          kind: hasImages ? "image" : link.trim() ? "link" : "text",
+          content: text,
+          media: uploaded.map((u) => ({ type: u.type, url: u.url, width: u.width, height: u.height, sizeBytes: u.sizeBytes, mimeType: u.mimeType, name: u.name })),
+        };
+        if (link.trim()) payload.linkUrl = /^https?:\/\//i.test(link.trim()) ? link.trim() : `https://${link.trim()}`;
+        const { data, error: e } = await supabase.rpc("community_suggest_post" as never, { p_community: community.id, p: payload } as never);
+        if (e) throw new Error(communityError((e as { message: string }).message));
+        // "suggested" (não "pending"): quem chama não repete o aviso de moderação.
+        onCreated({ id: (data as unknown as { id: string }).id, status: "suggested", kind: "post" });
+        toast("Sugestão enviada! A administração vai analisar antes de publicar.");
+        onClose();
+        return;
+      }
       if (kind === "discussion") {
         const { data, error: e } = await supabase.rpc("community_create_discussion", {
           p_community: community.id,
@@ -419,7 +438,7 @@ export function Composer({
       open={!!kind}
       onClose={() => !busy && onClose()}
       wide
-      title={TITLES[kind]}
+      title={suggest ? "Sugerir post" : TITLES[kind]}
       footer={
         <div className="flex items-center gap-2">
           {error ? <p className="min-w-0 flex-1 text-xs text-red-300">{error}</p> : <p className="min-w-0 flex-1 truncate text-xs text-white/45">{progress || `em ${community.name}`}</p>}
@@ -429,7 +448,7 @@ export function Composer({
             disabled={busy}
             className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow transition hover:opacity-90 disabled:opacity-60"
           >
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Publicar
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} {suggest ? "Enviar sugestão" : "Publicar"}
           </button>
         </div>
       }
@@ -704,10 +723,12 @@ export function Composer({
                     {TAG_LABEL[t].emoji} {TAG_LABEL[t].label}
                   </button>
                 ))}
+              {!suggest && (
               <label className="ml-auto flex items-center gap-2 text-xs text-white/60">
                 <input type="checkbox" checked={comments} onChange={(e) => setComments(e.target.checked)} className="h-4 w-4 accent-[rgb(var(--app-accent,139_92_246))]" />
                 Permitir comentários
               </label>
+              )}
             </div>
           )}
           {editor && kind !== "discussion" && (
@@ -720,7 +741,12 @@ export function Composer({
             </button>
           )}
           {editor && tag && <p className="text-[11px] text-white/40">Publicações com etiqueta (Aviso, Evento…) notificam todos os membros com notificações ativas e aparecem em Avisos.</p>}
-          {community.moderation.approvePosts && rank(role) < 2 && !editor && <p className="text-[11px] text-amber-400/90">Esta comunidade revisa as publicações antes de aparecerem.</p>}
+          {suggest && (
+            <p className="rounded-2xl border border-orbit-cyan/25 bg-orbit-cyan/[0.06] px-3 py-2.5 text-[12px] leading-relaxed text-white/75">
+              Sua sugestão vai para a administração de {community.name}. Se for aprovada, aparece no mural com o seu nome e você recebe um aviso.
+            </p>
+          )}
+          {!suggest && community.moderation.approvePosts && rank(role) < 2 && !editor && <p className="text-[11px] text-amber-400/90">Esta comunidade revisa as publicações antes de aparecerem.</p>}
         </div>
       </div>
     </Sheet>
