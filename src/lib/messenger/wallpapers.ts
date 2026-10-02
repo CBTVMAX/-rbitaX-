@@ -38,8 +38,12 @@ export function customWallpaperId(path: string) {
   return `custom:${path}`;
 }
 
-/** Fundo de quem ainda não escolheu um papel de parede: Órbita Clara no tema claro, Universo no escuro. */
-export function defaultWallpaper(light: boolean) {
+/**
+ * Fundo de quem ainda não escolheu um papel de parede: Órbita Clara no tema claro, Universo no escuro;
+ * com o visual simples, fundo liso (branco no claro, preto no escuro).
+ */
+export function defaultWallpaper(light: boolean, simple = false) {
+  if (simple) return light ? "liso-branco" : "liso-preto";
   return light ? "orbita-clara" : "universo";
 }
 

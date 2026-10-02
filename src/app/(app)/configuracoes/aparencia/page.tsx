@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { ArrowLeft, Palette } from "lucide-react";
-import { APP_THEME_COOKIE, parseAppTheme } from "@/lib/app-theme";
+import { APP_THEME_COOKIE, APP_VISUAL_COOKIE, parseAppTheme, parseAppVisual } from "@/lib/app-theme";
 import { AppearancePicker } from "@/components/appearance-picker";
+import { VisualPicker } from "@/components/visual-picker";
 
 export const dynamic = "force-dynamic";
 
 export default async function AppearancePage() {
   const theme = parseAppTheme((await cookies()).get(APP_THEME_COOKIE)?.value);
+  const visual = parseAppVisual((await cookies()).get(APP_VISUAL_COOKIE)?.value);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-3 py-4 md:px-4 md:py-6">
@@ -31,6 +33,15 @@ export default async function AppearancePage() {
           Muda o feed, o Messenger, as configurações e todo o restante do aplicativo.
         </p>
         <AppearancePicker initial={theme} />
+      </section>
+
+      <section className="rounded-2xl border border-white/10 bg-space-surface/80 p-4 md:p-5">
+        <h2 className="mb-1 text-base font-semibold text-white">Visual</h2>
+        <p className="mb-4 text-xs text-white/55">
+          Para quem prefere poucos detalhes: o modo simples tira as estrelas e os brilhos, e as conversas ficam com fundo liso
+          (dá para escolher outro papel de parede em cada conversa, no menu ⋮).
+        </p>
+        <VisualPicker initial={visual} />
       </section>
 
       <Link

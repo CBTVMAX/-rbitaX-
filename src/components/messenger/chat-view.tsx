@@ -21,7 +21,7 @@ import {
 import { chatThemeStyle } from "@/lib/messenger/themes";
 import { ensureSavedId, saveMessageToSaved } from "@/lib/messenger/saved";
 import { defaultWallpaper, isWallpaper, wallpaperStyle } from "@/lib/messenger/wallpapers";
-import { useLightApp } from "@/lib/messenger/use-light-app";
+import { useLightApp, useSimpleVisual } from "@/lib/messenger/use-light-app";
 import { ChatRulesProvider, useGroupConfig, type ChatRules } from "@/lib/messenger/group-rules";
 import { useTypingChannels } from "@/lib/messenger/typing";
 import { messagePreview, toDate } from "@/lib/messenger/format";
@@ -96,6 +96,7 @@ export function ChatView({
 }) {
   const { supabase, me, toast, patchConversation, reloadConversations, savedId, conversations, openConversation } = useMessenger();
   const lightApp = useLightApp();
+  const simpleVisual = useSimpleVisual();
   const { config: groupConfig, reload: reloadConfig } = useGroupConfig(supabase, c.id, !c.isSaved, c.role);
   const pinnedId = groupConfig?.pinned?.id ?? null;
   useTypingChannels(supabase, useMemo(() => (c.isSaved ? [] : [c.id]), [c.isSaved, c.id]));
@@ -919,7 +920,7 @@ export function ChatView({
     <div className="flex h-full min-h-0 min-w-0 flex-1" style={chatThemeStyle(c.theme)}>
       <section
         className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col"
-        style={wallpaperStyle(isWallpaper(c.wallpaper) ? c.wallpaper : defaultWallpaper(lightApp))}
+        style={wallpaperStyle(isWallpaper(c.wallpaper) ? c.wallpaper : defaultWallpaper(lightApp, simpleVisual))}
         aria-label={c.isSaved ? "Salvos, seu espaço pessoal" : `Conversa com ${title}`}
       >
         <ChatHeader
