@@ -277,10 +277,13 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
   else if (m.type === "poll") body = <PollCard message={m} mine={mine} votes={p.votes} meId={p.meId} onVote={(ix) => p.onVote(m, ix)} />;
   else
     body = (
-      <span className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">
+      <span className="whitespace-pre-wrap break-words text-[16px] leading-[1.45] lg:text-[15px] lg:leading-relaxed">
         <RichText text={m.content} />
+        {/* Reserva o espaço da hora no fim da última linha; a hora fica no canto (estilo app). */}
+        <span aria-hidden className={clsx("inline-block h-3 align-baseline", mine ? "w-[66px]" : "w-[44px]", (m.expiresAt || favorite) && "!w-[84px]")} />
       </span>
     );
+  const textOnly = !deleted && !media && m.type === "text" && !emojiOnly;
 
   const showAvatarColumn = (group || !!origin) && !mine;
 
@@ -322,12 +325,12 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
             bare
               ? ""
               : clsx(
-                  "rounded-[22px] shadow-[0_4px_16px_rgba(0,0,0,0.18)] lg:rounded-[20px]",
+                  "rounded-[22px] shadow-[0_2px_10px_rgba(0,0,0,0.18)] lg:rounded-[20px]",
                   mine
                     ? "bg-chat-bubble text-snow"
-                    : "border border-white/[0.1] bg-space-surface/75 text-white backdrop-blur-md lg:bg-white/[0.07]",
+                    : "bg-[#2a2b31]/95 text-white lg:border lg:border-white/[0.08] lg:bg-white/[0.07] lg:backdrop-blur-md",
                   lastInRun && (mine ? "rounded-br-md" : "rounded-bl-md"),
-                  media || card ? "overflow-hidden" : "px-4 py-2.5 lg:px-3.5 lg:py-2",
+                  media || card ? "overflow-hidden" : "px-4 py-2 lg:px-3.5",
                   card && !media && (inlineMeta ? "px-2 py-1.5" : "p-2"),
                   m.type === "gift" && !mine && "border-chat/30 shadow-[0_0_24px_rgb(var(--chat-accent,139_92_246)/0.18)]",
                   state === "failed" && "cursor-pointer ring-1 ring-red-400/60"
@@ -361,6 +364,10 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
           ) : bare || (media && !caption) ? (
             <span className={clsx("absolute bottom-2", mine ? "right-2" : bare ? "left-2" : "right-2")}>
               <Meta m={m} mine={mine} state={state} favorite={favorite} overlay />
+            </span>
+          ) : textOnly ? (
+            <span className="absolute bottom-[7px] right-3">
+              <Meta m={m} mine={mine} state={state} favorite={favorite} />
             </span>
           ) : (
             <span className={clsx("flex justify-end", media || card ? "px-3 pb-2 pt-0.5" : "-mb-0.5 mt-0.5")}>

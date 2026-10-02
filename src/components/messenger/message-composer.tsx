@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { Ban, Dices, Image as ImageIcon, Keyboard, Lock, Mic, Plus, Send, Smile, Trash2, UserMinus, Users, X } from "lucide-react";
+import { Ban, Dices, Image as ImageIcon, Keyboard, Lock, Mic, Paperclip, Plus, Send, Smile, Trash2, UserMinus, Users, X } from "lucide-react";
 import { formatDuration, messagePreview } from "@/lib/messenger/format";
 import type { Attachment, ChatMessage, Member, SendStatus, StickerInfo } from "@/lib/messenger/types";
 import { AttachmentMenu, type AttachmentChoice } from "./attachment-menu";
@@ -424,7 +424,7 @@ export function MessageComposer({
       className={clsx(
         "relative z-10 px-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 md:px-4",
         // Celular: flutua sobre o fundo da conversa (sem barra), como no app; computador: barra.
-        compact ? "border-t border-white/10 bg-space-surface/80 backdrop-blur-xl" : "bg-gradient-to-t from-black/45 via-black/20 to-transparent lg:border-t lg:border-white/10 lg:bg-space-surface/80 lg:bg-none lg:backdrop-blur-xl"
+        compact ? "border-t border-white/10 bg-space-surface/80 backdrop-blur-xl" : "border-t border-white/[0.06] bg-[#16171d]/95 lg:border-white/10 lg:bg-space-surface/80 lg:backdrop-blur-xl"
       )}
     >
       {panel && (
@@ -587,14 +587,19 @@ export function MessageComposer({
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-label="Anexar"
                 aria-expanded={menuOpen}
-                className={clsx(round, menuOpen ? "rotate-45 bg-chat/20 text-chat" : "border border-white/15 bg-space-surface/70 text-white/85 backdrop-blur-xl hover:bg-white/[0.1] hover:text-white")}
+                className={clsx(
+                  round,
+                  menuOpen ? "bg-chat/20 text-chat lg:rotate-45" : "text-white/60 hover:text-white lg:bg-white/[0.06] lg:text-white/75 lg:hover:bg-white/[0.1]"
+                )}
               >
-                <Plus className="h-5 w-5 transition-transform" />
+                {/* Celular: clipe (como no app); computador: + */}
+                <Paperclip className="h-6 w-6 -rotate-45 lg:hidden" />
+                <Plus className="hidden h-5 w-5 transition-transform lg:block" />
               </button>
               <AttachmentMenu open={menuOpen} onClose={() => setMenuOpen(false)} onChoose={choose} inSaved={inSaved} />
             </div>
 
-            <div className="flex min-h-12 min-w-0 flex-1 items-end rounded-[26px] border border-white/12 bg-space-surface/70 backdrop-blur-xl transition focus-within:border-chat/60 lg:min-h-11 lg:rounded-[22px] lg:bg-white/[0.05] lg:backdrop-blur-none">
+            <div className="flex min-h-12 min-w-0 flex-1 items-end transition lg:min-h-11 lg:rounded-[22px] lg:border lg:border-white/10 lg:bg-white/[0.05] lg:focus-within:border-chat/60">
               <textarea
                 ref={input}
                 value={text}
@@ -609,9 +614,9 @@ export function MessageComposer({
                 onPaste={onPaste}
                 rows={1}
                 maxLength={4000}
-                placeholder={pending.length ? "Adicione uma legenda..." : "Escreva uma mensagem..."}
+                placeholder={pending.length ? "Adicione uma legenda..." : "Mensagem"}
                 aria-label="Mensagem"
-                className="orbit-scrollbar max-h-[148px] min-w-0 flex-1 resize-none bg-transparent py-[13px] pl-5 pr-1 text-[16px] leading-snug text-white outline-none placeholder:text-white/45 lg:py-[11px] lg:pl-4 lg:text-[15px]"
+                className="orbit-scrollbar max-h-[148px] min-w-0 flex-1 resize-none bg-transparent py-[13px] pl-1 pr-1 text-[17px] caret-orbit-blue leading-snug text-white outline-none placeholder:text-white/45 lg:py-[11px] lg:pl-4 lg:text-[15px]"
               />
               <button
                 type="button"
