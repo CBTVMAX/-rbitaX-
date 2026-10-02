@@ -57,7 +57,7 @@ export const ConversationItem = memo(function ConversationItem({
         onClick={() => onOpen(c.id)}
         aria-current={active ? "true" : undefined}
         className={clsx(
-          "group relative flex w-full items-center gap-3.5 border-b border-white/[0.08] px-1 pb-4 pt-2 text-left transition lg:gap-3 lg:rounded-2xl lg:border lg:px-3 lg:py-2.5",
+          "group relative flex w-full items-center gap-3.5 border-b border-white/[0.08] px-1 pb-4 pt-2 text-left transition lg:gap-2.5 lg:rounded-xl lg:border lg:px-2.5 lg:py-2",
           active
             ? "lg:border-orbit-purple/45 lg:bg-orbit-purple/[0.16]"
             : "lg:border-white/[0.08] lg:bg-gradient-to-r lg:from-orbit-blue/[0.08] lg:via-orbit-purple/[0.06] lg:to-transparent lg:hover:border-white/15"
@@ -67,11 +67,11 @@ export const ConversationItem = memo(function ConversationItem({
           <ConversationAvatar c={c} size={54} />
         </span>
         <span className="hidden lg:block">
-          <ConversationAvatar c={c} size={50} />
+          <ConversationAvatar c={c} size={44} />
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
-            <span className="truncate text-[17px] font-semibold text-white lg:text-[15px]">Salvos</span>
+            <span className="truncate text-[17px] font-semibold text-white lg:text-[14px]">Salvos</span>
             <span className="ml-auto hidden shrink-0 pl-2 text-[11px] text-white/40 lg:inline">{m ? listTime(m.createdAt) : ""}</span>
           </span>
           {/* Celular: "Foto · 10h" (VK); computador: subtítulo + prévia */}
@@ -99,7 +99,7 @@ export const ConversationItem = memo(function ConversationItem({
       aria-current={active ? "true" : undefined}
       className={clsx(
         // Celular: linhas maiores com divisória (como no app); computador: compacto.
-        "group relative flex w-full items-center gap-3.5 px-1 py-2.5 text-left transition lg:gap-3 lg:rounded-2xl lg:px-3 lg:py-2.5",
+        "group relative flex w-full items-center gap-3.5 px-1 py-2.5 text-left transition lg:gap-2.5 lg:rounded-xl lg:px-2.5 lg:py-2",
         active ? "bg-orbit-purple/[0.14] ring-1 ring-inset ring-orbit-purple/30" : "hover:bg-white/[0.05]"
       )}
     >
@@ -108,12 +108,12 @@ export const ConversationItem = memo(function ConversationItem({
         <ConversationAvatar c={c} size={54} ringClass={active ? "border-space-surface" : "border-space-bg"} />
       </span>
       <span className="hidden lg:block">
-        <ConversationAvatar c={c} size={50} ringClass={active ? "border-space-surface" : "border-space-bg"} />
+        <ConversationAvatar c={c} size={44} ringClass={active ? "border-space-surface" : "border-space-bg"} />
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
           {c.isGroup && <Users className="h-3.5 w-3.5 shrink-0 text-orbit-cyan/80" aria-label="Grupo" />}
-          <span className={clsx("truncate text-[17px] text-white lg:text-[15px]", unread ? "font-semibold" : "font-medium")}>
+          <span className={clsx("truncate text-[17px] text-white lg:text-[14px]", unread ? "font-semibold" : "font-medium")}>
             {conversationTitle(c)}
           </span>
           {!c.isGroup && c.otherUser?.isVerified && <VerifiedBadge className="h-[15px] w-[15px]" />}

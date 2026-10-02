@@ -163,7 +163,9 @@ html[data-app-theme] body {
   to { opacity: 1; transform: none; }
 }
 .animate-msg-in {
-  animation: msg-in 180ms ease-out both;
+  /* "backwards" (e não "both"): depois de entrar, a mensagem não fica presa numa camada própria —
+     senão o menu da mensagem (Responder, Fixar…) abria por trás das mensagens seguintes. */
+  animation: msg-in 180ms ease-out backwards;
 }
 @keyframes msg-flash {
   0%, 100% { box-shadow: 0 0 0 0 rgb(var(--chat-accent, 139 92 246) / 0); }

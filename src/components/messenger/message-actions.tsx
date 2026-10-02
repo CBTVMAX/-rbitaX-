@@ -122,6 +122,7 @@ export function HoverActions({
   const [reactOpen, setReactOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [below, setBelow] = useState(false);
+  const [maxH, setMaxH] = useState(340);
   const bar = useRef<HTMLDivElement>(null);
   const live = !m.deletedAt && !m.status;
   const openAny = reactOpen || menuOpen;
@@ -129,10 +130,15 @@ export function HoverActions({
   const place = () => {
     const el = bar.current;
     if (!el) return;
-    // Room above inside the message area (not the window): the menu has up to 8 entries.
-    const top = el.getBoundingClientRect().top;
-    const area = el.closest(".orbit-scrollbar")?.getBoundingClientRect().top ?? 0;
-    setBelow(top - area < 300);
+    // Abre para o lado com mais espaço dentro da área das mensagens (não da janela).
+    const r = el.getBoundingClientRect();
+    const area = el.closest(".orbit-scrollbar")?.getBoundingClientRect() ?? { top: 0, bottom: window.innerHeight };
+    const above = r.top - area.top;
+    const below = area.bottom - r.bottom;
+    const down = below >= 320 || below > above;
+    setBelow(down);
+    // O menu nunca passa da área das mensagens: se faltar altura, ele rola por dentro.
+    setMaxH(Math.max(140, Math.min(340, (down ? below : above) - 10)));
   };
 
   return (
@@ -198,7 +204,8 @@ export function HoverActions({
       <Popover
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
-        className={clsx("w-56", below ? "top-full mt-1" : "bottom-full mb-1", mine ? "left-0" : "right-0")}
+        className={clsx("orbit-scrollbar w-56 overflow-y-auto", below ? "top-full mt-1" : "bottom-full mb-1", mine ? "left-0" : "right-0")}
+        style={{ maxHeight: maxH }}
       >
         <MenuEntries
           m={m}
