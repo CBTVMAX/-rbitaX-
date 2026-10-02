@@ -153,7 +153,17 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number) 
   return new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
 }
 
-/** Photos: fixes rotation, limits to 2048 px and re-encodes (WebP, or JPEG where unsupported). GIFs stay as they are. */
+/**
+ * Fotos na conversa, com a mesma qualidade dos posts e das comunidades:
+ *  - JPG/PNG/WebP de tamanho normal (até 4096 px e 15 MB) vão ORIGINAIS, sem recompressão;
+ *  - fotos enormes ou em formatos que o navegador não mostra (HEIC/HEIF) são convertidas uma vez,
+ *    em alta qualidade (até 4096 px, 92%). GIFs ficam como estão.
+ * A rotação da câmera (EXIF) é respeitada nos dois casos.
+ */
+const KEEP_ORIGINAL = new Set(["image/jpeg", "image/png", "image/webp"]);
+const MAX_SIDE = 4096;
+const KEEP_MAX_BYTES = 15 * 1024 * 1024;
+
 export async function compressImage(file: File): Promise<{ blob: Blob; mime: string; width: number; height: number }> {
   const bitmap = await createImageBitmap(file, { imageOrientation: "from-image" } as ImageBitmapOptions);
   const { width, height } = bitmap;
@@ -161,23 +171,27 @@ export async function compressImage(file: File): Promise<{ blob: Blob; mime: str
     bitmap.close();
     return { blob: file, mime: "image/gif", width, height };
   }
-  const scale = Math.min(1, 2048 / Math.max(width, height));
+  if (KEEP_ORIGINAL.has(file.type) && Math.max(width, height) <= MAX_SIDE && file.size <= KEEP_MAX_BYTES) {
+    bitmap.close();
+    return { blob: file, mime: file.type, width, height };
+  }
+  const scale = Math.min(1, MAX_SIDE / Math.max(width, height));
   const w = Math.round(width * scale);
   const h = Math.round(height * scale);
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, w, h);
+  const ctx = canvas.getContext("2d")!;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(bitmap, 0, 0, w, h);
   bitmap.close();
-  let blob = await canvasToBlob(canvas, "image/webp", 0.85);
+  let blob = await canvasToBlob(canvas, "image/webp", 0.92);
   let mime = "image/webp";
   if (!blob || blob.type !== "image/webp") {
-    blob = await canvasToBlob(canvas, "image/jpeg", 0.86);
+    blob = await canvasToBlob(canvas, "image/jpeg", 0.92);
     mime = "image/jpeg";
   }
   if (!blob) throw new Error("image");
-  // Already small and light: keep the original.
-  if (scale === 1 && blob.size > file.size && ALLOWED_MIME.has(file.type)) return { blob: file, mime: file.type, width, height };
   return { blob, mime, width: w, height: h };
 }
 

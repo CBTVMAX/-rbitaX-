@@ -11,7 +11,7 @@ import { Loader2, RotateCw, X, ZoomIn, ZoomOut } from "lucide-react";
  */
 const OUTPUT_MAX_WIDTH = 1024;
 const MAX_ZOOM = 3;
-const FULL_MAX_SIDE = 2048;
+const FULL_MAX_SIDE = 3072;
 
 type Crop = { x: number; y: number; w: number };
 type Rotation = 0 | 90 | 180 | 270;
@@ -278,7 +278,7 @@ export function AvatarEditor({
     if (!ctx) return null;
     paintAvatar(ctx, img, nat, crop, ratio, rotation, w, h);
     return new Promise<Blob | null>((resolve) =>
-      canvas.toBlob((b) => (b ? resolve(b) : canvas.toBlob(resolve, "image/jpeg", 0.9)), "image/webp", 0.9)
+      canvas.toBlob((b) => (b ? resolve(b) : canvas.toBlob(resolve, "image/jpeg", 0.93)), "image/webp", 0.93)
     );
   }
 
@@ -298,7 +298,7 @@ export function AvatarEditor({
     ctx.rotate((rotation * Math.PI) / 180);
     ctx.drawImage(img, (-nat.w * k) / 2, (-nat.h * k) / 2, nat.w * k, nat.h * k);
     return new Promise<Blob | null>((resolve) =>
-      canvas.toBlob((b) => (b ? resolve(b) : canvas.toBlob(resolve, "image/jpeg", 0.9)), "image/webp", 0.9)
+      canvas.toBlob((b) => (b ? resolve(b) : canvas.toBlob(resolve, "image/jpeg", 0.93)), "image/webp", 0.93)
     );
   }
 
