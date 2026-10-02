@@ -10,6 +10,15 @@ import type { DeliveryState } from "./message-actions";
 
 const RUN_GAP_MS = 5 * 60 * 1000;
 
+function days(messages: ChatMessage[]) {
+  const out: { key: string; from: number; to: number }[] = [];
+  messages.forEach((m, i) => {
+    if (i === 0 || !sameDay(messages[i - 1].createdAt, m.createdAt)) out.push({ key: `day-${m.id}`, from: i, to: i + 1 });
+    else out[out.length - 1].to = i + 1;
+  });
+  return out;
+}
+
 export function deliveryState(m: ChatMessage, othersReadAt: string | null): DeliveryState {
   if (m.status === "sending") return "sending";
   if (m.status === "failed") return "failed";
@@ -153,7 +162,17 @@ export function MessageList({
             ))}
           </div>
         ) : (
-          messages.map((m, i) => {
+          // Um bloco por dia: o selo da data fica preso no topo só enquanto o dia dele está na tela
+          // (selos soltos no mesmo contêiner se empilhavam um por cima do outro).
+          days(messages).map(({ key, from, to }) => (
+          <div key={key}>
+            <div className="sticky top-1.5 z-[2] my-3 flex justify-center">
+              <span className="rounded-full bg-[rgb(var(--chat-bar)/0.88)] px-4 py-1.5 text-[13px] font-medium text-white/85 shadow-[0_2px_10px_rgba(0,0,0,0.25)] backdrop-blur-md">
+                {dayLabel(messages[from].createdAt)}
+              </span>
+            </div>
+            {messages.slice(from, to).map((m, j) => {
+            const i = from + j;
             const before = messages[i - 1];
             const after = messages[i + 1];
             const newDay = !before || !sameDay(before.createdAt, m.createdAt);
@@ -171,13 +190,6 @@ export function MessageList({
             const replySender = replyTo ? (replyTo.senderId === meId ? "Você" : members.get(replyTo.senderId)?.name) : undefined;
             return (
               <Fragment key={m.id}>
-                {newDay && (
-                  <div className="sticky top-1 z-[2] my-3 flex justify-center">
-                    <span className="rounded-full border border-white/15 bg-space-surface/80 px-4 py-1.5 text-[13px] font-medium text-white/80 shadow-sm backdrop-blur lg:px-3 lg:py-1 lg:text-[11px] lg:text-white/60">
-                      {dayLabel(m.createdAt)}
-                    </span>
-                  </div>
-                )}
                 {m.id === unreadFromId && (
                   <div className="my-3 flex items-center gap-3 px-6" role="separator">
                     <span className="h-px flex-1 bg-gradient-to-r from-transparent to-chat/60" />
@@ -205,7 +217,9 @@ export function MessageList({
                 />
               </Fragment>
             );
-          })
+            })}
+          </div>
+          ))
         )}
       </div>
 
