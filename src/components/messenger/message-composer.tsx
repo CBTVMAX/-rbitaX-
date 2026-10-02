@@ -559,7 +559,7 @@ export function MessageComposer({
             <button type="button" onClick={() => stopRecording(false)} aria-label="Descartar gravação" className={clsx(round, "text-red-400 hover:bg-red-500/10")}>
               <Trash2 className="h-5 w-5" />
             </button>
-            <div className="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-full border border-red-500/30 bg-red-500/[0.08] px-4">
+            <div className="flex h-10 min-w-0 flex-1 items-center gap-3 rounded-full border border-red-500/30 bg-red-500/[0.08] px-4">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-70" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />

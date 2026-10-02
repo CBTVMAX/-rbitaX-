@@ -111,7 +111,7 @@ export function PermissionsSection({ onSaved }: { onSaved: (p: Permissions) => v
       {owner && (
         <div className="flex justify-end gap-2">
           {dirty && (
-            <button type="button" onClick={() => setPerm(saved)} className="min-h-[48px] rounded-full px-5 text-sm font-semibold text-white/70 hover:text-white">
+            <button type="button" onClick={() => setPerm(saved)} className="min-h-[44px] rounded-full px-5 text-sm font-semibold text-white/70 hover:text-white">
               Descartar
             </button>
           )}

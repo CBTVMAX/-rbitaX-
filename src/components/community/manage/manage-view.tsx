@@ -132,10 +132,10 @@ export function ManageView(props: {
             preenche. Depois de publicar, os membros encontram em Comunidade → Fichas → Criar minha ficha.
           </p>
           <div className="flex flex-wrap gap-2">
-            <Link href={`${base}/fichas/construtor`} className="flex h-11 items-center gap-2 rounded-full bg-orbit-gradient px-5 text-sm font-semibold text-snow shadow-glow">
+            <Link href={`${base}/fichas/construtor`} className="flex h-10 items-center gap-2 rounded-full bg-orbit-gradient px-5 text-sm font-semibold text-snow shadow-glow">
               Abrir o Construtor de ficha
             </Link>
-            <Link href={`${base}/fichas`} className="flex h-11 items-center gap-2 rounded-full border border-white/15 px-5 text-sm font-semibold text-white/85">
+            <Link href={`${base}/fichas`} className="flex h-10 items-center gap-2 rounded-full border border-white/15 px-5 text-sm font-semibold text-white/85">
               Ver fichas enviadas
             </Link>
           </div>
@@ -210,11 +210,11 @@ export function ManageView(props: {
             onClick={() => setSection(s.id)}
             aria-current={on ? "page" : undefined}
             className={clsx(
-              "flex min-h-[56px] w-full items-center gap-3 rounded-2xl px-3 text-left transition",
+              "flex min-h-[48px] w-full items-center gap-3 rounded-2xl px-3 text-left transition",
               on ? "lg:bg-orbit-purple/[0.12] lg:shadow-[inset_0_0_0_1px_rgb(var(--app-accent,139_92_246)/0.35)]" : "hover:bg-white/[0.04]"
             )}
           >
-            <span className={clsx("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", on ? "lg:bg-orbit-gradient lg:text-snow bg-white/[0.05] text-white/75" : "bg-white/[0.05] text-white/75")}>
+            <span className={clsx("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", on ? "lg:bg-orbit-gradient lg:text-snow bg-white/[0.05] text-white/75" : "bg-white/[0.05] text-white/75")}>
               <Icon className="h-5 w-5" />
             </span>
             <span className="min-w-0 flex-1">

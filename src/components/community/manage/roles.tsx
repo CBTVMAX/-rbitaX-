@@ -179,11 +179,11 @@ function RoleEditor({ role, onClose, onSaved, onDeleted }: { role: CommunityCust
           <div className="flex items-center gap-2">
             {error ? <p className="min-w-0 flex-1 text-xs text-red-300">{error}</p> : <span className="min-w-0 flex-1" />}
             {role && (
-              <button type="button" onClick={() => setConfirmDel(true)} className="flex h-11 items-center gap-1.5 rounded-full border border-red-500/30 px-4 text-sm font-semibold text-red-300 hover:bg-red-500/10">
+              <button type="button" onClick={() => setConfirmDel(true)} className="flex h-10 items-center gap-1.5 rounded-full border border-red-500/30 px-4 text-sm font-semibold text-red-300 hover:bg-red-500/10">
                 <Trash2 className="h-4 w-4" /> Excluir
               </button>
             )}
-            <button type="button" onClick={save} disabled={busy} className="flex h-11 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow disabled:opacity-60">
+            <button type="button" onClick={save} disabled={busy} className="flex h-10 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow disabled:opacity-60">
               {busy && <Loader2 className="h-4 w-4 animate-spin" />} Salvar
             </button>
           </div>

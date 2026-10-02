@@ -32,7 +32,7 @@ export default async function AccountSettingsPage() {
           <ArrowLeft className="h-6 w-6" />
         </Link>
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-xl font-bold text-white md:text-2xl lg:text-3xl">Editar perfil</h1>
+          <h1 className="font-display text-xl font-bold text-white md:text-2xl">Editar perfil</h1>
           <p className="mt-1 hidden text-sm text-white/60 lg:block">
             Atualize suas informações e personalize seu perfil no Órbita X.
           </p>

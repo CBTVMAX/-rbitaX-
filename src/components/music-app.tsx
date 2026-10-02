@@ -142,7 +142,7 @@ export function MusicApp({ userId, initialTracks }: { userId: string; initialTra
       </div>
 
       {nowPlaying && (
-        <div className="fixed inset-x-0 bottom-16 z-10 border-t border-white/10 bg-space-surface/95 px-4 py-3 backdrop-blur md:bottom-0 md:left-64">
+        <div className="fixed inset-x-0 bottom-16 z-10 border-t border-white/10 bg-space-surface/95 px-4 py-3 backdrop-blur md:bottom-0 md:left-56">
           <div className="mx-auto flex max-w-3xl items-center gap-3">
             <button
               onClick={() => togglePlay(nowPlaying)}

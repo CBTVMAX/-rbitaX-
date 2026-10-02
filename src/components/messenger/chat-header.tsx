@@ -170,7 +170,7 @@ export function ChatHeader({
         compact
           ? "h-14 border-b border-white/10 bg-space-surface/75 px-1.5"
           : // Barra sólida (celular e computador, como no app).
-            "min-h-[68px] border-b border-white/[0.06] bg-[rgb(var(--chat-bar)/0.95)] px-1.5 pt-[env(safe-area-inset-top)] lg:min-h-[64px] lg:px-3 md:gap-2"
+            "min-h-[58px] border-b border-white/[0.06] bg-[rgb(var(--chat-bar)/0.95)] px-1.5 pt-[env(safe-area-inset-top)] lg:min-h-[56px] lg:px-3 md:gap-2"
       )}
     >
       {showBack && (

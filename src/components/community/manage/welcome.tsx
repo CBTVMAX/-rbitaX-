@@ -103,7 +103,7 @@ export function WelcomeSection() {
           <span className="text-sm text-white/80">Ativar boas-vindas automáticas</span>
         </label>
         <textarea value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} rows={4} placeholder="Seja bem-vindo(a)! Leia as regras antes de participar." className={clsx(field, "resize-none")} />
-        <button type="button" onClick={saveWelcome} disabled={busy === "w"} className="mt-3 flex h-11 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow disabled:opacity-60">
+        <button type="button" onClick={saveWelcome} disabled={busy === "w"} className="mt-3 flex h-10 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow disabled:opacity-60">
           {busy === "w" && <Loader2 className="h-4 w-4 animate-spin" />} Salvar boas-vindas
         </button>
       </Panel>
@@ -137,7 +137,7 @@ export function WelcomeSection() {
       <Panel icon={<Megaphone className="h-5 w-5" />} title="Mensagem coletiva" desc="Notifica todos os membros com notificações ativas. Máx. 1 a cada 3 horas.">
         <input value={bcTitle} onChange={(e) => setBcTitle(e.target.value)} maxLength={120} placeholder="Título (opcional)" className={clsx(field, "mb-2 font-semibold")} />
         <textarea value={bcMsg} onChange={(e) => setBcMsg(e.target.value)} maxLength={300} rows={3} placeholder="Escreva a mensagem para todos os membros" className={clsx(field, "resize-none")} />
-        <button type="button" onClick={() => bcMsg.trim() && setConfirmBc(true)} disabled={!bcMsg.trim()} className="mt-3 flex h-11 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow disabled:opacity-50">
+        <button type="button" onClick={() => bcMsg.trim() && setConfirmBc(true)} disabled={!bcMsg.trim()} className="mt-3 flex h-10 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow disabled:opacity-50">
           <Send className="h-4 w-4" /> Enviar a todos
         </button>
       </Panel>

@@ -492,7 +492,7 @@ export function StoryViewer({
                     disabled={!interactive}
                     onClick={() => vote(i)}
                     className={clsx(
-                      "relative flex min-h-[48px] w-full items-center overflow-hidden rounded-2xl border px-4 text-left text-sm font-semibold text-white transition",
+                      "relative flex min-h-[44px] w-full items-center overflow-hidden rounded-2xl border px-4 text-left text-sm font-semibold text-white transition",
                       pollRes?.mine === i ? "border-white" : "border-white/30",
                       interactive && "active:scale-[0.98]"
                     )}
@@ -647,17 +647,17 @@ export function StoryViewer({
       <Sheet open={menu} onClose={() => setMenu(false)} title="História">
         <div className="space-y-1 pt-1">
           {(mine || staff) && (
-            <button type="button" onClick={() => (setMenu(false), openViewers())} className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm text-white hover:bg-white/[0.05]">
+            <button type="button" onClick={() => (setMenu(false), openViewers())} className="flex min-h-[46px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm text-white hover:bg-white/[0.05]">
               <Eye className="h-5 w-5" /> Visualizações e reações
             </button>
           )}
           {(mine || rank(role) >= 2) && (
-            <button type="button" onClick={() => (setMenu(false), setConfirmDelete(true))} className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm text-red-300 hover:bg-white/[0.05]">
+            <button type="button" onClick={() => (setMenu(false), setConfirmDelete(true))} className="flex min-h-[46px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm text-red-300 hover:bg-white/[0.05]">
               <Trash2 className="h-5 w-5" /> Excluir história
             </button>
           )}
           {!mine && rank(role) < 2 && staff && (
-            <button type="button" onClick={() => (setMenu(false), router.push(`/comunidades/${community.slug}/historias`))} className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm text-white hover:bg-white/[0.05]">
+            <button type="button" onClick={() => (setMenu(false), router.push(`/comunidades/${community.slug}/historias`))} className="flex min-h-[46px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm text-white hover:bg-white/[0.05]">
               Arquivo de histórias
             </button>
           )}
@@ -684,7 +684,7 @@ export function StoryViewer({
         ) : (
           <div className="space-y-0.5">
             {viewers.map((v) => (
-              <a key={v.userId} href={`/perfil/${v.username}`} className="flex min-h-[52px] items-center gap-3 rounded-2xl px-2 hover:bg-white/[0.04]">
+              <a key={v.userId} href={`/perfil/${v.username}`} className="flex min-h-[46px] items-center gap-3 rounded-2xl px-2 hover:bg-white/[0.04]">
                 <Avatar name={v.name} url={v.avatarUrl} size={38} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-white">{v.name}</span>
@@ -815,7 +815,7 @@ export function StoryComposer({ open, onClose, onCreated }: { open: boolean; onC
       footer={
         <div className="flex items-center gap-2">
           {error ? <p className="min-w-0 flex-1 text-xs text-red-300">{error}</p> : <p className="min-w-0 flex-1 truncate text-xs text-white/45">Some automaticamente em {hours} horas</p>}
-          <button type="button" onClick={submit} disabled={busy} className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow disabled:opacity-60">
+          <button type="button" onClick={submit} disabled={busy} className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow disabled:opacity-60">
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} Publicar
           </button>
         </div>
@@ -872,7 +872,7 @@ export function StoryComposer({ open, onClose, onCreated }: { open: boolean; onC
           {uploadKind && (
             <>
               <input ref={input} type="file" hidden accept={ACCEPT[uploadKind]} onChange={(e) => (pick(e.target.files?.[0]), (e.target.value = ""))} />
-              <button type="button" onClick={() => input.current?.click()} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 text-sm font-medium text-white/75 hover:border-orbit-purple/50">
+              <button type="button" onClick={() => input.current?.click()} className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 text-sm font-medium text-white/75 hover:border-orbit-purple/50">
                 {file ? `Trocar arquivo · ${file.name}` : type === "music" ? "Escolher áudio (MP3, M4A, OGG)" : type === "video" ? "Escolher vídeo (até 50 MB)" : "Escolher foto"}
               </button>
             </>
@@ -938,7 +938,7 @@ export function StoryComposer({ open, onClose, onCreated }: { open: boolean; onC
               </select>
             </label>
             {canAsCommunity && (
-              <button type="button" onClick={() => setAsCommunity((v) => !v)} aria-pressed={asCommunity} className="flex min-h-[48px] items-center gap-3 self-end rounded-2xl border border-white/10 px-3 text-left">
+              <button type="button" onClick={() => setAsCommunity((v) => !v)} aria-pressed={asCommunity} className="flex min-h-[44px] items-center gap-3 self-end rounded-2xl border border-white/10 px-3 text-left">
                 <span className={clsx("relative h-6 w-11 shrink-0 rounded-full transition", asCommunity ? "bg-orbit-gradient" : "bg-white/15")}>
                   <span className={clsx("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition", asCommunity ? "left-[22px]" : "left-0.5")} />
                 </span>

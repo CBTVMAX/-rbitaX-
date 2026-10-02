@@ -53,7 +53,7 @@ export function RpgCharactersView({ canSee }: { canSee: boolean }) {
           type="button"
           onClick={openMine}
           disabled={loadingMine}
-          className="flex h-11 w-full items-center justify-center gap-2 rounded-2xl bg-orbit-gradient px-5 text-sm font-semibold text-snow shadow-glow transition hover:opacity-90 disabled:opacity-60 sm:w-auto"
+          className="flex h-10 w-full items-center justify-center gap-2 rounded-2xl bg-orbit-gradient px-5 text-sm font-semibold text-snow shadow-glow transition hover:opacity-90 disabled:opacity-60 sm:w-auto"
         >
           {loadingMine ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           {config.myCharacterId ? "Editar meu personagem" : "Criar meu personagem"}

@@ -443,7 +443,7 @@ export default async function PrivacidadePage() {
 
           <div className="min-w-0 space-y-10">
             {SECTIONS.map((section) => (
-              <section key={section.id} id={section.id} className="scroll-mt-24">
+              <section key={section.id} id={section.id} className="scroll-mt-[96px]">
                 <div className="mb-4 flex items-center gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orbit-gradient text-sm font-bold text-white">
                     {section.number}

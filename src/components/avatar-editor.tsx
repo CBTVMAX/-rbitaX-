@@ -434,7 +434,7 @@ export function AvatarEditor({
         </div>
 
         <footer className="flex shrink-0 flex-col-reverse gap-2 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 md:flex-row md:justify-end md:border-t md:border-white/[0.08] md:px-5 md:py-3">
-          <button type="button" onClick={onCancel} className="h-12 rounded-2xl px-5 text-[15px] font-medium text-snow/80 hover:bg-white/10 md:h-10 md:rounded-xl md:border md:border-white/15 md:text-sm md:text-white/80">
+          <button type="button" onClick={onCancel} className="h-11 rounded-2xl px-5 text-[15px] font-medium text-snow/80 hover:bg-white/10 md:h-10 md:rounded-xl md:border md:border-white/15 md:text-sm md:text-white/80">
             Voltar
           </button>
           <button

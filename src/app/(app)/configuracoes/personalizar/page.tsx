@@ -35,7 +35,7 @@ export default async function CustomizeProfilePage() {
           <ArrowLeft className="h-6 w-6" />
         </Link>
         <div className="min-w-0 flex-1">
-          <h1 className="font-display text-xl font-bold text-white md:text-2xl lg:text-3xl">Personalizar perfil</h1>
+          <h1 className="font-display text-xl font-bold text-white md:text-2xl">Personalizar perfil</h1>
           <p className="mt-1 text-sm text-white/60">Expresse quem você é. Muda só o visual do seu perfil, não o aplicativo.</p>
         </div>
         <Link

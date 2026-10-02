@@ -52,7 +52,7 @@ export function EventsView({ canSee, events, rsvps }: { canSee: boolean; events:
       canSee={canSee}
       action={
         canCreate && canSee ? (
-          <button type="button" onClick={() => setCreating(true)} className="flex h-11 items-center gap-1.5 rounded-full bg-orbit-gradient px-4 text-sm font-semibold text-snow shadow-glow">
+          <button type="button" onClick={() => setCreating(true)} className="flex h-10 items-center gap-1.5 rounded-full bg-orbit-gradient px-4 text-sm font-semibold text-snow shadow-glow">
             <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Novo evento</span>
             <span className="sm:hidden">Criar</span>
           </button>
@@ -305,7 +305,7 @@ export function EventDetailView({
         ) : (
           <div className="mt-3 space-y-1">
             {(showAll ? going : going.slice(0, 8)).map((p) => (
-              <Link key={p.user.id} href={`/perfil/${p.user.username}`} className="flex min-h-[48px] items-center gap-3 rounded-2xl px-1 hover:bg-white/[0.03]">
+              <Link key={p.user.id} href={`/perfil/${p.user.username}`} className="flex min-h-[44px] items-center gap-3 rounded-2xl px-1 hover:bg-white/[0.03]">
                 <Avatar name={p.user.name} url={p.user.avatarUrl} size={36} />
                 <span className="min-w-0 flex-1 truncate text-sm text-white">{p.user.name}</span>
                 {p.user.id === e.createdById && <span className="rounded-full bg-orbit-purple/15 px-2 py-0.5 text-[10px] font-semibold text-orbit-purple">Organizador</span>}
@@ -334,19 +334,19 @@ export function EventDetailView({
 
       <Sheet open={menu} onClose={() => setMenu(false)} title="Gerenciar evento">
         <div className="space-y-1 pt-1">
-          <button type="button" onClick={() => (setMenu(false), setEditing(true))} className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm text-white hover:bg-white/[0.05]">
+          <button type="button" onClick={() => (setMenu(false), setEditing(true))} className="flex min-h-[46px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm text-white hover:bg-white/[0.05]">
             <Pencil className="h-5 w-5" /> Editar evento
           </button>
           {e.status === "scheduled" ? (
-            <button type="button" onClick={() => (setMenu(false), setConfirm("cancel"))} className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm text-amber-300 hover:bg-white/[0.05]">
+            <button type="button" onClick={() => (setMenu(false), setConfirm("cancel"))} className="flex min-h-[46px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm text-amber-300 hover:bg-white/[0.05]">
               <Ban className="h-5 w-5" /> Cancelar evento
             </button>
           ) : (
-            <button type="button" onClick={() => action("restore")} className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm text-white hover:bg-white/[0.05]">
+            <button type="button" onClick={() => action("restore")} className="flex min-h-[46px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm text-white hover:bg-white/[0.05]">
               <RotateCcw className="h-5 w-5" /> Reativar evento
             </button>
           )}
-          <button type="button" onClick={() => (setMenu(false), setConfirm("delete"))} className="flex min-h-[52px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm text-red-300 hover:bg-white/[0.05]">
+          <button type="button" onClick={() => (setMenu(false), setConfirm("delete"))} className="flex min-h-[46px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm text-red-300 hover:bg-white/[0.05]">
             <Trash2 className="h-5 w-5" /> Excluir evento
           </button>
         </div>

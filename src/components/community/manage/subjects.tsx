@@ -90,7 +90,7 @@ export function SubjectsSection() {
             type="button"
             onClick={saveSuffix}
             disabled={suffixBusy || suffix.trim().toUpperCase() === savedSuffix}
-            className="flex h-11 items-center gap-2 rounded-full bg-orbit-gradient px-5 text-sm font-semibold text-snow shadow-glow disabled:opacity-50"
+            className="flex h-10 items-center gap-2 rounded-full bg-orbit-gradient px-5 text-sm font-semibold text-snow shadow-glow disabled:opacity-50"
           >
             {suffixBusy && <Loader2 className="h-4 w-4 animate-spin" />} Salvar
           </button>
@@ -187,7 +187,7 @@ function SubjectEditor({ subject, suffix, onClose, onSaved }: { subject: Communi
       footer={
         <div className="flex items-center gap-2">
           {error ? <p className="min-w-0 flex-1 text-xs text-red-300">{error}</p> : <span className="min-w-0 flex-1" />}
-          <button type="button" onClick={save} disabled={busy} className="flex h-11 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow disabled:opacity-60">
+          <button type="button" onClick={save} disabled={busy} className="flex h-10 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow disabled:opacity-60">
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} Salvar
           </button>
         </div>

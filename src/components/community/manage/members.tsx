@@ -33,7 +33,7 @@ const PAGE = 40;
 
 function Person({ user, sub, right, badge }: { user: Author; sub?: React.ReactNode; right?: React.ReactNode; badge?: React.ReactNode }) {
   return (
-    <div className="flex min-h-[64px] items-center gap-3 px-4 py-2.5">
+    <div className="flex min-h-[56px] items-center gap-3 px-4 py-2.5">
       <Link href={`/perfil/${user.username}`} className="shrink-0">
         <Avatar name={user.name} url={user.avatarUrl} size={42} />
       </Link>
@@ -369,7 +369,7 @@ export function MembersSection({ badges, onBadge, initialTab }: { badges: { requ
       <div className="space-y-3">
         <label className="relative block">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome ou @" className={`${inputCls} pl-11`} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nome ou @" className={`${inputCls} pl-[44px]`} />
         </label>
         {members === null
           ? loading
@@ -437,7 +437,7 @@ export function MembersSection({ badges, onBadge, initialTab }: { badges: { requ
                     setTarget(null);
                     a.run();
                   }}
-                  className={`flex min-h-[48px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm transition hover:bg-white/5 ${a.danger ? "text-red-300" : "text-white/85"}`}
+                  className={`flex min-h-[44px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm transition hover:bg-white/5 ${a.danger ? "text-red-300" : "text-white/85"}`}
                 >
                   <Icon className="h-[18px] w-[18px]" /> {a.label}
                 </button>
@@ -458,7 +458,7 @@ export function MembersSection({ badges, onBadge, initialTab }: { badges: { requ
                   type="button"
                   onClick={() => setMuteMinutes(o.minutes)}
                   aria-pressed={muteMinutes === o.minutes}
-                  className={`min-h-[48px] rounded-2xl border px-3 text-sm font-semibold transition ${muteMinutes === o.minutes ? "border-orbit-purple/60 bg-orbit-purple/[0.12] text-white" : "border-white/10 text-white/70 hover:text-white"}`}
+                  className={`min-h-[44px] rounded-2xl border px-3 text-sm font-semibold transition ${muteMinutes === o.minutes ? "border-orbit-purple/60 bg-orbit-purple/[0.12] text-white" : "border-white/10 text-white/70 hover:text-white"}`}
                 >
                   {o.label}
                 </button>

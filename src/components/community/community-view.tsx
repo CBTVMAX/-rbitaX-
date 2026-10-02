@@ -122,6 +122,23 @@ function MenuTiles({ community, staff, base, discussions }: { community: Communi
   // Só mostramos imagens do próprio armazenamento do ÓrbitaX.
   const safeImage = (src?: string | null) => (src && /^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\//.test(src) ? src : null);
   const tile = "w-[168px] shrink-0 md:w-[188px]";
+  // Ainda sem atalhos nem discussões: só uma linha para a equipe criar (sem um quadro vazio enorme).
+  if (!items.length)
+    return (
+      <Link
+        href={`${base}/gerenciar?secao=geral#links`}
+        className="flex items-center gap-3 rounded-2xl border border-dashed border-white/15 px-3.5 py-2.5 text-left transition hover:border-orbit-purple/40 hover:bg-white/[0.03]"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] text-white/60">
+          <Settings className="h-[18px] w-[18px]" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium text-white/85">Adicionar atalhos</span>
+          <span className="block truncate text-xs text-white/45">Quadros com capa no topo, como Regras e Inscrição</span>
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
+      </Link>
+    );
   return (
     <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
       <div className="-mx-4 flex gap-3 overflow-x-auto px-4 [scrollbar-width:none]">
@@ -333,17 +350,17 @@ function Hub(p: HubProps) {
           onChange={(s) => setRole?.(s === "member" ? role ?? "member" : null)}
         />
       ) : (
-        <Link href="/entrar" className="flex h-11 items-center rounded-full bg-orbit-gradient px-5 text-sm font-semibold text-snow shadow-glow">
+        <Link href="/entrar" className="flex h-10 items-center rounded-full bg-orbit-gradient px-5 text-sm font-semibold text-snow shadow-glow">
           Entrar para participar
         </Link>
       )}
       {viewer && rank(role) < 3 && !membership.banned && (
-        <button type="button" onClick={chat.open} disabled={chat.busy} className="flex h-11 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.08]">
+        <button type="button" onClick={chat.open} disabled={chat.busy} className="flex h-10 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.08]">
           {chat.busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquareText className="h-4 w-4" />} Mensagem
         </button>
       )}
       {staff && (
-        <Link href={`${base}/gerenciar`} className="relative flex h-11 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.08]">
+        <Link href={`${base}/gerenciar`} className="relative flex h-10 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.08]">
           <Settings className="h-4 w-4" /> Gerenciar
           {p.badgeTotal > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-orbit-pink px-1 text-[10px] font-bold text-snow">{p.badgeTotal}</span>}
         </Link>
@@ -359,7 +376,7 @@ function Hub(p: HubProps) {
 
   // Mesmas proporções do perfil: capa 7:2 inteira (é como ela é salva) e foto redonda na beirada.
   const header = (
-    <div className="relative mx-auto max-w-6xl lg:px-10 lg:pt-4">
+    <div className="relative mx-auto max-w-5xl lg:px-10 lg:pt-4">
       <div
         className="relative aspect-[7/2] w-full overflow-hidden md:rounded-b-[28px] lg:rounded-[28px]"
         style={{ background: `linear-gradient(135deg, ${accent.from}, rgb(${accent.rgb}) 55%, ${accent.to})` }}
@@ -378,10 +395,10 @@ function Hub(p: HubProps) {
       <div className="px-4 md:px-6">
         <div className="flex items-end gap-4">
           <span
-            className="relative z-10 -mt-[clamp(28px,7.5vw,32px)] shrink-0 rounded-full p-[3px] shadow-[0_0_28px_rgb(var(--app-accent,139_92_246)/0.45)] md:-mt-12 lg:-mt-14"
+            className="relative z-10 -mt-[clamp(26px,7vw,30px)] shrink-0 rounded-full p-[3px] shadow-[0_0_28px_rgb(var(--app-accent,139_92_246)/0.45)] md:-mt-[42px] lg:-mt-[48px]"
             style={{ background: `linear-gradient(135deg, ${accent.from}, ${accent.to})` }}
           >
-            <span className="flex h-[clamp(100px,29vw,118px)] w-[clamp(100px,29vw,118px)] items-center justify-center overflow-hidden rounded-full border-4 border-space-bg bg-space-card text-3xl font-bold text-white md:h-[136px] md:w-[136px] lg:h-[156px] lg:w-[156px]">
+            <span className="flex h-[clamp(88px,25vw,104px)] w-[clamp(88px,25vw,104px)] items-center justify-center overflow-hidden rounded-full border-4 border-space-bg bg-space-card text-3xl font-bold text-white md:h-[120px] md:w-[120px] lg:h-[136px] lg:w-[136px]">
               {community.avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={community.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -413,9 +430,14 @@ function Hub(p: HubProps) {
               </>
             )}
           </p>
-          <Link href={`${base}/membros`} className="mt-1.5 inline-flex items-center gap-1.5 text-sm text-white/75 hover:text-white">
-            <Users className="h-4 w-4 text-orbit-cyan" /> {role && <span>Você participa ·</span>} <strong className="font-semibold text-white">{compactNumber(community.memberCount)}</strong> {community.memberCount === 1 ? "membro" : "membros"}
-            {role && <RoleBadge role={role} className="ml-1" />}
+          <Link href={`${base}/membros`} className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm text-white/75 hover:text-white">
+            {/* Cada pedaço fica inteiro (sem quebrar palavra por palavra em tela estreita). */}
+            <Users className="h-4 w-4 shrink-0 text-orbit-cyan" />
+            {role && <span className="whitespace-nowrap">Você participa ·</span>}
+            <span className="whitespace-nowrap">
+              <strong className="font-semibold text-white">{compactNumber(community.memberCount)}</strong> {community.memberCount === 1 ? "membro" : "membros"}
+            </span>
+            {role && <RoleBadge role={role} />}
           </Link>
           {community.description && (
             <div className="mt-2 max-w-2xl">
@@ -637,7 +659,7 @@ function Hub(p: HubProps) {
   return (
     <>
       {header}
-      <div className="mx-auto mt-3 max-w-6xl space-y-3 px-4 md:px-6 lg:px-10">
+      <div className="mx-auto mt-3 max-w-5xl space-y-3 px-4 md:px-6 lg:px-10">
         <MutedNotice />
         {staff && p.badgeTotal > 0 && (
           <Link href={`${base}/gerenciar?secao=moderacao`} className="flex items-center gap-2 rounded-2xl border border-orbit-pink/30 bg-orbit-pink/[0.06] px-3 py-2.5 text-xs text-white/85 lg:hidden">
@@ -670,7 +692,7 @@ function Hub(p: HubProps) {
         {canSee && <Highlights slug={community.slug} counts={p.counts} isRpg={community.isRpg} staff={rank(role) >= 3} sheets={p.hasSheets} />}
         {canSee && <StoriesStrip canSee={canSee} />}
       </div>
-      <div className="mx-auto mt-4 max-w-6xl px-4 pb-10 md:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:px-10">
+      <div className="mx-auto mt-4 max-w-5xl px-4 pb-10 md:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:px-10">
         <div className="min-w-0 space-y-4">
           {!canSee ? (
             <EmptyState

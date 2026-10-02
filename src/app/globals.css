@@ -319,3 +319,8 @@ html[data-app-theme] body {
 [data-visual="simples"] [class*="ox-scene-in"] {
   animation: none !important;
 }
+
+/* Densidade por faixa de tela (multiplica a escala de espaçamentos do tailwind.config). */
+:root { --ox-density: 1; }
+@media (max-width: 359px) { :root { --ox-density: 0.88; } }
+@media (min-width: 1536px) { :root { --ox-density: 1.08; } }

@@ -167,7 +167,7 @@ export function GroupChatSettings({
 
   return (
     <div className="animate-pop-in absolute inset-0 z-20 flex flex-col bg-space-surface" role="dialog" aria-label="Configurações do chat">
-      <div className="flex min-h-[56px] items-center gap-1 border-b border-white/[0.07] px-2">
+      <div className="flex min-h-[48px] items-center gap-1 border-b border-white/[0.07] px-2">
         <button type="button" onClick={onClose} aria-label="Voltar" className="flex h-10 w-10 items-center justify-center rounded-full text-white/70 transition hover:bg-white/[0.06] hover:text-white">
           <ChevronLeft className="h-6 w-6" />
         </button>

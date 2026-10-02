@@ -211,7 +211,7 @@ function BlockItem({
   const wide = !f.half || ["long", "gallery", "points", "single", "multi", "list"].includes(f.type);
   const editing = ((mode === "form" || mode === "preview") && !f.narratorOnly && !f.locked) || narratorEditable;
   return (
-    <div id={`campo-${f.id}`} className={clsx("min-w-0 scroll-mt-24", wide && "md:col-span-2")}>
+    <div id={`campo-${f.id}`} className={clsx("min-w-0 scroll-mt-[96px]", wide && "md:col-span-2")}>
       <div className="mb-1.5 flex flex-wrap items-center gap-2">
         <span className="text-sm font-semibold" style={{ color: "var(--sh-title)" }}>
           {f.label || "Pergunta"}

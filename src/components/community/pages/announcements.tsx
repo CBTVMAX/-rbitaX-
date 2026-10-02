@@ -30,7 +30,7 @@ export function AnnouncementsView({ canSee, initial }: { canSee: boolean; initia
       canSee={canSee}
       action={
         canCreate && canSee ? (
-          <button type="button" onClick={() => flow.start("announcement")} className="flex h-11 items-center gap-1.5 rounded-full bg-orbit-gradient px-4 text-sm font-semibold text-snow shadow-glow">
+          <button type="button" onClick={() => flow.start("announcement")} className="flex h-10 items-center gap-1.5 rounded-full bg-orbit-gradient px-4 text-sm font-semibold text-snow shadow-glow">
             <Plus className="h-4 w-4" /> Novo aviso
           </button>
         ) : undefined

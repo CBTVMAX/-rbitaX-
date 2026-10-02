@@ -234,7 +234,7 @@ export function CoverCropDialog({
                   <CroppedImage src={src} nat={nat} crop={crop} ratio={ratio} />
                 </div>
                 <div className="flex items-end gap-3 px-3 pb-2">
-                  <span className="relative z-10 -mt-8 flex h-16 w-16 shrink-0 items-end justify-center overflow-hidden rounded-full border-4 border-space-bg bg-space-card ring-2 ring-orbit-purple/70">
+                  <span className="relative z-10 -mt-[32px] flex h-16 w-16 shrink-0 items-end justify-center overflow-hidden rounded-full border-4 border-space-bg bg-space-card ring-2 ring-orbit-purple/70">
                     <User className="mb-1 h-8 w-8 text-orbit-blue/60" />
                   </span>
                   <div className="space-y-1.5 pb-1">
@@ -253,7 +253,7 @@ export function CoverCropDialog({
                   <CroppedImage src={src} nat={nat} crop={crop} ratio={ratio} />
                 </div>
                 <div className="px-2 pb-3">
-                  <span className="relative z-10 -mt-6 flex h-12 w-12 items-end justify-center overflow-hidden rounded-full border-[3px] border-space-bg bg-space-card ring-2 ring-orbit-purple/70">
+                  <span className="relative z-10 -mt-[24px] flex h-12 w-12 items-end justify-center overflow-hidden rounded-full border-[3px] border-space-bg bg-space-card ring-2 ring-orbit-purple/70">
                     <User className="mb-0.5 h-6 w-6 text-orbit-blue/60" />
                   </span>
                   <span className="mt-2 block h-2 w-24 rounded bg-white/25" />

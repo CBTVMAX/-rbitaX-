@@ -143,7 +143,7 @@ export function ReactorsSheet({ open, onClose, postId, total }: { open: boolean;
             {reactors
               .filter((r) => tab === "all" || r.reaction === tab)
               .map((r) => (
-                <Link key={r.user.id} href={`/perfil/${r.user.username}`} className="flex min-h-[52px] items-center gap-3 rounded-2xl px-2 hover:bg-white/[0.04]">
+                <Link key={r.user.id} href={`/perfil/${r.user.username}`} className="flex min-h-[46px] items-center gap-3 rounded-2xl px-2 hover:bg-white/[0.04]">
                   <Avatar name={r.user.name} url={r.user.avatarUrl} size={38} />
                   <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{r.user.name}</span>
                   <span className="text-xl">{reactionOf(r.reaction).emoji}</span>

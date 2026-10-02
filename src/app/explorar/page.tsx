@@ -607,7 +607,7 @@ function OfficialCommunitySection({
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-space-card">
           <div className="h-24 bg-[url('/hero-earth.webp')] bg-cover bg-center" />
           <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start">
-            <div className="-mt-12 h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-4 border-space-card bg-space-bg shadow-lg">
+            <div className="-mt-[48px] h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-4 border-space-card bg-space-bg shadow-lg">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={officialCommunity.avatarUrl ?? "/orbit-mark.webp"} alt={officialCommunity.name} className="h-full w-full object-cover" />
             </div>

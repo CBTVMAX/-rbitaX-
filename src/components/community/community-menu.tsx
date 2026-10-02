@@ -95,7 +95,7 @@ function MenuRow({ item, onDone }: { item: Item; onDone: () => void }) {
       {item.right}
     </>
   );
-  const cls = "flex min-h-[56px] w-full items-center gap-3 rounded-2xl px-2 text-left transition hover:bg-white/[0.04] active:scale-[0.99]";
+  const cls = "flex min-h-[48px] w-full items-center gap-3 rounded-2xl px-2 text-left transition hover:bg-white/[0.04] active:scale-[0.99]";
   return item.href ? (
     <Link href={item.href} className={cls} onClick={onDone}>
       {inner}
@@ -344,7 +344,7 @@ export function InviteSheet({ open, onClose }: { open: boolean; onClose: () => v
                 type="button"
                 disabled={already}
                 onClick={() => setPicked((s) => (s.has(f.id) ? (s.delete(f.id), new Set(s)) : new Set(s).add(f.id)))}
-                className="flex min-h-[56px] w-full items-center gap-3 rounded-2xl px-2 text-left transition hover:bg-white/[0.04] disabled:opacity-50"
+                className="flex min-h-[48px] w-full items-center gap-3 rounded-2xl px-2 text-left transition hover:bg-white/[0.04] disabled:opacity-50"
               >
                 <Avatar name={f.name} url={f.avatarUrl} size={40} />
                 <span className="min-w-0 flex-1">
@@ -502,7 +502,7 @@ export function SimilarSheet({ open, onClose }: { open: boolean; onClose: () => 
           {list.map((c) => {
             const a = accentOf(null);
             return (
-              <Link key={c.id} href={`/comunidades/${c.slug}`} onClick={onClose} className="flex min-h-[64px] items-center gap-3 rounded-2xl px-2 transition hover:bg-white/[0.04]">
+              <Link key={c.id} href={`/comunidades/${c.slug}`} onClick={onClose} className="flex min-h-[56px] items-center gap-3 rounded-2xl px-2 transition hover:bg-white/[0.04]">
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-lg font-bold text-white" style={{ background: `linear-gradient(135deg, ${a.from}, ${a.to})` }}>
                   {c.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element

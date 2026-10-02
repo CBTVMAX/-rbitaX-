@@ -286,7 +286,7 @@ export function ModerationSection({ badges, onBadges }: { badges: { pending: num
         {admin && (
           <div className="mt-4 flex justify-end gap-2">
             {dirty && (
-              <button type="button" onClick={() => setMod(saved)} className="min-h-[48px] rounded-full px-5 text-sm font-semibold text-white/70 hover:text-white">
+              <button type="button" onClick={() => setMod(saved)} className="min-h-[44px] rounded-full px-5 text-sm font-semibold text-white/70 hover:text-white">
                 Descartar
               </button>
             )}

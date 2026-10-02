@@ -363,7 +363,7 @@ export function PostCard({
                         key={v.id}
                         type="button"
                         onClick={() => changeVisibility(v.id)}
-                        className="flex w-full items-center gap-2.5 py-2 pl-8 pr-4 text-left text-sm text-white/80 hover:bg-white/5"
+                        className="flex w-full items-center gap-2.5 py-2 pl-[32px] pr-4 text-left text-sm text-white/80 hover:bg-white/5"
                       >
                         <v.icon className="h-3.5 w-3.5" />
                         <span className="min-w-0 flex-1">

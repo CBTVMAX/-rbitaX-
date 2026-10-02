@@ -236,7 +236,7 @@ export function FriendsHub({
     <div className="mx-auto max-w-2xl px-3 pb-10 pt-3 md:px-4 md:pt-6">
       <h1 className="px-1 font-display text-2xl font-bold text-white">Amigos</h1>
 
-      <label className="mt-3 flex h-12 items-center gap-3 rounded-2xl bg-white/[0.07] px-4 focus-within:ring-2 focus-within:ring-orbit-blue/50">
+      <label className="mt-3 flex h-11 items-center gap-3 rounded-2xl bg-white/[0.07] px-4 focus-within:ring-2 focus-within:ring-orbit-blue/50">
         <Search className="h-5 w-5 shrink-0 text-white/45" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Introduza o nome ou @usuário" className="min-w-0 flex-1 bg-transparent text-[15px] text-white outline-none placeholder:text-white/40" />
         {q && (
@@ -323,7 +323,7 @@ export function FriendsHub({
       )}
 
       {shownSuggestions.length > 0 && (
-        <div ref={suggestionsRef} className="scroll-mt-20">
+        <div ref={suggestionsRef} className="scroll-mt-[80px]">
           {divider}
           <SectionHead
             title="Possíveis amigos"

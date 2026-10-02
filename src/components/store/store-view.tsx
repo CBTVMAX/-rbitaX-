@@ -433,7 +433,7 @@ export function StoreView({
         </div>
       </div>
 
-      <div className="sticky top-14 z-10 -mx-4 mt-4 bg-space-bg/85 px-4 pb-2 pt-2 backdrop-blur md:top-16 md:-mx-6 md:px-6">
+      <div className="sticky top-14 z-10 -mx-4 mt-4 bg-space-bg/85 px-4 pb-2 pt-2 backdrop-blur md:top-14 md:-mx-6 md:px-6">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]" role="tablist" aria-label="Categorias">
             {STORE_CATEGORIES.map((c) => {

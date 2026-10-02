@@ -308,7 +308,7 @@ export default function CriarContaPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Seu nome completo"
-                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
+                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-[36px] pr-3 text-sm text-white outline-none focus:border-orbit-purple"
                 />
               </div>
             </div>
@@ -324,7 +324,7 @@ export default function CriarContaPage() {
                   onChange={(e) => setBirthDateInput(formatBirthDateInput(e.target.value, birthDateInput))}
                   placeholder="DD / MM / AAAA"
                   maxLength={10}
-                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
+                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-[36px] pr-3 text-sm text-white outline-none focus:border-orbit-purple"
                 />
               </div>
             </div>
@@ -337,7 +337,7 @@ export default function CriarContaPage() {
                   required
                   value={gender}
                   onChange={(e) => setGender(e.target.value)}
-                  className="w-full appearance-none rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
+                  className="w-full appearance-none rounded-lg border border-white/10 bg-space-card py-2 pl-[36px] pr-3 text-sm text-white outline-none focus:border-orbit-purple"
                 >
                   <option value="" disabled>
                     Selecione
@@ -362,7 +362,7 @@ export default function CriarContaPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="seuemail@exemplo.com"
-                    className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
+                    className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-[36px] pr-3 text-sm text-white outline-none focus:border-orbit-purple"
                   />
                 </div>
               </div>
@@ -377,7 +377,7 @@ export default function CriarContaPage() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+55 (11) 91234-5678"
-                    className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
+                    className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-[36px] pr-3 text-sm text-white outline-none focus:border-orbit-purple"
                   />
                 </div>
               </div>
@@ -394,7 +394,7 @@ export default function CriarContaPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Mín. 8 caracteres"
-                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-9 text-sm text-white outline-none focus:border-orbit-purple"
+                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-[36px] pr-[36px] text-sm text-white outline-none focus:border-orbit-purple"
                 />
                 <button
                   type="button"
@@ -451,7 +451,7 @@ export default function CriarContaPage() {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
                 placeholder="000000"
-                className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm tracking-[0.3em] text-white outline-none focus:border-orbit-purple"
+                className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-[36px] pr-3 text-sm tracking-[0.3em] text-white outline-none focus:border-orbit-purple"
               />
             </div>
           </div>

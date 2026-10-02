@@ -64,7 +64,7 @@ export const ConversationItem = memo(function ConversationItem({
         )}
       >
         <span className="lg:hidden">
-          <ConversationAvatar c={c} size={60} />
+          <ConversationAvatar c={c} size={54} />
         </span>
         <span className="hidden lg:block">
           <ConversationAvatar c={c} size={50} />
@@ -105,7 +105,7 @@ export const ConversationItem = memo(function ConversationItem({
     >
       {active && <span className="absolute inset-y-3 left-0 w-[3px] rounded-full bg-orbit-gradient" />}
       <span className="lg:hidden">
-        <ConversationAvatar c={c} size={60} ringClass={active ? "border-space-surface" : "border-space-bg"} />
+        <ConversationAvatar c={c} size={54} ringClass={active ? "border-space-surface" : "border-space-bg"} />
       </span>
       <span className="hidden lg:block">
         <ConversationAvatar c={c} size={50} ringClass={active ? "border-space-surface" : "border-space-bg"} />

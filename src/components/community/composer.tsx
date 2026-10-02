@@ -446,7 +446,7 @@ export function Composer({
             type="button"
             onClick={submit}
             disabled={busy}
-            className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow transition hover:opacity-90 disabled:opacity-60"
+            className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow transition hover:opacity-90 disabled:opacity-60"
           >
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} {suggest ? "Enviar sugestão" : "Publicar"}
           </button>
@@ -628,7 +628,7 @@ export function Composer({
                 <button
                   type="button"
                   onClick={() => input.current?.click()}
-                  className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 px-4 py-3 text-sm font-medium text-white/75 transition hover:border-orbit-purple/50 hover:bg-orbit-purple/[0.05]"
+                  className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 px-4 py-3 text-sm font-medium text-white/75 transition hover:border-orbit-purple/50 hover:bg-orbit-purple/[0.05]"
                 >
                   {uploadKind === "image" ? <ImageIcon className="h-5 w-5" /> : uploadKind === "video" ? <Film className="h-5 w-5" /> : uploadKind === "audio" ? <Music2 className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
                   {kind === "gif"

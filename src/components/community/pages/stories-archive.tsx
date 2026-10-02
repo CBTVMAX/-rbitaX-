@@ -34,7 +34,7 @@ export function StoriesArchiveView({ canSee, stories: initial }: { canSee: boole
       canSee={canSee}
       action={
         viewer && !membership?.muted ? (
-          <button type="button" onClick={() => setCreating(true)} aria-label="Nova história" className="flex h-11 items-center gap-1.5 rounded-full bg-orbit-gradient px-3.5 text-sm font-semibold text-snow shadow-glow sm:px-4">
+          <button type="button" onClick={() => setCreating(true)} aria-label="Nova história" className="flex h-10 items-center gap-1.5 rounded-full bg-orbit-gradient px-3.5 text-sm font-semibold text-snow shadow-glow sm:px-4">
             <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Nova história</span>
           </button>
         ) : undefined

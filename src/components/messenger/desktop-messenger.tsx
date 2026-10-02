@@ -199,10 +199,10 @@ export function DesktopMessenger({
 
   return (
     <MessengerContext.Provider value={ctx}>
-      <div className="flex h-[calc(100dvh-9.5rem)] overflow-hidden md:h-[calc(100dvh-4rem)]">
+      <div className="flex h-[calc(100dvh-7.75rem-env(safe-area-inset-bottom))] overflow-hidden md:h-[calc(100dvh-3.5rem)]">
         <aside
           className={clsx(
-            "h-full min-h-0 w-full shrink-0 border-white/10 bg-space-bg/60 lg:flex lg:w-[340px] lg:flex-col lg:border-r xl:w-[360px]",
+            "h-full min-h-0 w-full shrink-0 border-white/10 bg-space-bg/60 lg:flex lg:w-[320px] lg:flex-col lg:border-r xl:w-[340px]",
             active && !split ? "hidden" : "flex flex-col"
           )}
         >

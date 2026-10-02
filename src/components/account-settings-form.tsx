@@ -70,9 +70,9 @@ type UsernameState = "unchanged" | "invalid" | "checking" | "available" | "taken
 
 const inputClass =
   "w-full rounded-xl border border-white/10 bg-space-bg/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-orbit-purple/70";
-const selectClass = `${inputClass} appearance-none pr-10`;
+const selectClass = `${inputClass} appearance-none pr-[40px]`;
 const dateSelectClass =
-  "w-full appearance-none rounded-xl border border-white/10 bg-space-bg/60 py-3 pl-3 pr-7 text-sm text-white outline-none transition focus:border-orbit-purple/70";
+  "w-full appearance-none rounded-xl border border-white/10 bg-space-bg/60 py-3 pl-3 pr-[28px] text-sm text-white outline-none transition focus:border-orbit-purple/70";
 
 function SectionHeader({
   title,
@@ -393,8 +393,8 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
           {coverFile && <CoverCropDialog file={coverFile} onCancel={() => setCoverFile(null)} onConfirm={applyCover} />}
         </div>
 
-        <div className="flex items-end gap-4 px-4 pb-2 lg:-mt-20 lg:px-3 lg:pb-0">
-          <div className="relative -mt-12 shrink-0 lg:mt-0">
+        <div className="flex items-end gap-4 px-4 pb-2 lg:-mt-[80px] lg:px-3 lg:pb-0">
+          <div className="relative -mt-[48px] shrink-0 lg:mt-0">
             <div className="h-28 w-28 rounded-full lg:h-36 lg:w-36 bg-[conic-gradient(from_210deg,#2b6cff,#8b5cf6,#ec4899,#22d3ee,#2b6cff)] p-[3px]">
               <div className="flex h-full w-full items-end justify-center overflow-hidden rounded-full border-4 border-space-bg bg-space-card">
                 {avatarUrl ? (
@@ -446,7 +446,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
                 autoCorrect="off"
                 spellCheck={false}
                 maxLength={31}
-                className={clsx(inputClass, "pr-11")}
+                className={clsx(inputClass, "pr-[44px]")}
               />
               <span className="absolute right-3.5 top-1/2 -translate-y-1/2">
                 {usernameState === "checking" && <Loader2 className="h-5 w-5 animate-spin text-white/50" />}
@@ -482,7 +482,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
 
           <Field label="Link" icon={Link2} stacked>
             <div className="relative">
-              <input value={website} onChange={(e) => setWebsite(e.target.value)} maxLength={200} placeholder="Ex.: linktr.ee/seunome" className={clsx(inputClass, "pr-10")} />
+              <input value={website} onChange={(e) => setWebsite(e.target.value)} maxLength={200} placeholder="Ex.: linktr.ee/seunome" className={clsx(inputClass, "pr-[40px]")} />
               {website && (
                 <button
                   type="button"

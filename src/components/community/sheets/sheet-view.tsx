@@ -118,7 +118,7 @@ export function SheetView({ sheetId }: { sheetId: string }) {
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
           <StatusChip status={sheet.status} className="absolute left-3 top-3" />
         </div>
-        <div className="relative -mt-14 flex flex-col gap-4 px-4 pb-5 md:-mt-20 md:flex-row md:items-end md:px-6">
+        <div className="relative -mt-[56px] flex flex-col gap-4 px-4 pb-5 md:-mt-[80px] md:flex-row md:items-end md:px-6">
           <span className="block h-28 w-28 shrink-0 overflow-hidden rounded-3xl border-4 bg-space-card md:h-36 md:w-36" style={{ borderColor: "var(--sh-accent)" }}>
             {avatar ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -195,7 +195,7 @@ export function SheetView({ sheetId }: { sheetId: string }) {
 
       {narrate && hasNarratorFields && (
         <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] flex justify-end md:bottom-3">
-          <button type="button" onClick={saveNarrator} disabled={!narratorChanged || busy === "narr"} className="flex h-11 items-center gap-2 rounded-xl px-5 text-sm font-semibold text-white shadow-2xl disabled:opacity-40" style={{ background: t.style.accent }}>
+          <button type="button" onClick={saveNarrator} disabled={!narratorChanged || busy === "narr"} className="flex h-10 items-center gap-2 rounded-xl px-5 text-sm font-semibold text-white shadow-2xl disabled:opacity-40" style={{ background: t.style.accent }}>
             {busy === "narr" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar campos do narrador
           </button>
         </div>

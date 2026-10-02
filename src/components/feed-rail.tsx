@@ -75,7 +75,7 @@ export function FeedRail({
         </div>
         <div className="px-4 pb-4">
           <div className="flex items-end gap-3">
-            <Link href={`/perfil/${me.username}`} className="relative z-10 -mt-9 shrink-0 rounded-full bg-orbit-gradient p-[3px] shadow-glow">
+            <Link href={`/perfil/${me.username}`} className="relative z-10 -mt-[36px] shrink-0 rounded-full bg-orbit-gradient p-[3px] shadow-glow">
               <span className="block rounded-full border-[3px] border-space-surface">
                 <Face url={me.avatarUrl} name={me.name} size={76} />
               </span>

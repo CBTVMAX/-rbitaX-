@@ -348,7 +348,7 @@ export function StickerStoreView({
       </div>
 
       {/* Busca + abas */}
-      <div className={clsx("z-10 -mx-4 mt-3 bg-space-bg/85 px-4 pb-2 pt-2 backdrop-blur md:-mx-6 md:px-6", embedded ? "sticky top-0" : "sticky top-14 md:top-16")}>
+      <div className={clsx("z-10 -mx-4 mt-3 bg-space-bg/85 px-4 pb-2 pt-2 backdrop-blur md:-mx-6 md:px-6", embedded ? "sticky top-0" : "sticky top-14 md:top-14")}>
         <label className="flex items-center gap-2 rounded-2xl border border-white/10 bg-space-surface/80 px-3.5 py-2.5 focus-within:border-orbit-purple/50">
           <Search className="h-4 w-4 shrink-0 text-white/40" />
           <input

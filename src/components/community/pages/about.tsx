@@ -149,7 +149,7 @@ export function AboutView({ staff, stats }: { staff: StaffMember[]; stats: { pos
                   </p>
                   <div className="mt-1.5 space-y-1">
                     {list.map((s) => (
-                      <Link key={s.user.id} href={`/perfil/${s.user.username}`} className="flex min-h-[52px] items-center gap-3 rounded-2xl px-1 hover:bg-white/[0.03]">
+                      <Link key={s.user.id} href={`/perfil/${s.user.username}`} className="flex min-h-[46px] items-center gap-3 rounded-2xl px-1 hover:bg-white/[0.03]">
                         <Avatar name={s.user.name} url={s.user.avatarUrl} size={38} />
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-1 truncate text-sm font-semibold text-white">

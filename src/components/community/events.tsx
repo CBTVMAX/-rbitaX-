@@ -240,7 +240,7 @@ export function EventForm({ open, onClose, event, onSaved }: { open: boolean; on
       footer={
         <div className="flex items-center gap-2">
           {error ? <p className="min-w-0 flex-1 text-xs text-red-300">{error}</p> : <p className="min-w-0 flex-1 truncate text-xs text-white/45">Horário de {Intl.DateTimeFormat().resolvedOptions().timeZone.replace("_", " ")}</p>}
-          <button type="button" onClick={save} disabled={busy || uploading} className="flex h-11 shrink-0 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow disabled:opacity-60">
+          <button type="button" onClick={save} disabled={busy || uploading} className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow disabled:opacity-60">
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} {event ? "Salvar" : "Criar evento"}
           </button>
         </div>

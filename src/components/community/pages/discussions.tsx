@@ -120,7 +120,7 @@ export function DiscussionsView({ canSee, initial, initialCategory }: { canSee: 
       canSee={canSee}
       action={
         canCreate && canSee ? (
-          <button type="button" onClick={() => flow.start("discussion")} className="flex h-11 items-center gap-1.5 rounded-full bg-orbit-gradient px-4 text-sm font-semibold text-snow shadow-glow">
+          <button type="button" onClick={() => flow.start("discussion")} className="flex h-10 items-center gap-1.5 rounded-full bg-orbit-gradient px-4 text-sm font-semibold text-snow shadow-glow">
             <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Nova discussão</span>
             <span className="sm:hidden">Nova</span>
           </button>

@@ -64,7 +64,7 @@ export function CommunitiesHome({
       <div className="min-w-0 space-y-3 md:space-y-4">
         <div className="flex items-center gap-2">
           <form action="/comunidades" method="GET" className="min-w-0 flex-1">
-            <label className="flex h-11 items-center gap-2 rounded-2xl border border-white/10 bg-space-surface px-4">
+            <label className="flex h-10 items-center gap-2 rounded-2xl border border-white/10 bg-space-surface px-4">
               <Search className="h-4 w-4 shrink-0 text-white/40" />
               <input name="q" placeholder="Pesquisar comunidades" className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35" />
             </label>

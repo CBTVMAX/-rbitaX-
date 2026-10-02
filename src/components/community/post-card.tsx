@@ -406,7 +406,7 @@ export function CommunityPostCard({
       type="button"
       onClick={onClick}
       className={clsx(
-        "flex min-h-[48px] w-full items-center gap-3 rounded-2xl px-4 text-left text-sm transition hover:bg-white/[0.05]",
+        "flex min-h-[44px] w-full items-center gap-3 rounded-2xl px-4 text-left text-sm transition hover:bg-white/[0.05]",
         danger ? "text-red-300" : "text-white/90"
       )}
     >
