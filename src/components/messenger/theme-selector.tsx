@@ -6,9 +6,9 @@ import { Camera, Check, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/messenger/media";
 import { CHAT_THEMES, chatTheme } from "@/lib/messenger/themes";
-import { PLAIN_WALLPAPERS, WALLPAPERS, customWallpaperId, defaultWallpaper, isCustomWallpaper, wallpaperSrc } from "@/lib/messenger/wallpapers";
+import { PLAIN_WALLPAPERS, WALLPAPERS, customWallpaperId, defaultWallpaper, isCustomWallpaper, isPlainWallpaper, wallpaperSrc } from "@/lib/messenger/wallpapers";
 import { sniffFile } from "@/lib/upload-guard";
-import { useLightApp } from "@/lib/messenger/use-light-app";
+import { useLightApp, useSimpleVisual } from "@/lib/messenger/use-light-app";
 
 /** Tema da conversa: background glow, accents, sent bubbles and buttons of this chat only. */
 export function ThemeSelector({ value, onChange }: { value: string | null; onChange: (id: string) => void }) {
@@ -69,6 +69,8 @@ async function uploadWallpaper(file: File) {
 /** Papel de parede: a picture behind this chat (or the default space backdrop), ou uma foto da própria pessoa. */
 export function WallpaperSelector({ value, onChange }: { value: string | null; onChange: (id: string | null) => void }) {
   const light = useLightApp();
+  const simple = useSimpleVisual();
+  const fallback = defaultWallpaper(light, simple);
   const items: { id: string | null; label: string }[] = [{ id: null, label: "Padrão" }, ...WALLPAPERS];
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -175,8 +177,10 @@ export function WallpaperSelector({ value, onChange }: { value: string | null; o
                 style={
                   w.id
                     ? { backgroundImage: `url(${wallpaperSrc(w.id, true)})` }
-                    : // "Padrão" mostra o fundo que vale sem escolha: Órbita Clara no claro, Universo no escuro.
-                      { backgroundImage: `url(${wallpaperSrc(defaultWallpaper(light), true)})` }
+                    : // "Padrão" mostra o fundo que vale sem escolha (liso no visual simples).
+                      isPlainWallpaper(fallback)
+                      ? { backgroundColor: PLAIN_WALLPAPERS.find((p) => p.id === fallback)?.color }
+                      : { backgroundImage: `url(${wallpaperSrc(fallback, true)})` }
                 }
               >
                 {on && (

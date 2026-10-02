@@ -23,3 +23,17 @@ export function useLightApp() {
   }, []);
   return light;
 }
+
+/** Visual simples ligado (Configurações → Aparência → Visual)? */
+export function useSimpleVisual() {
+  const [simple, setSimple] = useState(false);
+  useEffect(() => {
+    const read = () => setSimple(document.documentElement.dataset.visual === "simples" || document.querySelector<HTMLElement>("[data-app-theme]")?.dataset.visual === "simples");
+    read();
+    const obs = new MutationObserver(read);
+    document.querySelectorAll("[data-app-theme]").forEach((el) => obs.observe(el, { attributes: true, attributeFilter: ["data-visual"] }));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["data-visual"] });
+    return () => obs.disconnect();
+  }, []);
+  return simple;
+}

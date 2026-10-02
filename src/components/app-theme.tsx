@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { APP_THEME_COOKIE, type AppTheme } from "@/lib/app-theme";
+import { APP_THEME_COOKIE, APP_VISUAL_COOKIE, type AppTheme, type AppVisual } from "@/lib/app-theme";
 
 function applyTheme(theme: AppTheme) {
   document.documentElement.dataset.appTheme = theme;
@@ -34,6 +34,38 @@ export function useAppTheme(initial: AppTheme) {
   }
 
   return { theme, change };
+}
+
+function applyVisual(visual: AppVisual) {
+  document.documentElement.dataset.visual = visual;
+  document.querySelectorAll<HTMLElement>("[data-app-theme]").forEach((el) => {
+    el.dataset.visual = visual;
+  });
+}
+
+/** Espelha o visual (completo/simples) no <html>, para janelas e o chat do celular seguirem também. */
+export function AppVisualSync({ visual }: { visual: AppVisual }) {
+  useEffect(() => {
+    applyVisual(visual);
+    return () => {
+      delete document.documentElement.dataset.visual;
+    };
+  }, [visual]);
+  return null;
+}
+
+export function useAppVisual(initial: AppVisual) {
+  const router = useRouter();
+  const [visual, setVisual] = useState<AppVisual>(initial);
+
+  function change(next: AppVisual) {
+    setVisual(next);
+    document.cookie = `${APP_VISUAL_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
+    applyVisual(next);
+    router.refresh();
+  }
+
+  return { visual, change };
 }
 
 const ACCENT_VARS = ["--app-accent", "--app-accent-a", "--app-accent-b"];

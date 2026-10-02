@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import type { getCurrentUser } from "@/lib/current-user";
-import { APP_THEME_COOKIE, parseAppTheme } from "@/lib/app-theme";
-import { AppAccentSync, AppThemeSync } from "@/components/app-theme";
+import { APP_THEME_COOKIE, APP_VISUAL_COOKIE, parseAppTheme, parseAppVisual } from "@/lib/app-theme";
+import { AppAccentSync, AppThemeSync, AppVisualSync } from "@/components/app-theme";
 import { appAccentVars } from "@/lib/profile-colors";
 import { LiveActivityProvider } from "@/components/live-activity";
 import { AppSidebar, AppTopBar, MobileHeader, MobileTabBar } from "@/components/app-sidebar";
@@ -24,14 +24,16 @@ export async function CommunityShell({ current, children }: { current: Current; 
   }
   const { profile } = current;
   const theme = parseAppTheme((await cookies()).get(APP_THEME_COOKIE)?.value);
+  const visual = parseAppVisual((await cookies()).get(APP_VISUAL_COOKIE)?.value);
   const { data: badgeRows } = await (await createClient()).rpc("my_badge_counts");
   const initialCounts = Array.isArray(badgeRows) && badgeRows[0] ? badgeRows[0] : undefined;
   const accent = appAccentVars(profile.profileColor);
 
   return (
     <LiveActivityProvider userId={current.authId} initialCounts={initialCounts}>
-      <div data-app-theme={theme} className="min-h-screen bg-space-bg bg-stars" style={accent as React.CSSProperties | undefined}>
+      <div data-app-theme={theme} data-visual={visual} className="min-h-screen bg-space-bg bg-stars" style={accent as React.CSSProperties | undefined}>
         <AppThemeSync theme={theme} />
+        <AppVisualSync visual={visual} />
         <AppAccentSync vars={accent} />
         <AppTopBar userId={current.authId} username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} presence={profile.presence} />
         <MobileHeader userId={current.authId} username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} presence={profile.presence} />
