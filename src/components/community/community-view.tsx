@@ -9,27 +9,19 @@ import {
   ArrowLeft,
   CalendarDays,
   ChevronRight,
-  Drama,
-  FileText,
-  Film,
   Globe,
-  Hash,
-  Images,
   Info,
   Link2,
   Loader2,
   Lock,
   MapPin,
-  Megaphone,
   MessageSquareText,
   MessagesSquare,
   MoreHorizontal,
-  Music2,
   Plus,
   Settings,
   Share2,
   ShieldAlert,
-  Sparkles,
   Users,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -54,45 +46,104 @@ export type MemberPreview = { role: Role; createdAt: string; user: { id: string;
 
 const TAB_IDS: ContentTab[] = ["tudo", "posts", "fotos", "videos", "clipes", "musica", "gifs", "arquivos"];
 
-/** Round shortcuts under the header: each opens a real page of the community. */
-function Highlights({ slug, counts, isRpg }: { slug: string; counts: { announcements: number; discussions: number; events: number } & ContentCounts; isRpg?: boolean }) {
+/** Abas da comunidade no estilo VK: Início, Discussões, Avisos… numa barra rolável, cada uma abre a página. */
+function Highlights({ slug, counts, isRpg, staff }: { slug: string; counts: { announcements: number; discussions: number; events: number } & ContentCounts; isRpg?: boolean; staff?: boolean }) {
   const base = `/comunidades/${slug}`;
-  const items: { href: string; label: string; icon: React.ComponentType<{ className?: string }>; count?: number; tone: string }[] = [
-    ...(isRpg ? [{ href: `${base}/personagens`, label: "Personagens", icon: Drama, tone: "from-orbit-purple to-orbit-pink" }] : []),
-    { href: `${base}/avisos`, label: "Avisos", icon: Megaphone, count: counts.announcements, tone: "from-amber-400 to-orbit-pink" },
-    { href: `${base}/discussoes`, label: "Discussões", icon: MessagesSquare, count: counts.discussions, tone: "from-orbit-purple to-orbit-pink" },
-    { href: `${base}/chats`, label: "Bate-papos", icon: MessageSquareText, tone: "from-orbit-blue to-orbit-purple" },
-    { href: `${base}/eventos`, label: "Eventos", icon: CalendarDays, count: counts.events, tone: "from-orbit-cyan to-orbit-blue" },
-    { href: `${base}/conteudo?aba=fotos`, label: "Fotos", icon: Images, count: counts.fotos, tone: "from-emerald-400 to-orbit-cyan" },
-    { href: `${base}/conteudo?aba=videos`, label: "Vídeos", icon: Film, count: (counts.videos ?? 0) + (counts.clipes ?? 0), tone: "from-red-400 to-orbit-purple" },
-    { href: `${base}/conteudo?aba=musica`, label: "Música", icon: Music2, count: counts.musica, tone: "from-orbit-pink to-orbit-purple" },
-    { href: `${base}/conteudo?aba=arquivos`, label: "Arquivos", icon: FileText, count: counts.arquivos, tone: "from-slate-300 to-orbit-blue" },
-    { href: `${base}/momentos`, label: "Momentos", icon: Sparkles, tone: "from-orbit-cyan via-orbit-purple to-orbit-pink" },
-    { href: `${base}/assuntos`, label: "Assuntos", icon: Hash, tone: "from-orbit-blue to-orbit-cyan" },
+  const items: { href: string; label: string; count?: number }[] = [
+    { href: base, label: "Início" },
+    { href: `${base}/discussoes`, label: "Discussões", count: counts.discussions },
+    { href: `${base}/avisos`, label: "Avisos", count: counts.announcements },
+    ...(isRpg ? [{ href: `${base}/personagens`, label: "Personagens" }] : []),
+    { href: `${base}/eventos`, label: "Eventos", count: counts.events },
+    { href: `${base}/chats`, label: "Bate-papos" },
+    { href: `${base}/momentos`, label: "Momentos" },
+    { href: `${base}/membros`, label: "Membros" },
+    { href: `${base}/sobre`, label: "Sobre" },
+    { href: `${base}/assuntos`, label: "Assuntos" },
   ];
   return (
-    <nav aria-label="Destaques da comunidade" className="-mx-4 md:mx-0">
-      <div className="flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:px-0 lg:grid lg:grid-cols-10 lg:gap-2">
-        {items.map((it) => {
-          const Icon = it.icon;
-          return (
-            <Link key={it.href} href={it.href} className="group flex w-[76px] shrink-0 flex-col items-center gap-1.5 rounded-2xl py-1 text-center lg:w-auto">
-              <span className={clsx("relative flex h-14 w-14 items-center justify-center rounded-[20px] bg-gradient-to-br p-[1.5px] transition group-hover:scale-105 group-active:scale-95", it.tone)}>
-                <span className="flex h-full w-full items-center justify-center rounded-[18.5px] bg-space-card/95 text-white">
-                  <Icon className="h-6 w-6" />
-                </span>
-                {!!it.count && (
-                  <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border-2 border-space-bg bg-white px-1 text-[10px] font-bold tabular-nums text-space-bg">
-                    {compactNumber(it.count)}
-                  </span>
+    <nav aria-label="Seções da comunidade" className="flex items-center gap-1 rounded-3xl border border-white/[0.08] bg-space-card/70 p-2">
+      <div className="flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none]">
+        {items.map((it, i) => (
+          <Link
+            key={it.href}
+            href={it.href}
+            className={clsx(
+              "flex h-10 shrink-0 items-center gap-1.5 rounded-2xl px-4 text-[15px] font-medium transition",
+              i === 0 ? "bg-white/[0.08] text-white" : "text-white/55 hover:bg-white/[0.04] hover:text-white"
+            )}
+          >
+            {it.label}
+            {!!it.count && <span className="text-xs text-white/40">{compactNumber(it.count)}</span>}
+          </Link>
+        ))}
+      </div>
+      {staff && (
+        <Link href={`${base}/gerenciar?secao=abas`} aria-label="Configurar abas" title="Configurar abas" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border-l border-white/10 text-white/60 hover:text-white">
+          <Settings className="h-5 w-5" />
+        </Link>
+      )}
+    </nav>
+  );
+}
+
+/** Quadros clicáveis com capa (os links da comunidade), como "INSCRIÇÃO MEMBROS" e "REGRAS" no VK. */
+function MenuTiles({ community, staff, base }: { community: Community; staff: boolean; base: string }) {
+  const items = community.links ?? [];
+  // A origem só é conhecida no navegador: até lá todos viram <a>, evitando diferença entre servidor e cliente.
+  const [origin, setOrigin] = useState<string | null>(null);
+  useEffect(() => setOrigin(window.location.origin), []);
+  if (!items.length && !staff) return null;
+  const sameSite = (url: string) => {
+    try {
+      const u = new URL(url);
+      return origin && u.origin === origin ? u.pathname + u.search + u.hash : null;
+    } catch {
+      return null;
+    }
+  };
+  // Só mostramos imagens do próprio armazenamento do ÓrbitaX.
+  const safeImage = (src?: string | null) => (src && /^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\//.test(src) ? src : null);
+  const tile = "w-[132px] shrink-0 md:w-[148px]";
+  return (
+    <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
+      <div className="-mx-4 flex gap-3 overflow-x-auto px-4 [scrollbar-width:none]">
+        {staff && (
+          <Link href={`${base}/gerenciar?secao=geral#links`} className={tile}>
+            <span className="flex aspect-[3/2] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/60 transition hover:text-white">
+              <Settings className="h-7 w-7" />
+            </span>
+            <span className="mt-1.5 block truncate text-center text-[13px] text-white/75">{items.length ? "Configurar" : "Adicionar atalhos"}</span>
+          </Link>
+        )}
+        {items.map((l, i) => {
+          const img = safeImage(l.image) ?? community.coverUrl ?? community.avatarUrl;
+          const inner = (
+            <>
+              <span className="relative block aspect-[3/2] overflow-hidden rounded-2xl bg-space-bg">
+                {img ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={img} alt="" loading="lazy" className="h-full w-full object-cover transition hover:scale-105" />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center bg-orbit-gradient text-2xl font-bold text-snow">{l.label.slice(0, 1)}</span>
                 )}
               </span>
-              <span className="text-[11px] font-medium text-white/75 group-hover:text-white">{it.label}</span>
+              <span className="mt-1.5 block truncate text-center text-[13px] font-medium uppercase tracking-wide text-white/80">{l.label}</span>
+            </>
+          );
+          const internal = sameSite(l.url);
+          return internal ? (
+            <Link key={i} href={internal} className={tile}>
+              {inner}
             </Link>
+          ) : (
+            <a key={i} href={l.url} target="_blank" rel="noopener noreferrer nofollow" className={tile}>
+              {inner}
+            </a>
           );
         })}
       </div>
-    </nav>
+    </section>
   );
 }
 
@@ -261,11 +312,6 @@ function Hub(p: HubProps) {
           Entrar para participar
         </Link>
       )}
-      {canCreate && (
-        <button type="button" onClick={flow.openMenu} className="flex h-11 items-center gap-1.5 rounded-full border border-orbit-purple/40 bg-orbit-purple/10 px-4 text-sm font-semibold text-white transition hover:bg-orbit-purple/20">
-          <Plus className="h-4 w-4" /> Criar
-        </button>
-      )}
       {viewer && rank(role) < 3 && !membership.banned && (
         <button type="button" onClick={chat.open} disabled={chat.busy} className="flex h-11 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.08]">
           {chat.busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquareText className="h-4 w-4" />} Mensagem
@@ -367,15 +413,7 @@ function Hub(p: HubProps) {
     </div>
   );
 
-  const composerPrompt = canCreate && viewer && (
-    <button type="button" onClick={flow.openMenu} className="flex w-full items-center gap-3 rounded-3xl border border-white/[0.08] bg-space-card/80 p-3 text-left transition hover:border-orbit-purple/40">
-      <Avatar name={viewer.name} url={viewer.avatarUrl} size={40} />
-      <span className="flex min-h-[44px] flex-1 items-center rounded-2xl border border-white/10 bg-space-bg/60 px-4 text-sm text-white/40">Compartilhe algo com a comunidade…</span>
-      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-orbit-gradient text-snow shadow-glow">
-        <Plus className="h-5 w-5" />
-      </span>
-    </button>
-  );
+
 
   const staffMembers = p.members.filter((m) => m.role !== "member").sort((a, b) => rank(b.role) - rank(a.role));
 
@@ -506,20 +544,6 @@ function Hub(p: HubProps) {
           </div>
         </section>
       )}
-      {community.links.length > 0 && (
-        <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
-          <h2 className="mb-2 text-sm font-semibold text-white">Links</h2>
-          <ul className="space-y-1">
-            {community.links.map((l) => (
-              <li key={l.url}>
-                <a href={l.url} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center gap-2 rounded-xl px-2 py-1.5 text-sm text-white/80 hover:bg-white/[0.04] hover:text-white">
-                  <Link2 className="h-4 w-4 shrink-0 text-orbit-cyan" /> <span className="truncate">{l.label}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </aside>
   );
 
@@ -541,8 +565,16 @@ function Hub(p: HubProps) {
             <ChevronRight className="ml-auto h-4 w-4" />
           </Link>
         )}
+        <MenuTiles community={community} staff={staff} base={base} />
+        {canCreate && (
+          <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-3">
+            <button type="button" onClick={flow.openMenu} className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-[16px] font-semibold text-white transition hover:bg-white/[0.1]">
+              <Plus className="h-5 w-5" /> Criar
+            </button>
+          </section>
+        )}
+        {canSee && <Highlights slug={community.slug} counts={p.counts} isRpg={community.isRpg} staff={staff} />}
         {canSee && <StoriesStrip canSee={canSee} />}
-        {canSee && <Highlights slug={community.slug} counts={p.counts} isRpg={community.isRpg} />}
       </div>
       <div className="mx-auto mt-4 max-w-6xl px-4 pb-10 md:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:px-10">
         <div className="min-w-0 space-y-4">
@@ -580,7 +612,6 @@ function Hub(p: HubProps) {
                 refreshKey={p.refreshKey}
                 focusId={p.focus?.id}
                 onCompose={flow.start}
-                header={composerPrompt}
               />
             </>
           )}
