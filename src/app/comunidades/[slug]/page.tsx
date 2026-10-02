@@ -7,6 +7,7 @@ import { findCommunity } from "@/lib/community-server";
 import { loadCommunityAccess } from "@/lib/community-access";
 import { DISCUSSION_COLUMNS, EVENT_COLUMNS, type Album, type Discussion } from "@/lib/communities";
 import { loadCommunityPosts } from "@/lib/community-data";
+import { loadCommunityContacts } from "@/lib/community-contacts";
 
 export const dynamic = "force-dynamic";
 
@@ -124,6 +125,8 @@ export default async function CommunityPage(
     staffBadges = { pending: pp.count ?? 0, requests: rq.count ?? 0, reports: rp.count ?? 0 };
   }
 
+  const contacts = canSee ? await loadCommunityContacts(supabase, community.id) : null;
+
   return (
     <CommunityShell current={current}>
       <CommunityView
@@ -143,6 +146,7 @@ export default async function CommunityPage(
         staffBadges={staffBadges}
         canAsCommunity={canAsCommunity}
         customTabs={customTabs}
+        contacts={contacts}
       />
     </CommunityShell>
   );
