@@ -11,7 +11,6 @@ import { MessengerContext, type MessengerContextValue } from "./context";
 import { ConversationList, EmptyUniverse } from "./conversation-list";
 import { ChatView } from "./chat-view";
 import { NewConversationDialog } from "./new-conversation";
-import { OrbitIllustration, PrimaryButton } from "./ui";
 
 type Toast = { id: number; text: string; tone: "info" | "error" };
 
@@ -221,22 +220,14 @@ export function DesktopMessenger({
           chat && <MobileChat>{chat}</MobileChat>
         ) : (
           <main className={clsx("h-full min-h-0 min-w-0 flex-1", !active && !split && "hidden")}>
-            {chat ?? (
-              <div className="chat-space-bg relative flex h-full flex-col items-center justify-center px-6 text-center">
-                {conversations.every((c) => c.isSaved) ? (
+            {chat ??
+              (conversations.every((c) => c.isSaved) ? (
+                <div className="chat-space-bg relative flex h-full flex-col items-center justify-center px-6 text-center">
                   <EmptyUniverse onFind={() => setNewOpen(true)} />
-                ) : (
-                  <>
-                    <OrbitIllustration />
-                    <p className="mt-6 font-display text-lg font-semibold text-white">Suas conversas, em órbita.</p>
-                    <p className="mt-1.5 max-w-xs text-sm text-white/55">Escolha uma conversa ao lado ou comece uma nova.</p>
-                    <PrimaryButton onClick={() => setNewOpen(true)} className="mt-6">
-                      <PenSquare className="h-4 w-4" /> Nova conversa
-                    </PrimaryButton>
-                  </>
-                )}
-              </div>
-            )}
+                </div>
+              ) : (
+                <WelcomeScene onNew={() => setNewOpen(true)} />
+              ))}
           </main>
         )}
       </div>
@@ -258,5 +249,43 @@ export function DesktopMessenger({
         ))}
       </div>
     </MessengerContext.Provider>
+  );
+}
+
+/**
+ * Tela inicial do Messenger no computador (nenhuma conversa aberta): o astronauta do ÓrbitaX
+ * olhando o planeta, com o título e o botão por cima. A arte é sempre escura, então a tinta
+ * fica branca mesmo no tema claro.
+ */
+export function WelcomeScene({ onNew }: { onNew: () => void }) {
+  return (
+    <div className="relative h-full overflow-hidden bg-[#05040f] text-white" style={{ "--c-ink": "255 255 255" } as React.CSSProperties}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/messenger/empty-space.webp"
+        alt=""
+        aria-hidden
+        decoding="async"
+        className="animate-[ox-scene-in_1.2s_ease-out_both] absolute inset-0 h-full w-full select-none object-cover object-[50%_35%]"
+        draggable={false}
+      />
+      {/* Escurece embaixo para o texto ler bem em qualquer tamanho de tela. */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_78%,rgba(5,4,15,0.72),transparent_75%)]" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-[#05040f]/85 via-[#05040f]/35 to-transparent" />
+      <div className="relative flex h-full flex-col items-center justify-end px-6 pb-[11%] text-center">
+        <h2 className="font-display text-[clamp(1.6rem,2.6vw,2.6rem)] font-bold leading-tight tracking-tight text-snow drop-shadow-[0_2px_18px_rgba(0,0,0,0.6)]">
+          Suas conversas,{" "}
+          <span className="bg-gradient-to-r from-[#ff4fd8] via-[#b36bff] to-[#38d9ff] bg-clip-text text-transparent">em órbita.</span>
+        </h2>
+        <p className="mt-3 max-w-xl text-[clamp(0.95rem,1.15vw,1.15rem)] text-snow/80 drop-shadow-[0_1px_8px_rgba(0,0,0,0.7)]">Escolha uma conversa ao lado ou comece uma nova.</p>
+        <button
+          type="button"
+          onClick={onNew}
+          className="mt-7 flex items-center gap-2.5 rounded-full bg-gradient-to-r from-[#e83cf0] via-[#ff4f9a] to-[#ff8a5c] px-7 py-3.5 text-[15px] font-semibold text-snow shadow-[0_10px_40px_rgba(232,60,240,0.45)] transition hover:scale-[1.03] hover:shadow-[0_12px_48px_rgba(232,60,240,0.6)] active:scale-[0.98]"
+        >
+          <PenSquare className="h-5 w-5" /> Nova conversa
+        </button>
+      </div>
+    </div>
   );
 }
