@@ -6,7 +6,12 @@ import { rememberCommunityVisit } from "@/lib/recent-communities";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import {
+  AlignLeft,
   ArrowLeft,
+  AtSign,
+  Images,
+  Megaphone,
+  Sparkles,
   CalendarDays,
   ChevronRight,
   Globe,
@@ -40,7 +45,7 @@ import { StoriesStrip } from "./stories";
 import { useTimeZone } from "@/lib/use-tz";
 import { DateBadge, eventLive, eventWhen, type CommunityEvent } from "./events";
 import { MutedNotice } from "./subpage";
-import { EmptyState, OfficialBadge, RoleBadge } from "./ui";
+import { EmptyState, OfficialBadge, RoleBadge, Sheet } from "./ui";
 
 export type MemberPreview = { role: Role; createdAt: string; user: { id: string; name: string; username: string; avatarUrl: string | null; isVerified: boolean } };
 
@@ -299,6 +304,7 @@ function Hub(p: HubProps) {
     p.bump();
   }
   const flow = useCreateFlow({ albums: p.albums, onCreated });
+  const [infoOpen, setInfoOpen] = useState(false);
   const canDiscuss = !!viewer && canSee && can(community, role, "discussion") && !membership.muted;
 
   const iconBtn = "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-white transition hover:bg-white/[0.08]";
@@ -403,17 +409,10 @@ function Hub(p: HubProps) {
           </Link>
           {community.description && (
             <div className="mt-2 max-w-2xl">
-              <p className={clsx("whitespace-pre-wrap text-sm leading-relaxed text-white/70", !p.descOpen && "line-clamp-3")}>{community.description}</p>
-              <div className="mt-0.5 flex gap-3">
-                {community.description.length > 160 && (
-                  <button type="button" onClick={() => p.setDescOpen((v) => !v)} className="text-xs font-semibold text-orbit-cyan">
-                    {p.descOpen ? "Mostrar menos" : "Ler mais"}
-                  </button>
-                )}
-                <Link href={`${base}/sobre`} className="text-xs font-semibold text-white/55 hover:text-white">
-                  Sobre a comunidade
-                </Link>
-              </div>
+              <p className="line-clamp-2 whitespace-pre-wrap text-sm leading-relaxed text-white/70">{community.description}</p>
+              <button type="button" onClick={() => setInfoOpen(true)} className="mt-0.5 text-sm font-semibold text-orbit-cyan hover:underline">
+                Mais
+              </button>
             </div>
           )}
           <div className="mt-3 flex flex-wrap items-center gap-2 md:hidden">{actions}</div>
@@ -463,6 +462,107 @@ function Hub(p: HubProps) {
     </section>
   );
 
+  const sectionTiles: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { href: `${base}/discussoes`, label: "Discussões", icon: MessagesSquare },
+    { href: `${base}/avisos`, label: "Avisos", icon: Megaphone },
+    { href: `${base}/chats`, label: "Bate-papos", icon: MessageSquareText },
+    { href: `${base}/eventos`, label: "Eventos", icon: CalendarDays },
+    { href: `${base}/momentos`, label: "Momentos", icon: Sparkles },
+    { href: `${base}/conteudo?aba=fotos`, label: "Fotos", icon: Images },
+    { href: `${base}/membros`, label: "Membros", icon: Users },
+  ];
+  // "Informação detalhada", como no VK: tudo sobre a comunidade e as seções em quadros.
+  const infoSheet = (
+    <Sheet open={infoOpen} onClose={() => setInfoOpen(false)} title="Informação detalhada">
+      <div className="space-y-1 pb-2">
+        {(
+          [
+          [Info, <span key="n" className="font-medium text-white">{community.name}</span>],
+          community.description ? [AlignLeft, <span key="d" className="whitespace-pre-wrap">{community.description}</span>] : null,
+          [AtSign, <span key="u">{community.username}</span>],
+          [community.isPrivate ? Lock : Globe, <span key="p">{community.isPrivate ? "Privada · só membros veem o conteúdo" : "Pública · qualquer pessoa pode ver e participar"}</span>],
+          [CalendarDays, <span key="c">Criada em {new Date(community.createdAt).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric", timeZone: tz })}</span>],
+        ] as ([React.ComponentType<{ className?: string }>, React.ReactNode] | null)[]
+        )
+          .filter((x): x is [React.ComponentType<{ className?: string }>, React.ReactNode] => !!x)
+          .map(([Icon, node], i) => (
+            <div key={i} className="flex items-start gap-3 border-b border-white/[0.06] py-3 text-sm leading-relaxed text-white/75 last:border-0">
+              <Icon className="mt-0.5 h-5 w-5 shrink-0 text-white/40" />
+              <div className="min-w-0 flex-1 break-words">{node}</div>
+            </div>
+          ))}
+        {community.links.length > 0 && (
+          <div className="border-t border-white/[0.06] pt-3">
+            {community.links.map((l) => (
+              <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer nofollow" className="flex items-center gap-3 py-1.5 text-sm text-orbit-cyan hover:underline">
+                <Link2 className="h-5 w-5 shrink-0 text-white/40" /> <span className="truncate">{l.label}</span>
+              </a>
+            ))}
+          </div>
+        )}
+        {canSee && (
+          <div className="pt-3">
+            <p className="mb-3 text-[15px] font-semibold text-white">Seções</p>
+            <div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
+              {sectionTiles.map((t) => {
+                const Icon = t.icon;
+                return (
+                  <Link key={t.href} href={t.href} onClick={() => setInfoOpen(false)} className="flex flex-col items-center gap-1.5 text-center">
+                    <span className="flex aspect-square w-full max-w-[72px] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/70 transition hover:text-white">
+                      <Icon className="h-6 w-6" />
+                    </span>
+                    <span className="text-[12px] text-white/75">{t.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </Sheet>
+  );
+
+  // Membros com nome (como "Seguidores" do VK) e Contatos: dono e equipe com o cargo.
+  const ROLE_TITLE: Record<string, string> = { owner: "Proprietário(a) da comunidade", admin: "Administrador(a)", moderator: "Moderador(a)", editor: "Editor(a)" };
+  const membersCard = canSee && p.members.length > 0 && (
+    <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-white">
+          Membros <span className="font-normal text-white/45">{compactNumber(community.memberCount)}</span>
+        </h2>
+        <Link href={`${base}/membros`} className="text-xs font-semibold text-orbit-cyan">
+          Ver todos
+        </Link>
+      </div>
+      <div className="grid grid-cols-4 gap-x-2 gap-y-3">
+        {p.members.slice(0, 8).map((m) => (
+          <Link key={m.user.id} href={`/perfil/${m.user.username}`} className="flex min-w-0 flex-col items-center gap-1 text-center">
+            <Avatar name={m.user.name} url={m.user.avatarUrl} size={56} />
+            <span className="w-full truncate text-[12px] text-white/75">{m.user.name.split(" ")[0]}</span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+  const contactsCard = canSee && staffMembers.length > 0 && (
+    <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
+      <h2 className="mb-2 text-sm font-semibold text-white">
+        Contatos <span className="font-normal text-white/45">{staffMembers.length}</span>
+      </h2>
+      <div className="space-y-1">
+        {staffMembers.slice(0, 6).map((m) => (
+          <Link key={m.user.id} href={`/perfil/${m.user.username}`} className="flex items-center gap-3 rounded-xl py-1.5 hover:bg-white/[0.03]">
+            <Avatar name={m.user.name} url={m.user.avatarUrl} size={40} />
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium text-white">{m.user.name}</span>
+              <span className="block truncate text-xs text-white/45">{ROLE_TITLE[m.role] ?? "Equipe"}</span>
+            </span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+
   const sidebar = (
     <aside className="hidden space-y-3 lg:block">
       {staff && (
@@ -504,37 +604,8 @@ function Hub(p: HubProps) {
           </li>
         </ul>
       </section>
-      {canSee && (
-        <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-white">Membros · {compactNumber(community.memberCount)}</h2>
-            <Link href={`${base}/membros`} className="text-xs font-semibold text-orbit-cyan">
-              Ver todos
-            </Link>
-          </div>
-          {staffMembers.length > 0 && (
-            <div className="mt-3 space-y-2">
-              {staffMembers.slice(0, 4).map((m) => (
-                <Link key={m.user.id} href={`/perfil/${m.user.username}`} className="flex items-center gap-2.5">
-                  <Avatar name={m.user.name} url={m.user.avatarUrl} size={32} />
-                  <span className="min-w-0 flex-1 truncate text-sm text-white/85">{m.user.name}</span>
-                  <RoleBadge role={m.role} />
-                </Link>
-              ))}
-            </div>
-          )}
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {p.members
-              .filter((m) => m.role === "member")
-              .slice(0, 16)
-              .map((m) => (
-                <Link key={m.user.id} href={`/perfil/${m.user.username}`} title={m.user.name}>
-                  <Avatar name={m.user.name} url={m.user.avatarUrl} size={34} />
-                </Link>
-              ))}
-          </div>
-        </section>
-      )}
+      {membersCard}
+      {contactsCard}
     </aside>
   );
 
@@ -583,6 +654,10 @@ function Hub(p: HubProps) {
           ) : (
             <>
               {discussionsCard}
+              <div className="space-y-4 lg:hidden">
+                {membersCard}
+                {contactsCard}
+              </div>
               {p.nextEvent && <NextEvent e={p.nextEvent.event} rsvp={p.nextEvent.rsvp} slug={community.slug} />}
               {p.focus && !p.pinned.some((x) => x.id === p.focus!.id) && <CommunityPostCard post={p.focus} highlight />}
               {p.pinned.map((x) => (
@@ -621,6 +696,7 @@ function Hub(p: HubProps) {
         </button>
       )}
       {flow.element}
+      {infoSheet}
     </>
   );
 }
