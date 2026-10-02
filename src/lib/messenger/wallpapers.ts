@@ -29,6 +29,11 @@ export function customWallpaperId(path: string) {
   return `custom:${path}`;
 }
 
+/** Fundo de quem ainda não escolheu um papel de parede: Doodles no tema claro, Universo no escuro. */
+export function defaultWallpaper(light: boolean) {
+  return light ? "doodles" : "universo";
+}
+
 export function wallpaperSrc(id: string, thumb = false) {
   const custom = id.match(CUSTOM);
   if (custom) return `${SUPABASE_URL}/storage/v1/object/public/media/${custom[1]}`;
