@@ -565,7 +565,7 @@ function Hub(p: HubProps) {
             <ChevronRight className="ml-auto h-4 w-4" />
           </Link>
         )}
-        <MenuTiles community={community} staff={staff} base={base} />
+        <MenuTiles community={community} staff={rank(role) >= 3} base={base} />
         {canCreate && (
           <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-3">
             <button type="button" onClick={flow.openMenu} className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-[16px] font-semibold text-white transition hover:bg-white/[0.1]">
@@ -573,7 +573,7 @@ function Hub(p: HubProps) {
             </button>
           </section>
         )}
-        {canSee && <Highlights slug={community.slug} counts={p.counts} isRpg={community.isRpg} staff={staff} />}
+        {canSee && <Highlights slug={community.slug} counts={p.counts} isRpg={community.isRpg} staff={rank(role) >= 3} />}
         {canSee && <StoriesStrip canSee={canSee} />}
       </div>
       <div className="mx-auto mt-4 max-w-6xl px-4 pb-10 md:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:px-10">
