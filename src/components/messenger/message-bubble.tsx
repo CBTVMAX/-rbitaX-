@@ -184,7 +184,8 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
     press.current = null;
   };
 
-  const replyBlock = !deleted && p.replyTo !== undefined && m.replyToId && (
+  // Resposta a uma mensagem que foi apagada: a citação some junto (não fica "Mensagem apagada").
+  const replyBlock = !deleted && p.replyTo !== undefined && !p.replyTo?.deletedAt && m.replyToId && (
     <button
       type="button"
       onClick={() => m.replyToId && p.onJump(m.replyToId)}
@@ -196,11 +197,7 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
     >
       <span className={clsx("block truncate font-semibold", mine ? "text-snow" : "text-chat")}>{p.replySenderName ?? "Mensagem"}</span>
       <span className={clsx("line-clamp-2", mine ? "text-snow/80" : "text-white/60")}>
-        {p.replyTo
-          ? p.replyTo.deletedAt
-            ? "Mensagem apagada"
-            : messagePreview(p.replyTo.type, p.replyTo.content, p.replyTo.meta, p.replyTo.attachments)
-          : "Mensagem indisponível"}
+        {p.replyTo ? messagePreview(p.replyTo.type, p.replyTo.content, p.replyTo.meta, p.replyTo.attachments) : "Mensagem indisponível"}
       </span>
     </button>
   );

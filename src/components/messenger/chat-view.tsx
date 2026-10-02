@@ -23,6 +23,7 @@ import { ensureSavedId, saveMessageToSaved } from "@/lib/messenger/saved";
 import { defaultWallpaper, isWallpaper, wallpaperStyle } from "@/lib/messenger/wallpapers";
 import { useLightApp } from "@/lib/messenger/use-light-app";
 import { ChatRulesProvider, useGroupConfig, type ChatRules } from "@/lib/messenger/group-rules";
+import { useTypingChannels } from "@/lib/messenger/typing";
 import { messagePreview, toDate } from "@/lib/messenger/format";
 import {
   conversationTitle,
@@ -96,6 +97,7 @@ export function ChatView({
   const lightApp = useLightApp();
   const { config: groupConfig, reload: reloadConfig } = useGroupConfig(supabase, c.id, !c.isSaved, c.role);
   const pinnedId = groupConfig?.pinned?.id ?? null;
+  useTypingChannels(supabase, useMemo(() => (c.isSaved ? [] : [c.id]), [c.isSaved, c.id]));
   const { refresh: refreshCounts } = useLiveCounts();
   const wide = useMediaQuery("(min-width: 1280px)");
 
@@ -880,6 +882,12 @@ export function ChatView({
     }
   }
 
+  // Mensagem apagada para todos some da conversa (sem deixar "Mensagem apagada" no lugar).
+  const shown = useMemo(() => messages.filter((m) => !m.deletedAt), [messages]);
+  useEffect(() => {
+    if (replyTo && messages.some((m) => m.id === replyTo.id && m.deletedAt)) setReplyTo(null);
+  }, [messages, replyTo]);
+
   const replyName = replyTo ? (replyTo.senderId === me.id ? "você mesmo" : memberMap.get(replyTo.senderId)?.name ?? "mensagem") : null;
   const title = conversationTitle(c);
   const infoProps = {
@@ -957,7 +965,7 @@ export function ChatView({
         <div className={clsx("contents", guard.className)} onContextMenu={guard.onContextMenu}>
         <MessageList
           conversationKey={c.id}
-          messages={messages}
+          messages={shown}
           meId={me.id}
           group={c.isGroup}
           members={memberMap}

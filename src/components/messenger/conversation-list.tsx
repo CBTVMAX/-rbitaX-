@@ -11,6 +11,7 @@ import { conversationTitle, type Attachment, type Conversation } from "@/lib/mes
 import { ConversationItem } from "./conversation-item";
 import { ChatAvatar, ConversationAvatar, OrbitIllustration, PrimaryButton } from "./ui";
 import { useMessenger } from "./context";
+import { useTypingChannels } from "@/lib/messenger/typing";
 
 export type ListFilter = "todas" | "nao-lidas" | "grupos" | "arquivadas";
 
@@ -271,7 +272,7 @@ export function ConversationList({
   banner: string | null;
   onCloseBanner: () => void;
 }) {
-  const { me, conversations } = useMessenger();
+  const { me, conversations, supabase } = useMessenger();
   const [filter, setFilter] = useState<ListFilter>("todas");
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<SearchKind>("all");
@@ -282,6 +283,8 @@ export function ConversationList({
   const saved = conversations.find((c) => c.isSaved) ?? null;
   const others = useMemo(() => conversations.filter((c) => !c.isSaved), [conversations]);
   const searching = query.trim().length > 0 || filtersOpen;
+  // "digitando…" nas conversas mais recentes da lista (um canal leve por conversa).
+  useTypingChannels(supabase, useMemo(() => others.slice(0, 25).map((c) => c.id), [others]));
 
   const counts = useMemo(
     () => ({
