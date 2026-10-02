@@ -1,5 +1,6 @@
 -- Contatos da comunidade (como no VK): pessoas escolhidas pelo dono/administradores, cada uma com
 -- um cargo livre ("President MC®", "Vice President MC®", "Official Page MC®"…).
+-- Sem o operador ->> de propósito: ao copiar o SQL pelo celular, o ">>" virava "»" e quebrava a função.
 alter table public."Community" add column if not exists contacts jsonb not null default '[]'::jsonb;
 
 create or replace function public.community_set_contacts(p_community text, p_contacts jsonb)
@@ -18,13 +19,13 @@ begin
   end if;
   if exists (
     select 1 from jsonb_array_elements(p_contacts) c
-     where coalesce(c->>'userId', '') = ''
-        or char_length(btrim(coalesce(c->>'title', ''))) > 60
-        or not exists (select 1 from public."User" u where u.id = c->>'userId')
-  ) or (select count(distinct c->>'userId') from jsonb_array_elements(p_contacts) c) <> jsonb_array_length(p_contacts) then
+     where coalesce(jsonb_extract_path_text(c, 'userId'), '') = ''
+        or char_length(btrim(coalesce(jsonb_extract_path_text(c, 'title'), ''))) > 60
+        or not exists (select 1 from public."User" u where u.id = jsonb_extract_path_text(c, 'userId'))
+  ) or (select count(distinct jsonb_extract_path_text(c, 'userId')) from jsonb_array_elements(p_contacts) c) <> jsonb_array_length(p_contacts) then
     raise exception 'invalid_contacts' using errcode = 'check_violation';
   end if;
-  select coalesce(jsonb_agg(jsonb_build_object('userId', c->>'userId', 'title', btrim(coalesce(c->>'title', ''))) order by o), '[]'::jsonb)
+  select coalesce(jsonb_agg(jsonb_build_object('userId', jsonb_extract_path_text(c, 'userId'), 'title', btrim(coalesce(jsonb_extract_path_text(c, 'title'), ''))) order by o), '[]'::jsonb)
     into v_clean
     from jsonb_array_elements(p_contacts) with ordinality as t(c, o);
   update public."Community" set contacts = v_clean, "updatedAt" = now() where id = p_community;
