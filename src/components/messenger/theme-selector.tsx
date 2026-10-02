@@ -6,7 +6,7 @@ import { Camera, Check, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/messenger/media";
 import { CHAT_THEMES, chatTheme } from "@/lib/messenger/themes";
-import { WALLPAPERS, customWallpaperId, defaultWallpaper, isCustomWallpaper, wallpaperSrc } from "@/lib/messenger/wallpapers";
+import { PLAIN_WALLPAPERS, WALLPAPERS, customWallpaperId, defaultWallpaper, isCustomWallpaper, wallpaperSrc } from "@/lib/messenger/wallpapers";
 import { sniffFile } from "@/lib/upload-guard";
 import { useLightApp } from "@/lib/messenger/use-light-app";
 
@@ -137,6 +137,32 @@ export function WallpaperSelector({ value, onChange }: { value: string | null; o
           </span>
           <span className={clsx("text-center text-[10px] leading-tight", custom ? "font-semibold text-white" : "text-white/55")}>Sua foto</span>
         </button>
+        {PLAIN_WALLPAPERS.map((w) => {
+          const on = value === w.id;
+          const white = w.id === "liso-branco";
+          return (
+            <button key={w.id} type="button" onClick={() => onChange(w.id)} aria-pressed={on} title={`Fundo liso ${w.label.toLowerCase()}`} className="group flex flex-col items-center gap-1.5">
+              <span
+                className={clsx(
+                  "relative flex aspect-[9/14] w-full flex-col justify-end gap-1 overflow-hidden rounded-xl border p-2 ring-2 ring-offset-2 ring-offset-space-surface transition group-hover:scale-[1.03]",
+                  white ? "border-black/10" : "border-white/15",
+                  on ? "ring-chat" : "ring-transparent",
+                )}
+                style={{ backgroundColor: w.color }}
+              >
+                {/* miniatura das bolhas, para mostrar como fica */}
+                <span className={clsx("h-2.5 w-3/5 rounded-full", white ? "bg-[rgb(238_239_244)]" : "bg-[rgb(38_38_42)]")} />
+                <span className="h-2.5 w-1/2 self-end rounded-full bg-chat-bubble" />
+                {on && (
+                  <span className="absolute inset-0 m-auto flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-snow">
+                    <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                  </span>
+                )}
+              </span>
+              <span className={clsx("text-center text-[10px] leading-tight", on ? "font-semibold text-white" : "text-white/55")}>{w.label}</span>
+            </button>
+          );
+        })}
         {items.map((w) => {
           const on = (value ?? null) === w.id;
           return (

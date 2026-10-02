@@ -18,6 +18,7 @@ import {
   UserPlus,
   UserRound,
   Video,
+  Wallpaper,
   X,
 } from "lucide-react";
 import { usePresenceText } from "@/components/presence-picker";
@@ -124,9 +125,12 @@ export function ChatHeader({
   onMute,
   onArchive,
   onDelete,
+  onWallpaper,
   compact = false,
   extra,
 }: {
+  /** Abre a escolha do fundo da conversa (Preto, Branco, imagens, foto sua). */
+  onWallpaper?: () => void;
   compact?: boolean;
   extra?: React.ReactNode;
   c: Conversation;
@@ -281,6 +285,7 @@ export function ChatHeader({
                 {!c.isGroup && <MenuItem icon={UserRound} label="Ver perfil" onClick={() => { setMenu(false); onOpenProfile(); }} />}
                 {compact && <MenuItem icon={Search} label="Buscar na conversa" onClick={() => { setMenu(false); onToggleSearch(); }} />}
                 <MenuItem icon={PanelRightOpen} label="Informações da conversa" onClick={() => { setMenu(false); onToggleInfo(); }} />
+                {onWallpaper && <MenuItem icon={Wallpaper} label="Papel de parede" onClick={() => { setMenu(false); onWallpaper(); }} />}
                 <MenuItem icon={muted ? Bell : BellOff} label={muted ? "Reativar notificações" : "Silenciar"} onClick={() => { setMenu(false); onMute(); }} />
                 <MenuItem icon={Archive} label={c.archivedAt ? "Desarquivar" : "Arquivar"} onClick={() => { setMenu(false); onArchive(); }} />
                 <div className="my-1 h-px bg-white/[0.07]" />
