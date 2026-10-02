@@ -88,8 +88,17 @@ function Highlights({ slug, counts, isRpg, staff }: { slug: string; counts: { an
 }
 
 /** Quadros clicáveis com capa (os links da comunidade), como "INSCRIÇÃO MEMBROS" e "REGRAS" no VK. */
-function MenuTiles({ community, staff, base }: { community: Community; staff: boolean; base: string }) {
-  const items = community.links ?? [];
+function MenuTiles({ community, staff, base, discussions }: { community: Community; staff: boolean; base: string; discussions: Discussion[] }) {
+  // Como no VK: os atalhos configurados e, em seguida, os tópicos de discussão (fixados primeiro),
+  // cada um como um quadro com capa. Uma discussão já usada num atalho não se repete.
+  const links = community.links ?? [];
+  const linked = new Set(links.map((l) => l.url.split("/discussoes/")[1]?.split(/[?#]/)[0]).filter(Boolean));
+  const items: { label: string; url: string; image?: string | null; path?: string }[] = [
+    ...links,
+    ...discussions
+      .filter((d) => !linked.has(d.id))
+      .map((d) => ({ label: d.title, url: "", image: d.imageUrl, path: `${base}/discussoes/${d.id}` })),
+  ].slice(0, 12);
   // A origem só é conhecida no navegador: até lá todos viram <a>, evitando diferença entre servidor e cliente.
   const [origin, setOrigin] = useState<string | null>(null);
   useEffect(() => setOrigin(window.location.origin), []);
@@ -113,11 +122,11 @@ function MenuTiles({ community, staff, base }: { community: Community; staff: bo
             <span className="flex aspect-[3/2] items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/60 transition hover:text-white">
               <Settings className="h-7 w-7" />
             </span>
-            <span className="mt-1.5 block truncate text-center text-[13px] text-white/75">{items.length ? "Configurar" : "Adicionar atalhos"}</span>
+            <span className="mt-1.5 block truncate text-center text-[13px] text-white/75">{links.length ? "Configurar" : "Adicionar atalhos"}</span>
           </Link>
         )}
         {items.map((l, i) => {
-          const img = safeImage(l.image) ?? community.coverUrl ?? community.avatarUrl;
+          const img = safeImage(l.image) ?? community.avatarUrl ?? community.coverUrl;
           const inner = (
             <>
               <span className="relative block aspect-[3/2] overflow-hidden rounded-2xl bg-space-bg">
@@ -131,7 +140,7 @@ function MenuTiles({ community, staff, base }: { community: Community; staff: bo
               <span className="mt-1.5 block truncate text-center text-[13px] font-medium uppercase tracking-wide text-white/80">{l.label}</span>
             </>
           );
-          const internal = sameSite(l.url);
+          const internal = l.path ?? sameSite(l.url);
           return internal ? (
             <Link key={i} href={internal} className={tile}>
               {inner}
@@ -565,7 +574,7 @@ function Hub(p: HubProps) {
             <ChevronRight className="ml-auto h-4 w-4" />
           </Link>
         )}
-        <MenuTiles community={community} staff={rank(role) >= 3} base={base} />
+        {canSee && <MenuTiles community={community} staff={rank(role) >= 3} base={base} discussions={p.discussions} />}
         {canCreate && (
           <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-3">
             <button type="button" onClick={flow.openMenu} className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.06] text-[16px] font-semibold text-white transition hover:bg-white/[0.1]">

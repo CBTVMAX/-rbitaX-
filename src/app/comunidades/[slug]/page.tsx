@@ -58,7 +58,7 @@ export default async function CommunityPage(
         .eq("status", "visible")
         .order("isPinned", { ascending: false })
         .order("lastActivityAt", { ascending: false })
-        .limit(5),
+        .limit(10),
       supabase.from("CommunityAlbum").select("id, title, description, coverUrl, createdAt").eq("communityId", community.id).order("createdAt", { ascending: false }),
       supabase
         .from("CommunityMember")
