@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { Ban, Dices, Image as ImageIcon, Keyboard, Lock, Mic, Paperclip, Plus, Send, Smile, Trash2, UserMinus, Users, X } from "lucide-react";
+import { Ban, Dices, Image as ImageIcon, Lock, Mic, Paperclip, Plus, Send, Smile, Trash2, UserMinus, Users, X } from "lucide-react";
 import { formatDuration, messagePreview } from "@/lib/messenger/format";
 import type { Attachment, ChatMessage, Member, SendStatus, StickerInfo } from "@/lib/messenger/types";
 import { AttachmentMenu, type AttachmentChoice } from "./attachment-menu";
@@ -418,6 +418,22 @@ export function MessageComposer({
     });
   }
 
+  // Tecla ⌫ do painel de emojis: apaga o caractere (ou emoji inteiro) antes do cursor.
+  function backspace() {
+    const el = input.current;
+    const start = el?.selectionStart ?? text.length;
+    const end = el?.selectionEnd ?? text.length;
+    let from = start;
+    if (start === end) {
+      if (start === 0) return;
+      const before = text.slice(0, start);
+      const parts = Array.from(new Intl.Segmenter("pt-BR", { granularity: "grapheme" }).segment(before));
+      from = start - (parts[parts.length - 1]?.segment.length ?? 1);
+    }
+    setText(text.slice(0, from) + text.slice(end));
+    requestAnimationFrame(() => el?.setSelectionRange(from, from));
+  }
+
   const round = "flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition active:scale-95 lg:h-11 lg:w-11";
   const photoInput = useRef<HTMLInputElement>(null);
 
@@ -426,39 +442,11 @@ export function MessageComposer({
       ref={wrap}
       className={clsx(
         "relative z-10 px-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 md:px-4",
+        panel && !compact && "max-md:pb-0",
         // Celular: flutua sobre o fundo da conversa (sem barra), como no app; computador: barra.
         compact ? "border-t border-white/10 bg-space-surface/80 backdrop-blur-xl" : "border-t border-white/[0.06] bg-[rgb(var(--chat-bar)/0.95)] lg:border-white/10 lg:bg-space-surface/80 lg:backdrop-blur-xl"
       )}
     >
-      {panel && (
-        <div className={clsx("animate-sheet-up absolute bottom-full left-0 right-0", !compact && "md:bottom-full md:left-auto md:right-4 md:mb-2 md:w-[400px]")}>
-          <StickerPanel
-            key={panelKey}
-            initialTab={panel}
-            onTabChange={(t) => (lastTab = t)}
-            onClose={() => setPanel(null)}
-            onEmoji={insertEmoji}
-            onSticker={(id, info) => {
-              setPanel(null);
-              api.sticker(id, info);
-            }}
-            onGifFile={(f) => {
-              setPanel(null);
-              api.gif(f);
-            }}
-            onGifReuse={(a) => {
-              setPanel(null);
-              api.gifReuse(a);
-            }}
-            onPersonalSticker={(file) => {
-              setPanel(null);
-              api.personalSticker(file);
-            }}
-            onOpenStore={(packId) => setStore(packId ?? null)}
-          />
-        </div>
-      )}
-
       {store !== undefined && (
         <ChatStickerStore
           initialPack={store}
@@ -636,10 +624,10 @@ export function MessageComposer({
                 title={panel ? "Teclado" : "Stickers, emoji e GIF"}
                 className={clsx(
                   "mb-0.5 mr-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition",
-                  panel ? "bg-chat/15 text-chat" : "text-white/55 hover:text-white"
+                  panel ? "text-chat lg:bg-chat/15" : "text-white/55 hover:text-white"
                 )}
               >
-                {panel ? <Keyboard className="h-[21px] w-[21px]" /> : <Smile className="h-[22px] w-[22px]" />}
+                <Smile className="h-[23px] w-[23px]" />
               </button>
               {/* Atalho de foto/vídeo dentro do campo (como no app), só no celular. */}
               {!text.trim() && !pending.length && (
@@ -707,6 +695,43 @@ export function MessageComposer({
           </>
         )}
       </div>
+      {panel && (
+        // Celular: no lugar do teclado, logo abaixo do campo (como no VK); computador: janela acima.
+        <div
+          className={clsx(
+            compact
+              ? "animate-sheet-up absolute bottom-full left-0 right-0"
+              : "animate-sheet-up -mx-2.5 mt-2.5 md:absolute md:bottom-full md:left-auto md:right-4 md:mx-0 md:mb-2 md:mt-0 md:w-[400px]"
+          )}
+        >
+          <StickerPanel
+            key={panelKey}
+            initialTab={panel}
+            onTabChange={(t) => (lastTab = t)}
+            onClose={() => setPanel(null)}
+            onEmoji={insertEmoji}
+            onBackspace={backspace}
+            onSticker={(id, info) => {
+              setPanel(null);
+              api.sticker(id, info);
+            }}
+            onGifFile={(f) => {
+              setPanel(null);
+              api.gif(f);
+            }}
+            onGifReuse={(a) => {
+              setPanel(null);
+              api.gifReuse(a);
+            }}
+            onPersonalSticker={(file) => {
+              setPanel(null);
+              api.personalSticker(file);
+            }}
+            onOpenStore={(packId) => setStore(packId ?? null)}
+          />
+        </div>
+      )}
+
       {recording && elapsed > MAX_RECORD_SECONDS - 15 && (
         <p className="mt-1 text-center text-[11px] text-white/45">Limite de {MAX_RECORD_SECONDS / 60} minutos por áudio.</p>
       )}
