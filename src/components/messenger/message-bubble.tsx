@@ -322,12 +322,12 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
             bare
               ? ""
               : clsx(
-                  "rounded-[20px] shadow-[0_2px_12px_rgba(0,0,0,0.12)]",
+                  "rounded-[22px] shadow-[0_4px_16px_rgba(0,0,0,0.18)] lg:rounded-[20px]",
                   mine
                     ? "bg-chat-bubble text-snow"
-                    : "border border-white/[0.08] bg-white/[0.07] text-white backdrop-blur-md",
+                    : "border border-white/[0.1] bg-space-surface/75 text-white backdrop-blur-md lg:bg-white/[0.07]",
                   lastInRun && (mine ? "rounded-br-md" : "rounded-bl-md"),
-                  media || card ? "overflow-hidden" : "px-3.5 py-2",
+                  media || card ? "overflow-hidden" : "px-4 py-2.5 lg:px-3.5 lg:py-2",
                   card && !media && (inlineMeta ? "px-2 py-1.5" : "p-2"),
                   m.type === "gift" && !mine && "border-chat/30 shadow-[0_0_24px_rgb(var(--chat-accent,139_92_246)/0.18)]",
                   state === "failed" && "cursor-pointer ring-1 ring-red-400/60"

@@ -54,20 +54,25 @@ export const ConversationItem = memo(function ConversationItem({
         onClick={() => onOpen(c.id)}
         aria-current={active ? "true" : undefined}
         className={clsx(
-          "group relative flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition",
+          "group relative flex w-full items-center gap-3.5 rounded-[24px] border px-4 py-3.5 text-left transition lg:gap-3 lg:rounded-2xl lg:px-3 lg:py-2.5",
           active
             ? "border-orbit-purple/45 bg-orbit-purple/[0.16]"
-            : "border-white/[0.08] bg-gradient-to-r from-orbit-blue/[0.08] via-orbit-purple/[0.06] to-transparent hover:border-white/15"
+            : "border-white/[0.1] bg-gradient-to-br from-orbit-purple/[0.16] via-orbit-blue/[0.07] to-transparent shadow-[0_8px_30px_rgba(0,0,0,0.25)] hover:border-white/15"
         )}
       >
-        <ConversationAvatar c={c} size={50} />
+        <span className="lg:hidden">
+          <ConversationAvatar c={c} size={60} />
+        </span>
+        <span className="hidden lg:block">
+          <ConversationAvatar c={c} size={50} />
+        </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
-            <span className="truncate text-[15px] font-semibold text-white">Salvos</span>
-            <span className="ml-auto shrink-0 pl-2 text-[11px] text-white/40">{m ? listTime(m.createdAt) : ""}</span>
+            <span className="truncate text-[17px] font-semibold text-white lg:text-[15px]">Salvos</span>
+            <span className="ml-auto shrink-0 pl-2 text-[12px] text-white/45 lg:text-[11px]">{m ? listTime(m.createdAt) : ""}</span>
           </span>
-          <span className="block truncate text-[13px] text-white/55">Seu espaço pessoal</span>
-          {m && !m.deleted && <span className="mt-0.5 block truncate text-[12px] text-white/40">{m.preview}</span>}
+          <span className="block truncate text-[14px] text-white/60 lg:text-[13px]">Seu espaço pessoal</span>
+          {m && !m.deleted && <span className="mt-0.5 block truncate text-[13px] text-white/45 lg:text-[12px]">{m.preview}</span>}
         </span>
         <Pin className="h-3.5 w-3.5 shrink-0 self-end text-white/30" aria-label="Fixada" />
       </button>
@@ -80,32 +85,38 @@ export const ConversationItem = memo(function ConversationItem({
       onClick={() => onOpen(c.id)}
       aria-current={active ? "true" : undefined}
       className={clsx(
-        "group relative flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition",
+        // Celular: linhas maiores com divisória (como no app); computador: compacto.
+        "group relative flex w-full items-center gap-3.5 border-b border-white/[0.06] px-2 py-3.5 text-left transition last:border-b-0 lg:gap-3 lg:rounded-2xl lg:border-b-0 lg:px-3 lg:py-2.5",
         active ? "bg-orbit-purple/[0.14] ring-1 ring-inset ring-orbit-purple/30" : "hover:bg-white/[0.05]"
       )}
     >
       {active && <span className="absolute inset-y-3 left-0 w-[3px] rounded-full bg-orbit-gradient" />}
-      <ConversationAvatar c={c} size={50} ringClass={active ? "border-space-surface" : "border-space-bg"} />
+      <span className="lg:hidden">
+        <ConversationAvatar c={c} size={60} ringClass={active ? "border-space-surface" : "border-space-bg"} />
+      </span>
+      <span className="hidden lg:block">
+        <ConversationAvatar c={c} size={50} ringClass={active ? "border-space-surface" : "border-space-bg"} />
+      </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
           {c.isGroup && <Users className="h-3.5 w-3.5 shrink-0 text-orbit-cyan/80" aria-label="Grupo" />}
-          <span className={clsx("truncate text-[15px] text-white", unread ? "font-semibold" : "font-medium")}>
+          <span className={clsx("truncate text-[17px] text-white lg:text-[15px]", unread ? "font-semibold" : "font-medium")}>
             {conversationTitle(c)}
           </span>
           {!c.isGroup && c.otherUser?.isVerified && <VerifiedBadge className="h-[15px] w-[15px]" />}
           {muted && <BellOff className="h-3.5 w-3.5 shrink-0 text-white/35" aria-label="Silenciada" />}
           {c.messageTtlSeconds && <Timer className="h-3.5 w-3.5 shrink-0 text-white/35" aria-label="Mensagens temporárias" />}
-          <span className={clsx("ml-auto shrink-0 pl-2 text-[11px]", unread && !muted ? "font-semibold text-orbit-cyan" : "text-white/40")}>
+          <span className={clsx("ml-auto shrink-0 self-start pl-2 text-[13px] lg:self-auto lg:text-[11px]", unread && !muted ? "font-semibold text-orbit-cyan" : "text-white/45")}>
             {m ? listTime(m.createdAt) : ""}
           </span>
         </span>
-        <span className="mt-0.5 flex items-center gap-1.5">
+        <span className="mt-1 flex items-center gap-1.5 lg:mt-0.5">
           {mine && !system && !m?.deleted && (
             <DeliveryTicks state={lastMessageState(c) ?? "sent"} className="shrink-0 text-white/60" />
           )}
           <span
             className={clsx(
-              "min-w-0 flex-1 truncate text-[13px]",
+              "min-w-0 flex-1 truncate text-[15px] lg:text-[13px]",
               m?.deleted && "italic",
               unread ? "font-medium text-white/85" : "text-white/50"
             )}
@@ -124,8 +135,8 @@ export const ConversationItem = memo(function ConversationItem({
           {unread && (
             <span
               className={clsx(
-                "flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold leading-none text-snow",
-                muted ? "bg-white/25" : "bg-orbit-gradient shadow-[0_0_10px_rgb(var(--app-accent,139_92_246)/0.5)]"
+                "flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full px-2 text-[13px] font-bold leading-none text-snow lg:h-5 lg:min-w-5 lg:px-1.5 lg:text-[11px]",
+                muted ? "bg-white/25" : "bg-gradient-to-br from-[#ff4f8b] to-[#e8306b] shadow-[0_0_12px_rgba(255,79,139,0.5)]"
               )}
               aria-label={`${c.unread} não lidas`}
             >

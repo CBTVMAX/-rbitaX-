@@ -159,8 +159,11 @@ export function ChatHeader({
   return (
     <header
       className={clsx(
-        "relative z-20 flex shrink-0 items-center gap-1 border-b border-white/10 bg-space-surface/75 backdrop-blur-xl",
-        compact ? "h-14 px-1.5" : "h-16 px-2 pt-[env(safe-area-inset-top)] md:gap-2 md:px-4"
+        "relative z-20 flex shrink-0 items-center gap-1 backdrop-blur-xl",
+        compact
+          ? "h-14 border-b border-white/10 bg-space-surface/75 px-1.5"
+          : // Celular: cartão flutuante arredondado (como no app); computador: barra.
+            "mx-2 mt-[max(0.5rem,env(safe-area-inset-top))] h-[72px] rounded-[26px] border border-white/10 bg-space-surface/70 px-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.35)] lg:mx-0 lg:mt-0 lg:h-16 lg:rounded-none lg:border-x-0 lg:border-t-0 lg:px-4 lg:shadow-none md:gap-2"
       )}
     >
       {showBack && (
@@ -203,10 +206,21 @@ export function ChatHeader({
             onClick={c.isGroup ? onToggleInfo : onOpenProfile}
             className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-1.5 py-1 text-left transition hover:bg-white/[0.04]"
           >
-            <ConversationAvatar c={c} size={compact ? 36 : 42} ringClass="border-space-surface" />
+            {compact ? (
+              <ConversationAvatar c={c} size={36} ringClass="border-space-surface" />
+            ) : (
+              <>
+                <span className="lg:hidden">
+                  <ConversationAvatar c={c} size={52} ringClass="border-space-surface" />
+                </span>
+                <span className="hidden lg:block">
+                  <ConversationAvatar c={c} size={42} ringClass="border-space-surface" />
+                </span>
+              </>
+            )}
             <span className="min-w-0">
               <span className="flex items-center gap-1.5">
-                <span className="truncate text-[15px] font-semibold text-white">{conversationTitle(c)}</span>
+                <span className={clsx("truncate font-semibold text-white", compact ? "text-[15px]" : "text-[17px] lg:text-[15px]")}>{conversationTitle(c)}</span>
                 {!c.isGroup && other?.isVerified && <VerifiedBadge />}
                 {muted && <BellOff className="h-3.5 w-3.5 shrink-0 text-white/35" aria-label="Silenciada" />}
                 {c.messageTtlSeconds && <Timer className="h-3.5 w-3.5 shrink-0 text-white/35" aria-label="Mensagens temporárias" />}
@@ -218,9 +232,9 @@ export function ChatHeader({
                   </span>
                 ) : (
                   <>
-                    <span className="truncate">@{other?.username}</span>
-                    <span className="text-white/25">·</span>
-                    <span className={clsx("flex min-w-0 items-center gap-1", presence.color)}>
+                    <span className={clsx("truncate", !compact && "hidden lg:inline")}>@{other?.username}</span>
+                    <span className={clsx("text-white/25", !compact && "hidden lg:inline")}>·</span>
+                    <span className={clsx("flex min-w-0 items-center gap-1", !compact && "text-[13px] lg:text-xs", presence.color)}>
                       <span className={clsx("h-1.5 w-1.5 shrink-0 rounded-full", presence.dot)} />
                       <span className="truncate">{presence.text}</span>
                     </span>

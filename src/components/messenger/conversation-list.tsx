@@ -307,10 +307,10 @@ export function ConversationList({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="px-4 pb-3 pt-4">
-        <div className="flex items-start justify-between gap-3">
+      <div className="px-4 pb-3 pt-5 lg:pt-4">
+        <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="font-display text-2xl font-bold tracking-tight text-white">Mensagens</h1>
+            <h1 className="font-display text-[32px] font-bold leading-tight tracking-tight text-white lg:text-2xl">Mensagens</h1>
             <PresenceStatus userId={me.id} initial={presence} editable className="mt-1" />
           </div>
           <button
@@ -318,13 +318,13 @@ export function ConversationList({
             onClick={onNew}
             aria-label="Nova conversa"
             title="Nova conversa"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-orbit-gradient text-snow shadow-glow transition hover:scale-105 hover:opacity-95 active:scale-95"
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ff4fa3] via-[#d63cf0] to-[#8b5cf6] text-snow shadow-[0_10px_30px_rgba(214,60,240,0.45)] transition hover:scale-105 active:scale-95 lg:h-10 lg:w-10"
           >
-            <PenSquare className="h-[18px] w-[18px]" />
+            <PenSquare className="h-6 w-6 lg:h-[18px] lg:w-[18px]" />
           </button>
         </div>
 
-        <label className="mt-4 flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.04] py-1.5 pl-3.5 pr-1.5 transition focus-within:border-orbit-purple/60 focus-within:bg-white/[0.06]">
+        <label className="mt-5 flex h-[52px] items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.05] pl-4 pr-2 transition lg:mt-4 lg:h-auto lg:rounded-2xl lg:py-1.5 lg:pl-3.5 lg:pr-1.5 focus-within:border-orbit-purple/60 focus-within:bg-white/[0.06]">
           <Search className="h-4 w-4 shrink-0 text-white/40" />
           <input
             value={query}
@@ -332,7 +332,7 @@ export function ConversationList({
             onKeyDown={(e) => e.key === "Escape" && clearSearch()}
             placeholder="Pesquisar conversas e mensagens..."
             aria-label="Pesquisar conversas e mensagens"
-            className="min-w-0 flex-1 bg-transparent py-1 text-sm text-white outline-none placeholder:text-white/40"
+            className="min-w-0 flex-1 bg-transparent py-1 text-[15px] text-white outline-none placeholder:text-white/45 lg:text-sm"
           />
           {searching ? (
             <button type="button" onClick={clearSearch} aria-label="Limpar pesquisa" className="flex h-8 w-8 items-center justify-center rounded-xl text-white/45 hover:text-white">
@@ -351,7 +351,7 @@ export function ConversationList({
           )}
         </label>
 
-        <div className="-mx-1 mt-3 flex gap-1 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none]" role="tablist">
+        <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1 pt-1.5 [scrollbar-width:none] lg:mt-3 lg:gap-1 lg:pt-0" role="tablist">
           {searching
             ? KINDS.map((k) => {
                 const on = kind === k.id;
@@ -384,14 +384,18 @@ export function ConversationList({
                     aria-selected={on}
                     onClick={() => setFilter(f.id)}
                     className={clsx(
-                      "flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-medium transition",
+                      "relative flex shrink-0 items-center gap-1 rounded-full px-5 py-2.5 text-[15px] font-medium transition lg:px-3 lg:py-1.5 lg:text-[13px]",
                       on
-                        ? "bg-orbit-gradient text-snow shadow-[0_0_16px_rgb(var(--app-accent,139_92_246)/0.35)]"
-                        : "border border-white/10 text-white/60 hover:border-white/20 hover:text-white"
+                        ? "bg-gradient-to-r from-[#2b6cff] to-[#8b5cf6] text-snow shadow-[0_6px_20px_rgba(70,100,255,0.4)]"
+                        : "border border-white/12 bg-white/[0.03] text-white/75 hover:border-white/20 hover:text-white"
                     )}
                   >
                     {f.label}
-                    {n > 0 && <span className={clsx("rounded-full px-1.5 text-[10px] font-bold", on ? "bg-white/25" : "bg-white/10")}>{n}</span>}
+                    {n > 0 && (
+                      <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-orbit-pink px-1 text-[11px] font-bold leading-none text-snow ring-2 ring-space-bg">
+                        {n > 99 ? "99+" : n}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -411,9 +415,9 @@ export function ConversationList({
         {searching ? (
           <SearchResults query={query} kind={kind} conversations={conversations} onOpen={onOpen} />
         ) : (
-          <div className="space-y-0.5 px-2 pb-4 pt-1">
+          <div className="px-3 pb-28 pt-1 lg:space-y-0.5 lg:px-2 lg:pb-4">
             {saved && filter === "todas" && (
-              <div className="pb-1.5">
+              <div className="pb-2.5 lg:pb-1.5">
                 <ConversationItem c={saved} meId={me.id} active={saved.id === activeId} onOpen={onOpen} />
               </div>
             )}

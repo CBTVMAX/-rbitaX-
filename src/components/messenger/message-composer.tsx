@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { Ban, Dices, Keyboard, Lock, Mic, Plus, Send, Smile, Trash2, UserMinus, Users, X } from "lucide-react";
+import { Ban, Dices, Image as ImageIcon, Keyboard, Lock, Mic, Plus, Send, Smile, Trash2, UserMinus, Users, X } from "lucide-react";
 import { formatDuration, messagePreview } from "@/lib/messenger/format";
 import type { Attachment, ChatMessage, Member, SendStatus, StickerInfo } from "@/lib/messenger/types";
 import { AttachmentMenu, type AttachmentChoice } from "./attachment-menu";
@@ -415,10 +415,18 @@ export function MessageComposer({
     });
   }
 
-  const round = "flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition active:scale-95";
+  const round = "flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition active:scale-95 lg:h-11 lg:w-11";
+  const photoInput = useRef<HTMLInputElement>(null);
 
   return (
-    <div ref={wrap} className="relative z-10 border-t border-white/10 bg-space-surface/80 px-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-xl md:px-4">
+    <div
+      ref={wrap}
+      className={clsx(
+        "relative z-10 px-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 md:px-4",
+        // Celular: flutua sobre o fundo da conversa (sem barra), como no app; computador: barra.
+        compact ? "border-t border-white/10 bg-space-surface/80 backdrop-blur-xl" : "bg-gradient-to-t from-black/45 via-black/20 to-transparent lg:border-t lg:border-white/10 lg:bg-space-surface/80 lg:bg-none lg:backdrop-blur-xl"
+      )}
+    >
       {panel && (
         <div className={clsx("animate-sheet-up absolute bottom-full left-0 right-0", !compact && "md:bottom-full md:left-auto md:right-4 md:mb-2 md:w-[400px]")}>
           <StickerPanel
@@ -579,14 +587,14 @@ export function MessageComposer({
                 onClick={() => setMenuOpen((v) => !v)}
                 aria-label="Anexar"
                 aria-expanded={menuOpen}
-                className={clsx(round, menuOpen ? "rotate-45 bg-chat/20 text-chat" : "bg-white/[0.06] text-white/75 hover:bg-white/[0.1] hover:text-white")}
+                className={clsx(round, menuOpen ? "rotate-45 bg-chat/20 text-chat" : "border border-white/15 bg-space-surface/70 text-white/85 backdrop-blur-xl hover:bg-white/[0.1] hover:text-white")}
               >
                 <Plus className="h-5 w-5 transition-transform" />
               </button>
               <AttachmentMenu open={menuOpen} onClose={() => setMenuOpen(false)} onChoose={choose} inSaved={inSaved} />
             </div>
 
-            <div className="flex min-h-11 min-w-0 flex-1 items-end rounded-[22px] border border-white/10 bg-white/[0.05] transition focus-within:border-chat/60 focus-within:bg-white/[0.07]">
+            <div className="flex min-h-12 min-w-0 flex-1 items-end rounded-[26px] border border-white/12 bg-space-surface/70 backdrop-blur-xl transition focus-within:border-chat/60 lg:min-h-11 lg:rounded-[22px] lg:bg-white/[0.05] lg:backdrop-blur-none">
               <textarea
                 ref={input}
                 value={text}
@@ -603,7 +611,7 @@ export function MessageComposer({
                 maxLength={4000}
                 placeholder={pending.length ? "Adicione uma legenda..." : "Escreva uma mensagem..."}
                 aria-label="Mensagem"
-                className="orbit-scrollbar max-h-[148px] min-w-0 flex-1 resize-none bg-transparent py-[11px] pl-4 pr-1 text-[15px] leading-snug text-white outline-none placeholder:text-white/40"
+                className="orbit-scrollbar max-h-[148px] min-w-0 flex-1 resize-none bg-transparent py-[13px] pl-5 pr-1 text-[16px] leading-snug text-white outline-none placeholder:text-white/45 lg:py-[11px] lg:pl-4 lg:text-[15px]"
               />
               <button
                 type="button"
@@ -625,6 +633,32 @@ export function MessageComposer({
               >
                 {panel ? <Keyboard className="h-[21px] w-[21px]" /> : <Smile className="h-[22px] w-[22px]" />}
               </button>
+              {/* Atalho de foto/vídeo dentro do campo (como no app), só no celular. */}
+              {!text.trim() && !pending.length && (
+                <>
+                  <input
+                    ref={photoInput}
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    hidden
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files ?? []);
+                      e.target.value = "";
+                      if (files.length) choose({ kind: "media", files });
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => photoInput.current?.click()}
+                    aria-label="Enviar foto ou vídeo"
+                    title="Foto ou vídeo"
+                    className="mb-0.5 mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/55 transition hover:text-white lg:hidden"
+                  >
+                    <ImageIcon className="h-[21px] w-[21px]" />
+                  </button>
+                </>
+              )}
             </div>
 
             {isGroup && !canSend && (
@@ -657,9 +691,9 @@ export function MessageComposer({
                 onClick={startRecording}
                 aria-label="Gravar mensagem de voz"
                 title="Gravar áudio"
-                className={clsx(round, "border border-white/10 bg-white/[0.05] text-white/80 hover:border-chat/40 hover:text-white")}
+                className={clsx(round, "text-white/85 hover:text-white lg:border lg:border-white/10 lg:bg-white/[0.05] lg:hover:border-chat/40")}
               >
-                <Mic className="h-5 w-5" />
+                <Mic className="h-6 w-6 lg:h-5 lg:w-5" />
               </button>
             )}
           </>
