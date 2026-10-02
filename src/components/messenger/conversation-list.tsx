@@ -314,7 +314,7 @@ export function ConversationList({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="px-4 pb-2 pt-3 lg:pb-3 lg:pt-4">
+      <div className="px-4 pb-2 pt-3 lg:px-3 lg:pb-2 lg:pt-3">
         {/* Celular: topo compacto como no VK (foto · Messenger · ligações · arquivadas · busca). */}
         <div className="flex items-center gap-3 lg:hidden">
           <ChatAvatar name={me.name} url={me.avatarUrl} size={40} frame={me.avatarFrame} />
@@ -349,7 +349,7 @@ export function ConversationList({
 
         <div className="hidden items-center justify-between gap-3 lg:flex">
           <div className="min-w-0">
-            <h1 className="font-display text-[32px] font-bold leading-tight tracking-tight text-white lg:text-2xl">Mensagens</h1>
+            <h1 className="font-display text-[32px] font-bold leading-tight tracking-tight text-white lg:text-xl">Mensagens</h1>
             <PresenceStatus userId={me.id} initial={presence} editable className="mt-1" />
           </div>
           <button
@@ -364,7 +364,7 @@ export function ConversationList({
         </div>
 
         <label className={clsx(
-            "mt-3 h-12 items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.05] pl-4 pr-2 transition lg:mt-4 lg:flex lg:h-auto lg:rounded-2xl lg:py-1.5 lg:pl-3.5 lg:pr-1.5 focus-within:border-orbit-purple/60 focus-within:bg-white/[0.06]",
+            "mt-3 h-12 items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.05] pl-4 pr-2 transition lg:mt-3 lg:flex lg:h-auto lg:rounded-xl lg:py-1 lg:pl-3 lg:pr-1 focus-within:border-orbit-purple/60 focus-within:bg-white/[0.06]",
             mobileSearch || searching ? "flex" : "hidden"
           )}
         >
@@ -429,7 +429,7 @@ export function ConversationList({
                     onClick={() => setFilter(f.id)}
                     className={clsx(
                       // Celular: abas de texto como no VK (a ativa num bloco discreto); computador: pílulas.
-                      "flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-[16px] font-medium transition lg:rounded-full lg:px-3 lg:py-1.5 lg:text-[13px]",
+                      "flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-[16px] font-medium transition lg:rounded-full lg:px-2.5 lg:py-1 lg:text-[12.5px]",
                       // Arquivadas já fica no ícone do topo no celular.
                       f.id === "arquivadas" && !on && "hidden lg:flex",
                       on

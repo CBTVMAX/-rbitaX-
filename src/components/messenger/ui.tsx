@@ -185,11 +185,13 @@ export function Popover({
   open,
   onClose,
   className,
+  style,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   className?: string;
+  style?: React.CSSProperties;
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -227,7 +229,7 @@ export function Popover({
   return (
     <div
       ref={ref}
-      style={shift ? { translate: `${shift}px 0` } : undefined}
+      style={shift ? { ...style, translate: `${shift}px 0` } : style}
       className={clsx(
         "animate-pop-in absolute z-40 overflow-hidden rounded-2xl border border-white/10 bg-space-surface py-1.5 shadow-[0_18px_50px_rgba(0,0,0,0.45)]",
         className

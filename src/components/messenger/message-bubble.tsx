@@ -278,7 +278,7 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
   else if (m.type === "poll") body = <PollCard message={m} mine={mine} votes={p.votes} meId={p.meId} onVote={(ix) => p.onVote(m, ix)} />;
   else
     body = (
-      <span className="whitespace-pre-wrap break-words text-[16px] leading-[1.45] lg:text-[15px] lg:leading-relaxed">
+      <span className="whitespace-pre-wrap break-words text-[16px] leading-[1.45] lg:text-[14px] lg:leading-[1.45]">
         <RichText text={m.content} />
         {/* Reserva o espaço da hora no fim da última linha; a hora fica no canto (estilo app). */}
         <span aria-hidden className={clsx("inline-block h-3 align-baseline", mine ? "w-[66px]" : "w-[44px]", (m.expiresAt || favorite) && "!w-[84px]")} />
@@ -292,7 +292,8 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
     <div
       id={`msg-${m.id}`}
       className={clsx(
-        "group/msg flex items-end gap-2 px-3 md:px-6",
+        // A mensagem em uso (menu aberto/foco) fica por cima das vizinhas.
+        "group/msg relative flex items-end gap-2 px-3 hover:z-20 focus-within:z-20 md:px-6 lg:px-5",
         mine ? "justify-end" : "justify-start",
         firstInRun ? "mt-3" : "mt-0.5",
         "animate-msg-in"
@@ -326,12 +327,12 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
             bare
               ? ""
               : clsx(
-                  "rounded-[22px] shadow-[0_2px_10px_rgba(0,0,0,0.18)] lg:rounded-[20px]",
+                  "rounded-[22px] shadow-[0_2px_10px_rgba(0,0,0,0.18)] lg:rounded-[16px]",
                   mine
                     ? "bg-chat-bubble text-snow"
                     : "bg-[rgb(var(--chat-recv))] text-white",
                   lastInRun && (mine ? "rounded-br-md" : "rounded-bl-md"),
-                  media || card ? "overflow-hidden" : "px-4 py-2 lg:px-3.5",
+                  media || card ? "overflow-hidden" : "px-4 py-2 lg:px-3 lg:py-1.5",
                   card && !media && (inlineMeta ? "px-2 py-1.5" : "p-2"),
                   m.type === "gift" && !mine && "border-chat/30 shadow-[0_0_24px_rgb(var(--chat-accent,139_92_246)/0.18)]",
                   state === "failed" && "cursor-pointer ring-1 ring-red-400/60"

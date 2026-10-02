@@ -436,14 +436,14 @@ export function MessageComposer({
     requestAnimationFrame(() => el?.setSelectionRange(from, from));
   }
 
-  const round = "flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition active:scale-95 lg:h-11 lg:w-11";
+  const round = "flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition active:scale-95 lg:h-9 lg:w-9";
   const photoInput = useRef<HTMLInputElement>(null);
 
   return (
     <div
       ref={wrap}
       className={clsx(
-        "relative z-10 px-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 md:px-4",
+        "relative z-10 px-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 md:px-4 lg:pb-2 lg:pt-2",
         panel && !compact && "max-md:pb-0",
         // Celular: flutua sobre o fundo da conversa (sem barra), como no app; computador: barra.
         compact ? "border-t border-white/10 bg-space-surface/80 backdrop-blur-xl" : "border-t border-white/[0.06] bg-[rgb(var(--chat-bar)/0.95)]"
@@ -585,12 +585,12 @@ export function MessageComposer({
                   menuOpen ? "bg-chat/15 text-chat" : "text-white/60 hover:bg-white/[0.06] hover:text-white"
                 )}
               >
-                <Paperclip className="h-6 w-6 -rotate-45 lg:h-[22px] lg:w-[22px]" />
+                <Paperclip className="h-6 w-6 -rotate-45 lg:h-5 lg:w-5" />
               </button>
               <AttachmentMenu open={menuOpen} onClose={() => setMenuOpen(false)} onChoose={choose} inSaved={inSaved} />
             </div>
 
-            <div className="flex min-h-12 min-w-0 flex-1 items-end transition">
+            <div className="flex min-h-12 min-w-0 flex-1 items-end transition lg:min-h-9">
               <textarea
                 ref={input}
                 value={text}
@@ -608,7 +608,7 @@ export function MessageComposer({
                 maxLength={4000}
                 placeholder={pending.length ? "Adicione uma legenda..." : "Mensagem"}
                 aria-label="Mensagem"
-                className="orbit-scrollbar max-h-[148px] min-w-0 flex-1 resize-none bg-transparent py-[13px] pl-1 pr-1 text-[17px] caret-orbit-blue leading-snug text-white outline-none placeholder:text-white/45 lg:text-[16px]"
+                className="orbit-scrollbar max-h-[148px] min-w-0 flex-1 resize-none bg-transparent py-[13px] pl-1 pr-1 text-[17px] caret-orbit-blue leading-snug text-white outline-none placeholder:text-white/45 lg:py-2 lg:text-[14px]"
               />
               <button
                 type="button"
@@ -624,11 +624,11 @@ export function MessageComposer({
                 aria-label={panel ? "Voltar ao teclado" : "Stickers, emoji e GIF"}
                 title={panel ? "Teclado" : "Stickers, emoji e GIF"}
                 className={clsx(
-                  "mb-0.5 mr-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition",
+                  "mb-0.5 mr-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition lg:mb-0 lg:h-9 lg:w-9",
                   panel ? "text-chat" : "text-white/55 hover:text-white"
                 )}
               >
-                <Smile className="h-[23px] w-[23px]" />
+                <Smile className="h-[23px] w-[23px] lg:h-5 lg:w-5" />
               </button>
               {/* Atalho de foto/vídeo dentro do campo (como no app). */}
               {!text.trim() && !pending.length && (
@@ -650,9 +650,9 @@ export function MessageComposer({
                     onClick={() => photoInput.current?.click()}
                     aria-label="Enviar foto ou vídeo"
                     title="Foto ou vídeo"
-                    className="mb-0.5 mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/55 transition hover:text-white"
+                    className="mb-0.5 mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/55 transition hover:text-white lg:mb-0 lg:h-9 lg:w-9"
                   >
-                    <ImageIcon className="h-[21px] w-[21px]" />
+                    <ImageIcon className="h-[21px] w-[21px] lg:h-5 lg:w-5" />
                   </button>
                 </>
               )}
@@ -690,7 +690,7 @@ export function MessageComposer({
                 title="Gravar áudio"
                 className={clsx(round, "text-white/85 hover:bg-white/[0.06] hover:text-white")}
               >
-                <Mic className="h-6 w-6 lg:h-[22px] lg:w-[22px]" />
+                <Mic className="h-6 w-6 lg:h-5 lg:w-5" />
               </button>
             )}
           </>
