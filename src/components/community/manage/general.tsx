@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { Camera, Check, Globe, ImagePlus, Loader2, Lock, Plus, Trash2, X } from "lucide-react";
-import { COMMUNITY_CATEGORIES } from "@/lib/community-categories";
+import { categoryLabel, COMMUNITY_CATEGORIES } from "@/lib/community-categories";
 import { ACCENTS, ACCEPT, accentOf, communityError, uploadCommunityFile, type CommunityLink } from "@/lib/communities";
 import { useCommunity } from "../context";
 import { Confirm } from "../ui";
@@ -238,6 +238,8 @@ export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Par
                   {c.label}
                 </option>
               ))}
+              {/* Categoria antiga que saiu da lista continua selecionada ao editar. */}
+              {f.category && !COMMUNITY_CATEGORIES.some((c) => c.slug === f.category) && <option value={f.category}>{categoryLabel(f.category)}</option>}
             </select>
           </Field>
           <div className="md:col-span-2">

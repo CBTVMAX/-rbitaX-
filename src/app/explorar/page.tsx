@@ -5,7 +5,7 @@ import { ChatDock } from "@/components/chat-dock";
 import { NotifyMeButton } from "@/components/notify-me-button";
 import { PeopleResults, type PersonResult } from "@/components/people-results";
 import { Avatar } from "@/components/post-card";
-import { COMMUNITY_CATEGORIES, categoryLabel } from "@/lib/community-categories";
+import { FEATURED_CATEGORIES, categoryLabel } from "@/lib/community-categories";
 import { subjectHashtag } from "@/lib/communities";
 import { timeAgo } from "@/lib/format";
 import {
@@ -340,7 +340,7 @@ export default async function ExplorarPage(
             <div>
               <SectionHeader emoji="🔥" title="Em alta no ÓrbitaX" subtitle="Explore os principais assuntos da comunidade." seeAllHref="/comunidades" />
               <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
-                {COMMUNITY_CATEGORIES.slice(0, 6).map(({ slug, label, icon: Icon }) => (
+                {FEATURED_CATEGORIES.slice(0, 6).map(({ slug, label, icon: Icon }) => (
                   <Link
                     key={slug}
                     href={`/comunidades?categoria=${slug}`}
@@ -464,7 +464,7 @@ export default async function ExplorarPage(
             <div>
               <SectionHeader emoji="🧩" title="Explore outras comunidades" subtitle="Descubra conteúdos, compartilhe interesses e encontre seu lugar." seeAllHref="/comunidades" />
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
-                {COMMUNITY_CATEGORIES.map(({ slug, label, icon: Icon }) => (
+                {FEATURED_CATEGORIES.map(({ slug, label, icon: Icon }) => (
                   <Link
                     key={slug}
                     href={`/comunidades?categoria=${slug}`}
