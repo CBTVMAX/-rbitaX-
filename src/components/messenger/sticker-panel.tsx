@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { Check, Clock, Flame, ImagePlus, Loader2, Lock, Play, Plus, Search, Send, ShoppingBag, Smile, Sparkles, Star, Trash2, Wand2, X } from "lucide-react";
+import { Check, Clock, Delete, Flame, ImagePlus, Loader2, Lock, Play, Plus, Search, Send, Settings, ShoppingBag, Smile, Sparkles, Star, Store, Trash2, Wand2, X } from "lucide-react";
 import { EMOJI_CATEGORIES, recentEmoji, rememberEmoji } from "@/lib/messenger/emoji";
 import {
   loadFavoriteStickers,
@@ -41,12 +41,6 @@ import { useMessenger } from "./context";
 
 export type PanelTab = "emoji" | "stickers" | "gif" | "favoritos";
 
-const TABS: { id: PanelTab; label: string; icon: string }[] = [
-  { id: "emoji", label: "Emojis", icon: "😀" },
-  { id: "stickers", label: "Adesivos", icon: "✨" },
-  { id: "gif", label: "GIFs", icon: "" },
-  { id: "favoritos", label: "Favoritos", icon: "❤️" },
-];
 
 export function stickerInfo(s: Sticker): StickerInfo {
   return { storage: s.storage, file: s.file, preview: s.preview, format: s.format, w: s.width, h: s.height, size: s.size, label: s.label };
@@ -92,7 +86,7 @@ function PersonalCell({ s, onSend, onRemove }: { s: PersonalSticker; onSend: () 
         aria-label="Enviar meu adesivo"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={s.url} alt="" loading="lazy" draggable={false} className="pointer-events-none h-[84%] w-[84%] object-contain" />
+        <img src={s.url} alt="" loading="lazy" draggable={false} className="pointer-events-none h-[92%] w-[92%] object-contain" />
       </button>
       <button
         type="button"
@@ -179,7 +173,7 @@ function StickerCell({
           loading="lazy"
           decoding="async"
           draggable={false}
-          className={clsx("pointer-events-none h-[84%] w-[84%] object-contain", locked && "opacity-60 saturate-[0.8]")}
+          className={clsx("pointer-events-none h-[92%] w-[92%] object-contain", locked && "opacity-60 saturate-[0.8]")}
           onMouseEnter={(e) => animated && !locked && (e.currentTarget.src = stickerFileUrl(s))}
           onMouseLeave={(e) => animated && !locked && (e.currentTarget.src = preview)}
         />
@@ -225,7 +219,10 @@ export function StickerPanel({
   tabs,
   onPersonalSticker,
   onOpenStore,
+  onBackspace,
 }: {
+  /** Tecla ⌫ na aba de emojis (apaga o último caractere do campo). */
+  onBackspace?: () => void;
   /** Envia um adesivo de "Meus adesivos" (sem isso, a seção não aparece — ex.: comentários). */
   onPersonalSticker?: (file: File) => void;
   /** Abre a loja por cima da conversa; sem isso, vai para a página da loja. */
@@ -244,7 +241,6 @@ export function StickerPanel({
   const { supabase, me, toast } = useMessenger();
   const router = useRouter();
   const [tab, setTab] = useState<PanelTab>(initialTab === ("figurinhas" as PanelTab) ? "stickers" : initialTab);
-  const [emojiCat, setEmojiCat] = useState<string>("recentes");
   const [section, setSection] = useState<string>("recentes");
   const [packs, setPacks] = useState<Pack[] | null>(null);
   const [lib, setLib] = useState<Library | null>(null);
@@ -271,9 +267,7 @@ export function StickerPanel({
   useEffect(() => setTab(initialTab === ("figurinhas" as PanelTab) ? "stickers" : initialTab), [initialTab]);
 
   useEffect(() => {
-    const r = recentEmoji();
-    setRecentEmojiList(r);
-    if (!r.length) setEmojiCat(EMOJI_CATEGORIES[0].id);
+    setRecentEmojiList(recentEmoji());
     loadPacks(supabase).then(setPacks, () => setPacks([]));
     loadLibrary(supabase, me.id).then(setLib, () => setLib({ owned: new Set(), installed: new Set(), favoritePacks: new Set() }));
     loadFavoriteStickers(supabase).then(
@@ -292,9 +286,14 @@ export function StickerPanel({
   const byId = useMemo(() => new Map((packs ?? []).map((p) => [p.id, p])), [packs]);
   const installed = useMemo(() => (packs ?? []).filter((p) => lib?.installed.has(p.id)), [packs, lib]);
 
-  // Nothing sent yet → open straight on the first installed pack.
+  // Nothing sent yet → open straight on the first installed pack (only on the first opening).
+  const jumped = useRef(false);
   useEffect(() => {
-    if (section === "recentes" && recents && recents.length === 0 && installed.length) setSection(installed[0].id);
+    if (jumped.current || !recents) return;
+    if (section === "recentes" && recents.length === 0 && installed.length) {
+      jumped.current = true;
+      setSection(installed[0].id);
+    } else if (recents.length) jumped.current = true;
   }, [recents, installed, section]);
 
   // Lazy: a pack's stickers load only when its tab is opened.
@@ -474,20 +473,20 @@ export function StickerPanel({
   let currentPack: Pack | undefined;
   if (searching && query.trim().length >= 2) {
     list = results ? results.stickers : null;
-    title = `Resultados para “${query.trim()}”`;
+    title = `Resultados: ${query.trim()}`;
     emptyText = "Nenhum adesivo com esse nome. Tente o nome de um pack, uma categoria ou um criador.";
   } else if (tab === "favoritos") {
     list = favorites;
-    title = "Meus favoritos";
+    title = "Favoritos";
     emptyText = "Toque na estrela de um adesivo (ou segure o dedo sobre ele) para guardar aqui.";
   } else if (tab === "stickers") {
     if (section === "recentes") {
       list = recents;
-      title = "Usados recentemente";
+      title = "Recentes";
       emptyText = "Os adesivos que você enviar aparecem aqui, em qualquer aparelho.";
     } else if (section === "populares") {
       list = popular;
-      title = "Populares no ÓrbitaX";
+      title = "Populares";
       emptyText = "Os adesivos mais enviados da semana aparecem aqui.";
     } else if (section === "meus") {
       list = [];
@@ -503,183 +502,179 @@ export function StickerPanel({
   const previewLocked = preview ? locked(preview) : false;
   const previewInstalled = previewPack ? !!lib?.installed.has(previewPack.id) : false;
 
+  const show = (t: PanelTab) => !tabs || tabs.includes(t);
+  const inSection = (id: string) => !searching && tab === "stickers" && section === id;
+  const openSection = (id: string) => {
+    choose("stickers");
+    setSection(id);
+  };
+  const barButton = (active: boolean) =>
+    clsx(
+      "relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full transition md:h-10 md:w-10",
+      active ? "bg-white/[0.1] text-chat" : "text-white/50 hover:text-white"
+    );
+  const heading = "text-[12.5px] font-semibold uppercase tracking-[0.06em] text-white/40";
+  const emojiGrid = (list: string[]) => (
+    <div className="grid grid-cols-7 sm:grid-cols-8">
+      {list.map((e) => (
+        <button
+          key={e}
+          type="button"
+          onClick={() => {
+            rememberEmoji(e);
+            onEmoji(e);
+          }}
+          className="flex aspect-square items-center justify-center rounded-xl text-[31px] leading-none transition hover:bg-white/[0.06] active:scale-90 md:text-[26px]"
+          aria-label={e}
+        >
+          {e}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div
       className={clsx(
-        "relative flex h-[min(52dvh,430px)] flex-col overflow-hidden border-white/10 bg-space-surface bg-[radial-gradient(120%_60%_at_50%_0%,rgb(var(--app-accent,139_92_246)/0.10),transparent_70%)] shadow-[0_-12px_40px_rgba(0,0,0,0.35)]",
-        "rounded-t-[28px] border-t md:h-[440px] md:rounded-3xl md:border md:shadow-[0_18px_50px_rgba(0,0,0,0.45)]",
+        "relative flex h-[min(46dvh,390px)] flex-col overflow-hidden bg-[rgb(var(--chat-recv))]",
+        "md:h-[440px] md:rounded-3xl md:border md:border-white/10 md:shadow-[0_18px_50px_rgba(0,0,0,0.45)]",
         className
       )}
       role="dialog"
       aria-label="Emojis, adesivos e GIFs"
       onKeyDown={(e) => e.key === "Escape" && (draft ? setDraft(null) : removing ? setRemoving(null) : preview ? setPreview(null) : onClose?.())}
     >
-      <button type="button" onClick={onClose} aria-label="Fechar" className="mx-auto mt-2 block h-1.5 w-10 shrink-0 rounded-full bg-white/20 transition hover:bg-white/35 md:hidden" />
-
-      {/* Tabs + search */}
-      <div className="flex items-center gap-2 px-3 pb-2 pt-2 md:pt-3">
+      {/* Uma barra só, como no VK: busca · loja · emojis · recentes · favoritos · meus · GIF · populares · packs */}
+      <div className="relative shrink-0 border-b border-white/[0.06] bg-[rgb(var(--chat-bar))]">
         {searching ? (
-          <label className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-chat/40 bg-white/[0.05] px-3 py-2">
-            <Search className="h-4 w-4 shrink-0 text-white/45" />
-            <input
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Procurar adesivos"
-              aria-label="Procurar adesivos por nome, pack, categoria ou criador"
-              className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/40"
-            />
-            <button type="button" onClick={() => (setSearching(false), setQuery(""))} aria-label="Fechar busca" className="text-white/50 hover:text-white">
-              <X className="h-4 w-4" />
-            </button>
-          </label>
+          <div className="px-2.5 py-2">
+            <label className="flex min-w-0 items-center gap-2 rounded-full bg-white/[0.07] px-3.5 py-2">
+              <Search className="h-4 w-4 shrink-0 text-white/45" />
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Procurar adesivos"
+                aria-label="Procurar adesivos por nome, pack, categoria ou criador"
+                className="min-w-0 flex-1 bg-transparent text-[15px] text-white outline-none placeholder:text-white/40"
+              />
+              <button type="button" onClick={() => (setSearching(false), setQuery(""))} aria-label="Fechar busca" className="text-white/50 hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </label>
+          </div>
         ) : (
-          <>
-            <div className="flex min-w-0 flex-1 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-1" role="tablist">
-              {TABS.filter((t) => !tabs || tabs.includes(t.id)).map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === t.id}
-                  onClick={() => choose(t.id)}
-                  className={clsx(
-                    "flex min-w-0 flex-auto items-center justify-center gap-1 whitespace-nowrap rounded-xl px-1.5 py-1.5 text-[12px] font-semibold transition sm:text-[12.5px]",
-                    tab === t.id ? "bg-orbit-gradient text-snow shadow-[0_0_16px_rgb(var(--app-accent,139_92_246)/0.4)]" : "text-white/60 hover:text-white"
-                  )}
-                >
-                  {t.icon && (
-                    <span aria-hidden className="hidden text-[13px] leading-none min-[380px]:inline">
-                      {t.icon}
-                    </span>
-                  )}
-                  {t.label}
-                </button>
-              ))}
-            </div>
+          <div
+            className={clsx("flex items-center gap-2 overflow-x-auto px-2 py-1.5 md:gap-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", tab === "emoji" && onBackspace && "pr-16")}
+            role="tablist"
+          >
+            {show("stickers") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearching(true);
+                  if (tab === "emoji" || tab === "gif") setTab("stickers");
+                }}
+                aria-label="Procurar adesivos"
+                title="Procurar"
+                className={barButton(false)}
+              >
+                <Search className="h-[22px] w-[22px]" />
+              </button>
+            )}
+            <button type="button" onClick={() => openStore()} aria-label="Loja de adesivos" title="Loja de adesivos" className={barButton(false)}>
+              <Store className="h-[23px] w-[23px]" />
+            </button>
+            {show("emoji") && (
+              <button type="button" role="tab" aria-selected={tab === "emoji"} onClick={() => choose("emoji")} aria-label="Emojis" title="Emojis" className={barButton(tab === "emoji")}>
+                <Smile className="h-[23px] w-[23px]" />
+              </button>
+            )}
+            {show("stickers") && (
+              <button type="button" role="tab" aria-selected={inSection("recentes")} onClick={() => openSection("recentes")} aria-label="Recentes" title="Recentes" className={barButton(inSection("recentes"))}>
+                <Clock className="h-[22px] w-[22px]" />
+              </button>
+            )}
+            {show("favoritos") && (
+              <button type="button" role="tab" aria-selected={tab === "favoritos"} onClick={() => choose("favoritos")} aria-label="Favoritos" title="Favoritos" className={barButton(tab === "favoritos" && !searching)}>
+                <Star className="h-[22px] w-[22px]" />
+              </button>
+            )}
+            {onPersonalSticker && show("stickers") && (
+              <button type="button" role="tab" aria-selected={inSection("meus")} onClick={() => openSection("meus")} aria-label="Meus adesivos" title="Meus adesivos" className={barButton(inSection("meus"))}>
+                <Wand2 className="h-[21px] w-[21px]" />
+              </button>
+            )}
+            {show("gif") && (
+              <button type="button" role="tab" aria-selected={tab === "gif"} onClick={() => choose("gif")} aria-label="GIFs" title="GIFs" className={barButton(tab === "gif")}>
+                <span className="rounded-md border-[1.8px] border-current px-1 text-[10px] font-extrabold leading-[14px] tracking-wide">GIF</span>
+              </button>
+            )}
+            {show("stickers") && (
+              <button type="button" role="tab" aria-selected={inSection("populares")} onClick={() => openSection("populares")} aria-label="Populares" title="Populares" className={barButton(inSection("populares"))}>
+                <Flame className="h-[22px] w-[22px]" />
+              </button>
+            )}
+            {show("stickers") &&
+              (packs === null || lib === null
+                ? Array.from({ length: 4 }, (_, i) => <span key={i} className="h-12 w-12 shrink-0 animate-pulse rounded-full bg-white/[0.06] md:h-10 md:w-10" />)
+                : installed.map((p) => {
+                    const on = inSection(p.id);
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={on}
+                        onClick={() => openSection(p.id)}
+                        title={p.name}
+                        aria-label={p.name}
+                        className={clsx(barButton(on), !on && "opacity-90 hover:opacity-100")}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={p.coverUrl} alt="" loading="lazy" className="h-10 w-10 object-contain md:h-8 md:w-8" />
+                        {p.rating === "adulto" && <AdultTag className="absolute -bottom-0.5 -right-0.5" />}
+                      </button>
+                    );
+                  }))}
+          </div>
+        )}
+        {!searching && tab === "emoji" && onBackspace && (
+          <div className="absolute inset-y-0 right-0 flex items-center bg-[rgb(var(--chat-bar))] pl-1 pr-2 shadow-[-14px_0_12px_-6px_rgb(var(--chat-bar))]">
             <button
               type="button"
-              onClick={() => {
-                setSearching(true);
-                if (tab === "emoji" || tab === "gif") setTab("stickers");
-              }}
-              aria-label="Procurar adesivos"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.03] text-white/70 transition hover:border-chat/40 hover:text-white"
+              onClick={onBackspace}
+              aria-label="Apagar"
+              title="Apagar"
+              className="flex h-10 w-12 items-center justify-center rounded-xl text-white/65 transition hover:bg-white/[0.06] hover:text-white active:scale-95"
             >
-              <Search className="h-[18px] w-[18px]" />
+              <Delete className="h-[26px] w-[26px]" />
             </button>
-          </>
+          </div>
         )}
       </div>
 
-      {/* Installed packs row */}
-      {!searching && tab === "stickers" && (
-        <div className="flex gap-1 overflow-x-auto border-b border-white/[0.06] px-2 pb-2 [scrollbar-width:none]">
-          {[
-            { id: "recentes", label: "Recentes", Icon: Clock },
-            { id: "populares", label: "Populares", Icon: Flame },
-            ...(onPersonalSticker ? [{ id: "meus", label: "Meus adesivos", Icon: Smile }] : []),
-          ].map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setSection(id)}
-              aria-pressed={section === id}
-              title={label}
-              aria-label={label}
-              className={clsx(
-                "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition",
-                section === id ? "border-chat/60 bg-chat/15 text-chat" : "border-transparent text-white/55 hover:text-white"
-              )}
-            >
-              <Icon className="h-[18px] w-[18px]" />
-            </button>
-          ))}
-          <span aria-hidden className="my-2 w-px shrink-0 bg-white/10" />
-          {packs === null || lib === null
-            ? Array.from({ length: 5 }, (_, i) => <span key={i} className="h-11 w-11 shrink-0 animate-pulse rounded-xl bg-white/[0.05]" />)
-            : installed.map((p) => {
-                const on = section === p.id;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setSection(p.id)}
-                    aria-pressed={on}
-                    title={p.name}
-                    aria-label={p.name}
-                    className={clsx(
-                      "relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition",
-                      on ? "border-chat/60 bg-chat/15" : "border-transparent opacity-75 hover:opacity-100"
-                    )}
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.coverUrl} alt="" loading="lazy" className="h-9 w-9 rounded-lg object-contain" />
-                    {p.rating === "adulto" && <AdultTag className="absolute -bottom-1 -right-1" />}
-                  </button>
-                );
-              })}
-          <button
-            type="button"
-            onClick={() => openStore()}
-            aria-label="Loja de adesivos"
-            title="Loja de adesivos"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-dashed border-white/20 text-white/55 transition hover:border-chat/50 hover:text-white"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-      {!searching && tab === "emoji" && (
-        <div className="flex gap-0.5 overflow-x-auto border-b border-white/[0.06] px-2 pb-1.5 [scrollbar-width:none]">
-          {recentEmojiList.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setEmojiCat("recentes")}
-              aria-label="Recentes"
-              className={clsx("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition", emojiCat === "recentes" ? "bg-chat/15 text-chat" : "text-white/55 hover:text-white")}
-            >
-              <Clock className="h-4 w-4" />
-            </button>
-          )}
-          {EMOJI_CATEGORIES.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setEmojiCat(c.id)}
-              aria-label={c.label}
-              title={c.label}
-              className={clsx("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg transition", emojiCat === c.id ? "bg-chat/15" : "opacity-60 hover:opacity-100")}
-            >
-              {c.icon}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Content */}
-      <div ref={body} className="orbit-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
+      <div ref={body} className="orbit-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {tab === "emoji" && !searching && (
-          <div className="grid grid-cols-8 gap-0.5">
-            {(emojiCat === "recentes" ? recentEmojiList : EMOJI_CATEGORIES.find((c) => c.id === emojiCat)?.emoji ?? []).map((e) => (
-              <button
-                key={e}
-                type="button"
-                onClick={() => {
-                  rememberEmoji(e);
-                  onEmoji(e);
-                }}
-                className="flex aspect-square items-center justify-center rounded-lg text-[26px] leading-none transition hover:scale-110 hover:bg-white/[0.06] active:scale-90"
-                aria-label={e}
-              >
-                {e}
-              </button>
+          <>
+            {recentEmojiList.length > 0 && (
+              <>
+                <p className={clsx(heading, "px-2 pb-1.5 pt-3.5")}>Mais usados</p>
+                {emojiGrid(recentEmojiList.slice(0, 21))}
+              </>
+            )}
+            {EMOJI_CATEGORIES.map((c) => (
+              <div key={c.id}>
+                <p className={clsx(heading, "px-2 pb-1.5 pt-4")}>{c.label}</p>
+                {emojiGrid(c.emoji)}
+              </div>
             ))}
-          </div>
+          </>
         )}
 
         {tab === "gif" && !searching && (
-          <div className="px-1">
+          <div className="px-1 pt-3">
             <input
               ref={gifInput}
               type="file"
@@ -707,7 +702,7 @@ export function StickerPanel({
                 <Sparkles className="h-4 w-4" /> Transformar GIF em adesivo
               </button>
             )}
-            <p className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-wider text-white/40">GIFs das suas conversas</p>
+            <p className={clsx(heading, "mb-2 mt-4 px-1")}>GIFs das suas conversas</p>
             {gifs === null ? (
               <div className="flex justify-center py-6">
                 <Loader2 className="h-5 w-5 animate-spin text-white/40" />
@@ -738,9 +733,9 @@ export function StickerPanel({
 
         {tab === "stickers" && section === "meus" && !searching && (
           <div className="px-0.5">
-            <div className="mb-1.5 flex items-center justify-between gap-2 px-1.5">
-              <span className="text-[13px] font-semibold text-white/85">Meus adesivos</span>
-              <span className="text-[11px] text-white/40">GIF vira adesivo animado</span>
+            <div className="flex items-center justify-between gap-2 px-1.5 pb-2 pt-3.5">
+              <span className={heading}>Meus adesivos</span>
+              <span className="text-[11px] text-white/35">GIF vira adesivo animado</span>
             </div>
             {personal === null ? (
               <div className="grid grid-cols-4 gap-1">
@@ -749,7 +744,7 @@ export function StickerPanel({
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-4 gap-1">
+              <div className="grid grid-cols-4 gap-x-1 gap-y-2">
                 <button
                   type="button"
                   onClick={() => stickerInput.current?.click()}
@@ -775,7 +770,7 @@ export function StickerPanel({
         {(tab === "stickers" || tab === "favoritos" || searching) && !(tab === "stickers" && section === "meus" && !searching) && (
           <>
             {searching && results && results.packIds.length > 0 && (
-              <div className="mb-2 flex gap-1.5 overflow-x-auto px-1 [scrollbar-width:none]">
+              <div className="flex gap-1.5 overflow-x-auto px-1 pt-3 [scrollbar-width:none]">
                 {results.packIds
                   .map((id) => byId.get(id))
                   .filter((p): p is Pack => !!p)
@@ -794,28 +789,35 @@ export function StickerPanel({
               </div>
             )}
             {title && (
-              <div className="mb-1.5 flex items-center justify-between gap-2 px-1.5">
-                <span className="flex min-w-0 items-center gap-1.5 truncate text-[13px] font-semibold text-white/85">
-                  {title}
+              <div className="flex items-center justify-between gap-2 px-2 pb-2 pt-3.5">
+                <span className={clsx(heading, "flex min-w-0 items-center gap-2")}>
+                  <span className="truncate">{title}</span>
                   {currentPack?.rating === "adulto" && <AdultTag />}
+                  {currentPack && (
+                    <button
+                      type="button"
+                      onClick={() => openStore(currentPack!.id)}
+                      aria-label={`Sobre o pack ${currentPack.name}`}
+                      title="Sobre o pack"
+                      className="-my-1 shrink-0 rounded-full p-1 text-white/45 transition hover:bg-white/[0.06] hover:text-white"
+                    >
+                      <Settings className="h-[18px] w-[18px]" />
+                    </button>
+                  )}
                 </span>
-                {currentPack && (
-                  <button type="button" onClick={() => openStore(currentPack!.id)} className="shrink-0 text-[11px] font-medium text-white/45 transition hover:text-white">
-                    {currentPack.creator}
-                  </button>
-                )}
+                {currentPack && <span className="shrink-0 truncate text-[11px] text-white/35">{currentPack.creator}</span>}
               </div>
             )}
             {list === null ? (
-              <div className="grid grid-cols-5 gap-1">
-                {Array.from({ length: 15 }, (_, i) => (
+              <div className="grid grid-cols-4 gap-x-1 gap-y-2 pt-3">
+                {Array.from({ length: 12 }, (_, i) => (
                   <span key={i} className="aspect-square animate-pulse rounded-2xl bg-white/[0.04]" />
                 ))}
               </div>
             ) : list.length === 0 ? (
               <Empty>{emptyText ?? "Nada por aqui ainda."}</Empty>
             ) : (
-              <div className={clsx("grid gap-1", currentPack && list[0]?.size !== "mini" ? "grid-cols-4" : "grid-cols-5")}>
+              <div className={clsx("grid gap-x-1 gap-y-2", list[0]?.size === "mini" ? "grid-cols-5" : "grid-cols-4")}>
                 {list.map((s) => (
                   <StickerCell
                     key={s.id}
