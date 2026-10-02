@@ -1216,7 +1216,7 @@ export function ProfileView({
             slots={{
               posts: (
                 <div className="space-y-3 md:space-y-4">
-                  {!showArchive && <ProfileMediaShowcase photos={photos} videos={videos} isMe={isMe} />}
+                  {!showArchive && <ProfileMediaShowcase photos={photos} videos={videos} isMe={isMe} userId={user.id} />}
                   {showArchive && feed.length === 0 ? (
                     <div className={`${cardClass} p-10 text-center text-sm text-white/50`}>Nenhuma publicação arquivada.</div>
                   ) : (

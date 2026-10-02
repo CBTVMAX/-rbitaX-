@@ -4,12 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { Gift, Image as ImageIcon, Play, PlaySquare, X } from "lucide-react";
+import { Gift, Image as ImageIcon, Pin, Play, PlaySquare, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/post-card";
 import { ProfileGiftButton } from "@/components/profile-gift-button";
 import { PublishButton } from "@/components/publish/publish-provider";
 import { commentDate } from "@/components/comments/comment-kit";
+import { useProfilePhotoPreview } from "@/components/profile-photos";
 
 type Media = { id: string; type: string; url: string };
 
@@ -22,8 +23,23 @@ function openPhoto(e: React.MouseEvent, id: string) {
 }
 
 /** Topo dos posts, como no VK: abas Foto/Vídeo com um mosaico 3×2 e "Mostrar tudo"; e "Criar entrada". */
-export function ProfileMediaShowcase({ photos, videos, isMe, className }: { photos: Media[]; videos: Media[]; isMe: boolean; className?: string }) {
-  const [tab, setTab] = useState<"foto" | "video">(photos.length || !videos.length ? "foto" : "video");
+export function ProfileMediaShowcase({
+  photos: feedPhotos,
+  videos,
+  isMe,
+  userId,
+  className,
+}: {
+  photos: Media[];
+  videos: Media[];
+  isMe: boolean;
+  /** Dono do perfil: com ele a vitrine mostra as fixadas primeiro e esconde as arquivadas. */
+  userId?: string;
+  className?: string;
+}) {
+  const preview = useProfilePhotoPreview(userId);
+  const photos: (Media & { pinnedAt?: string | null })[] = preview ?? feedPhotos;
+  const [tab, setTab] = useState<"foto" | "video">(feedPhotos.length || !videos.length ? "foto" : "video");
   const items = (tab === "foto" ? photos : videos).slice(0, 6);
   const hasMedia = photos.length > 0 || videos.length > 0;
 
@@ -63,9 +79,14 @@ export function ProfileMediaShowcase({ photos, videos, isMe, className }: { phot
                   </span>
                 </a>
               ) : (
-                <a key={m.id} href={`?foto=${m.id}#tab-fotos`} onClick={(e) => openPhoto(e, m.id)} className="block aspect-square overflow-hidden bg-space-card">
+                <a key={m.id} href={`?foto=${m.id}#tab-fotos`} onClick={(e) => openPhoto(e, m.id)} className="relative block aspect-square overflow-hidden bg-space-card">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={m.url} alt="" loading="lazy" className="h-full w-full object-cover transition hover:scale-105" />
+                  {!!(m as { pinnedAt?: string | null }).pinnedAt && (
+                    <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-snow backdrop-blur-sm" title="Fixada">
+                      <Pin className="h-3.5 w-3.5 fill-snow" />
+                    </span>
+                  )}
                 </a>
               )
             )}
