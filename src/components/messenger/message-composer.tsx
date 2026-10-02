@@ -57,7 +57,7 @@ const DICE = [
   { d: "d100", sides: 100 },
 ] as const;
 
-const DICE_CMD = /^\/(?:r|roll)\s+(.+)$/i;
+const DICE_CMD = /^\/(?:r|roll)\s+([\s\S]+)$/i;
 
 const drafts = new Map<string, string>();
 let lastTab: PanelTab = "stickers";
@@ -266,7 +266,7 @@ export function MessageComposer({
           setText("");
           input.current?.focus();
         } else if (res.error === "invalid") {
-          setHint("🎲 Comando de dado inválido. Disponíveis: D4, D6, D8, D10, D12, D20 e D100.");
+          setHint("🎲 Use /r d20 e, se quiser, o motivo depois: /r d20 ataque no dragão. Dados: D4, D6, D8, D10, D12, D20 e D100.");
         } else {
           setHint("🎲 Não foi possível rolar agora. Tente de novo.");
         }
@@ -280,8 +280,15 @@ export function MessageComposer({
 
   function rollFromSheet(d: string) {
     setDiceOpen(false);
-    setText(`/r ${d}`);
-    requestAnimationFrame(() => input.current?.focus());
+    // Fica "/r d20 " com o cursor no fim: dá para escrever o motivo antes de enviar.
+    setText(`/r ${d} `);
+    setHint("🎲 Escreva o motivo depois do dado (opcional) e envie.");
+    requestAnimationFrame(() => {
+      const el = input.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    });
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -760,6 +767,9 @@ function DiceSheet({ onPick, onClose }: { onPick: (d: string) => void; onClose: 
             <X className="h-4 w-4" />
           </button>
         </div>
+        <p className="mb-2 px-1 text-[11px] leading-snug text-white/50">
+          Escolha o dado e escreva o motivo depois, se quiser: <span className="text-white/75">/r d20 ataque no dragão</span>
+        </p>
         <button
           type="button"
           onClick={() => onPick("d20")}

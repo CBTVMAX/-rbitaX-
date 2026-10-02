@@ -82,7 +82,7 @@ export type MessageMeta = {
   artist?: string;
   event?: string;
   /** Rolagem de dados (escrito só pelo banco: roll_dice). */
-  roll?: { dice: string; sides: number; count: number; rolls: number[]; total: number; player: string };
+  roll?: { dice: string; sides: number; count: number; rolls: number[]; total: number; player: string; reason?: string };
 };
 
 export type StickerInfo = {

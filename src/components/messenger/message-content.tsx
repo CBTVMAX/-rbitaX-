@@ -482,6 +482,7 @@ export function DiceCard({ message, mine }: { message: ChatMessage; mine: boolea
           <span className={clsx("block text-[11px] uppercase tracking-wider", mine ? "text-snow/70" : "text-chat")}>rolou {dice}</span>
         </div>
       </div>
+      {roll.reason && <p className="mt-1.5 whitespace-pre-wrap break-words text-[14px] leading-snug">{roll.reason}</p>}
       <div className={clsx("mt-2 flex items-end justify-center rounded-xl py-2", mine ? "bg-white/10" : "bg-white/[0.04]")}>
         <span className="text-3xl font-extrabold tabular-nums leading-none">{roll.total}</span>
       </div>
