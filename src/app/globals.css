@@ -281,3 +281,19 @@ html[data-app-theme] body {
     animation: none;
   }
 }
+
+/* Messenger no celular: barra do topo/de escrever e bolha recebida (seguem o tema e o papel de parede). */
+:root {
+  --chat-bar: 22 23 29;
+  --chat-recv: 42 43 49;
+}
+[data-app-theme="light"] {
+  --chat-bar: 255 255 255;
+  --chat-recv: 255 255 255;
+}
+@media (prefers-color-scheme: light) {
+  [data-app-theme="auto"] {
+    --chat-bar: 255 255 255;
+    --chat-recv: 255 255 255;
+  }
+}

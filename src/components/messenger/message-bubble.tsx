@@ -328,7 +328,7 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
                   "rounded-[22px] shadow-[0_2px_10px_rgba(0,0,0,0.18)] lg:rounded-[20px]",
                   mine
                     ? "bg-chat-bubble text-snow"
-                    : "bg-[#2a2b31]/95 text-white lg:border lg:border-white/[0.08] lg:bg-white/[0.07] lg:backdrop-blur-md",
+                    : "bg-[rgb(var(--chat-recv))] text-white lg:border lg:border-white/[0.08] lg:bg-white/[0.07] lg:backdrop-blur-md",
                   lastInRun && (mine ? "rounded-br-md" : "rounded-bl-md"),
                   media || card ? "overflow-hidden" : "px-4 py-2 lg:px-3.5",
                   card && !media && (inlineMeta ? "px-2 py-1.5" : "p-2"),

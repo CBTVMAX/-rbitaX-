@@ -424,7 +424,7 @@ export function MessageComposer({
       className={clsx(
         "relative z-10 px-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 md:px-4",
         // Celular: flutua sobre o fundo da conversa (sem barra), como no app; computador: barra.
-        compact ? "border-t border-white/10 bg-space-surface/80 backdrop-blur-xl" : "border-t border-white/[0.06] bg-[#16171d]/95 lg:border-white/10 lg:bg-space-surface/80 lg:backdrop-blur-xl"
+        compact ? "border-t border-white/10 bg-space-surface/80 backdrop-blur-xl" : "border-t border-white/[0.06] bg-[rgb(var(--chat-bar)/0.95)] lg:border-white/10 lg:bg-space-surface/80 lg:backdrop-blur-xl"
       )}
     >
       {panel && (

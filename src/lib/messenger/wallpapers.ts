@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 
 /** Chat wallpapers (Messenger → Tema da conversa → Papel de parede), in public/wallpapers. */
 export const WALLPAPERS = [
+  { id: "orbita-clara", label: "Órbita Clara" },
   { id: "doodles", label: "Doodles Órbita" },
   { id: "universo", label: "Universo" },
   { id: "horizonte", label: "Horizonte" },
@@ -42,7 +43,30 @@ export function isWallpaper(id: string | null | undefined): id is string {
  * The picture is dark, so the chat area uses dark surfaces on top of it (readable bubbles and
  * text in any app appearance), with a soft shade to keep messages in focus.
  */
+/** Papéis de parede claros: a conversa fica com superfícies claras e tinta escura em cima deles. */
+const LIGHT = new Set(["orbita-clara"]);
+export function isLightWallpaper(id: string | null | undefined) {
+  return !!id && LIGHT.has(id);
+}
+
 export function wallpaperStyle(id: string): CSSProperties {
+  if (LIGHT.has(id))
+    return {
+      "--c-ink": "17 20 43",
+      "--c-space-bg": "242 243 250",
+      "--c-space-surface": "255 255 255",
+      "--c-space-card": "234 236 246",
+      "--c-space-border": "218 222 236",
+      "--c-body": "30 34 62",
+      "--chat-bar": "255 255 255",
+      "--chat-recv": "255 255 255",
+      colorScheme: "light",
+      color: "rgb(30 34 62)",
+      backgroundColor: "rgb(236 238 250)",
+      backgroundImage: `linear-gradient(180deg, rgb(255 255 255 / 0.18) 0%, rgb(255 255 255 / 0.05) 45%, rgb(255 255 255 / 0.25) 100%), url(${wallpaperSrc(id)})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    } as CSSProperties;
   return {
     "--c-ink": "255 255 255",
     "--c-space-bg": "5 6 15",
@@ -50,6 +74,8 @@ export function wallpaperStyle(id: string): CSSProperties {
     "--c-space-card": "17 21 42",
     "--c-space-border": "31 37 66",
     "--c-body": "229 231 245",
+    "--chat-bar": "22 23 29",
+    "--chat-recv": "42 43 49",
     colorScheme: "dark",
     color: "rgb(229 231 245)",
     backgroundColor: "rgb(5 6 15)",

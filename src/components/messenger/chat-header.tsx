@@ -163,7 +163,7 @@ export function ChatHeader({
         compact
           ? "h-14 border-b border-white/10 bg-space-surface/75 px-1.5"
           : // Celular: cartão flutuante arredondado (como no app); computador: barra.
-            "min-h-[68px] border-b border-white/[0.06] bg-[#16171d]/95 px-1.5 pt-[env(safe-area-inset-top)] lg:h-16 lg:min-h-0 lg:border-white/10 lg:bg-space-surface/75 lg:px-4 md:gap-2"
+            "min-h-[68px] border-b border-white/[0.06] bg-[rgb(var(--chat-bar)/0.95)] px-1.5 pt-[env(safe-area-inset-top)] lg:h-16 lg:min-h-0 lg:border-white/10 lg:bg-space-surface/75 lg:px-4 md:gap-2"
       )}
     >
       {showBack && (
