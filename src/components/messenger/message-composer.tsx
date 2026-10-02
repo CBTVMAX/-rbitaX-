@@ -109,7 +109,10 @@ export function MessageComposer({
   mentionMembers,
   meId,
   compact = false,
+  allowMentionAll = true,
 }: {
+  /** "Menções em massa" restrita a administradores: @todos não aparece na lista. */
+  allowMentionAll?: boolean;
   /** Janela pequena do chat flutuante: os painéis ocupam a largura toda. */
   compact?: boolean;
   conversationId: string;
@@ -197,7 +200,7 @@ export function MessageComposer({
     if (!isGroup || !mention) return [];
     const q = mention.query.toLowerCase();
     const out: MentionOption[] = [];
-    if (q === "" || ALL_ALIASES.some((a) => a.startsWith(q))) {
+    if (allowMentionAll && (q === "" || ALL_ALIASES.some((a) => a.startsWith(q)))) {
       out.push({ handle: "todos", name: "Todos do grupo", username: null, all: true });
     }
     for (const m of mentionMembers ?? []) {
@@ -208,7 +211,7 @@ export function MessageComposer({
       if (out.length >= 8) break;
     }
     return out.slice(0, 8);
-  }, [isGroup, mention, mentionMembers, meId]);
+  }, [isGroup, mention, mentionMembers, meId, allowMentionAll]);
 
   useEffect(() => setMentionIdx(0), [mention?.query, mention?.start]);
 

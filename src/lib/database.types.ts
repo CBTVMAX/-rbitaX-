@@ -514,6 +514,13 @@ export type Database = {
       add_group_members: { Args: { p_conversation_id: string; p_member_ids: string[] }; Returns: number };
       remove_group_member: { Args: { p_conversation_id: string; p_user_id: string }; Returns: undefined };
       set_group_admin: { Args: { p_conversation_id: string; p_user_id: string; p_admin: boolean }; Returns: undefined };
+      group_config: { Args: { p_conversation_id: string }; Returns: Json };
+      set_group_permissions: { Args: { p_conversation_id: string; p_patch: Json; p_no_forward?: boolean | null }; Returns: undefined };
+      set_group_system_messages: { Args: { p_conversation_id: string; p_on: boolean }; Returns: undefined };
+      pin_conversation_message: { Args: { p_conversation_id: string; p_message_id: string | null }; Returns: undefined };
+      group_invite_code: { Args: { p_conversation_id: string; p_reset?: boolean }; Returns: string };
+      group_invite_preview: { Args: { p_code: string }; Returns: Json };
+      join_group_by_code: { Args: { p_code: string }; Returns: string };
       set_conversation_ttl: { Args: { p_conversation_id: string; p_seconds: number | null }; Returns: undefined };
       ensure_saved_chat: { Args: Record<string, never>; Returns: string };
       save_to_saved: { Args: { p_message_id: string; p_attachments: Json }; Returns: string };

@@ -2,13 +2,14 @@
 
 import { useRef, useState } from "react";
 import { clsx } from "clsx";
-import { Bookmark, Copy, Download, Forward, MoreHorizontal, Reply, SmilePlus, Star, Trash2 } from "lucide-react";
+import { Bookmark, Copy, Download, Forward, MoreHorizontal, Pin, PinOff, Reply, SmilePlus, Star, Trash2 } from "lucide-react";
+import { useChatRules } from "@/lib/messenger/group-rules";
 import { QUICK_REACTIONS } from "@/lib/messenger/emoji";
 import { formatTime, toDate } from "@/lib/messenger/format";
 import type { ChatMessage } from "@/lib/messenger/types";
 import { GhostButton, MenuItem, Modal, Popover } from "./ui";
 
-export type MessageAction = "reply" | "copy" | "forward" | "favorite" | "delete" | "save" | "download";
+export type MessageAction = "reply" | "copy" | "forward" | "favorite" | "delete" | "save" | "download" | "pin";
 
 export type DeliveryState = "sending" | "sent" | "delivered" | "seen" | "failed";
 
@@ -74,19 +75,26 @@ function MenuEntries({
   inSaved?: boolean;
   onAction: (a: MessageAction) => void;
 }) {
+  const rules = useChatRules();
   const live = !m.deletedAt && !m.status;
+  // "Proibição de encaminhamento": o conteúdo dos outros não sai do chat (copiar, salvar, encaminhar, baixar).
+  const locked = rules.noForward && !mine && !inSaved;
+  const pinned = rules.pinnedId === m.id;
   return (
     <>
       {live && <MenuItem icon={Reply} label="Responder" onClick={() => onAction("reply")} />}
-      {canCopy(m) && <MenuItem icon={Copy} label="Copiar texto" onClick={() => onAction("copy")} />}
-      {!inSaved && live && m.type !== "system" && m.type !== "gift" && (
+      {!inSaved && live && rules.canPin && m.type !== "system" && (
+        <MenuItem icon={pinned ? PinOff : Pin} label={pinned ? "Desafixar" : "Fixar"} onClick={() => onAction("pin")} />
+      )}
+      {!locked && canCopy(m) && <MenuItem icon={Copy} label="Copiar texto" onClick={() => onAction("copy")} />}
+      {!locked && !inSaved && live && m.type !== "system" && m.type !== "gift" && (
         <MenuItem icon={Bookmark} label="Salvar nos meus salvos" onClick={() => onAction("save")} />
       )}
-      {canForward(m) && <MenuItem icon={Forward} label="Encaminhar" onClick={() => onAction("forward")} />}
+      {!locked && canForward(m) && <MenuItem icon={Forward} label="Encaminhar" onClick={() => onAction("forward")} />}
       {live && (
         <MenuItem icon={Star} label={favorite ? "Remover dos favoritos" : "Favoritar"} onClick={() => onAction("favorite")} />
       )}
-      {canDownload(m) && <MenuItem icon={Download} label={m.attachments.length > 1 ? "Baixar arquivos" : "Baixar"} onClick={() => onAction("download")} />}
+      {!locked && canDownload(m) && <MenuItem icon={Download} label={m.attachments.length > 1 ? "Baixar arquivos" : "Baixar"} onClick={() => onAction("download")} />}
       {!m.status && <MenuItem icon={Trash2} label="Apagar" danger onClick={() => onAction("delete")} />}
       {m.status === "failed" && mine && <MenuItem icon={Trash2} label="Descartar" danger onClick={() => onAction("delete")} />}
     </>
@@ -121,7 +129,7 @@ export function HoverActions({
   const place = () => {
     const el = bar.current;
     if (!el) return;
-    // Room above inside the message area (not the window): the menu has up to 7 entries.
+    // Room above inside the message area (not the window): the menu has up to 8 entries.
     const top = el.getBoundingClientRect().top;
     const area = el.closest(".orbit-scrollbar")?.getBoundingClientRect().top ?? 0;
     setBelow(top - area < 300);

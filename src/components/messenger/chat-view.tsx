@@ -22,6 +22,7 @@ import { chatThemeStyle } from "@/lib/messenger/themes";
 import { ensureSavedId, saveMessageToSaved } from "@/lib/messenger/saved";
 import { defaultWallpaper, isWallpaper, wallpaperStyle } from "@/lib/messenger/wallpapers";
 import { useLightApp } from "@/lib/messenger/use-light-app";
+import { ChatRulesProvider, useGroupConfig, type ChatRules } from "@/lib/messenger/group-rules";
 import { messagePreview, toDate } from "@/lib/messenger/format";
 import {
   conversationTitle,
@@ -49,6 +50,7 @@ import { GiftDialog, LinkDialog, SaveToSavedDialog } from "./extra-dialogs";
 import { MediaViewer } from "./media-viewer";
 import { useMediaGuard } from "@/lib/use-media-guard";
 import { ProfileCard } from "./profile-card";
+import { PinnedBanner } from "./pinned-banner";
 import { GhostButton, Modal } from "./ui";
 
 const PAGE = 40;
@@ -92,6 +94,8 @@ export function ChatView({
 }) {
   const { supabase, me, toast, patchConversation, reloadConversations, savedId, conversations, openConversation } = useMessenger();
   const lightApp = useLightApp();
+  const { config: groupConfig, reload: reloadConfig } = useGroupConfig(supabase, c.id, !c.isSaved, c.role);
+  const pinnedId = groupConfig?.pinned?.id ?? null;
   const { refresh: refreshCounts } = useLiveCounts();
   const wide = useMediaQuery("(min-width: 1280px)");
 
@@ -702,6 +706,15 @@ export function ChatView({
         }
       }
       if (a === "forward") setForwardFor(m);
+      if (a === "pin") {
+        const unpin = pinnedId === m.id;
+        const { error } = await supabase.rpc("pin_conversation_message", { p_conversation_id: c.id, p_message_id: unpin ? null : m.id });
+        if (error) toast(unpin ? "Não foi possível desafixar." : "Não foi possível fixar esta mensagem.", "error");
+        else {
+          toast(unpin ? "Mensagem desafixada." : "Mensagem fixada no topo do chat. 📌");
+          reloadConfig();
+        }
+      }
       if (a === "save") {
         try {
           const id = savedId ?? (await ensureSavedId(supabase));
@@ -747,7 +760,7 @@ export function ChatView({
         } else setDeleteFor(m);
       }
     },
-    [supabase, toast, savedId, me.id, reloadConversations]
+    [supabase, toast, savedId, me.id, reloadConversations, pinnedId, c.id, reloadConfig]
   );
 
   async function doDelete(forEveryone: boolean) {
@@ -848,6 +861,25 @@ export function ChatView({
     [react, action, openMedia, vote, jumpTo, deliver, conversations, openConversation, toast]
   );
 
+  const rules = useMemo<ChatRules>(
+    () => ({
+      canPin: !!groupConfig?.can.pin,
+      pinnedId,
+      noForward: !!groupConfig?.noForward,
+      systemMessages: groupConfig?.systemMessages ?? true,
+    }),
+    [groupConfig, pinnedId]
+  );
+
+  async function unpin() {
+    const { error } = await supabase.rpc("pin_conversation_message", { p_conversation_id: c.id, p_message_id: null });
+    if (error) toast("Não foi possível desafixar.", "error");
+    else {
+      toast("Mensagem desafixada.");
+      reloadConfig();
+    }
+  }
+
   const replyName = replyTo ? (replyTo.senderId === me.id ? "você mesmo" : memberMap.get(replyTo.senderId)?.name ?? "mensagem") : null;
   const title = conversationTitle(c);
   const infoProps = {
@@ -868,9 +900,12 @@ export function ChatView({
       reloadConversations();
     },
     onLeft: onBack,
+    config: groupConfig,
+    onConfigChanged: reloadConfig,
   };
 
   return (
+    <ChatRulesProvider value={rules}>
     <div className="flex h-full min-h-0 min-w-0 flex-1" style={chatThemeStyle(c.theme)}>
       <section
         className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col"
@@ -908,6 +943,16 @@ export function ChatView({
           compact={compact}
           extra={headerActions}
         />
+
+        {groupConfig?.pinned && (
+          <PinnedBanner
+            pinned={groupConfig.pinned}
+            canUnpin={groupConfig.can.pin}
+            meId={me.id}
+            onOpen={() => jumpTo(groupConfig.pinned!.id, groupConfig.pinned!.createdAt)}
+            onUnpin={unpin}
+          />
+        )}
 
         <div className={clsx("contents", guard.className)} onContextMenu={guard.onContextMenu}>
         <MessageList
@@ -951,7 +996,7 @@ export function ChatView({
         </div>
 
         {c.sendStatus === "ok" ? (
-          <MessageComposer conversationId={c.id} replyTo={replyTo} replyName={replyName} onCancelReply={() => setReplyTo(null)} api={api} inSaved={c.isSaved} isGroup={!!c.isGroup} mentionMembers={c.isGroup ? members : undefined} meId={me.id} compact={compact} />
+          <MessageComposer conversationId={c.id} replyTo={replyTo} replyName={replyName} onCancelReply={() => setReplyTo(null)} api={api} inSaved={c.isSaved} isGroup={!!c.isGroup} mentionMembers={c.isGroup ? members : undefined} meId={me.id} compact={compact} allowMentionAll={groupConfig?.can.mentions ?? true} />
         ) : (
           <ComposerLocked status={c.sendStatus} username={c.otherUser?.username} name={c.otherUser?.name} />
         )}
@@ -1059,5 +1104,6 @@ export function ChatView({
       </Modal>
       {viewer && <MediaViewer {...viewer} protect={guard.active} onClose={() => setViewer(null)} />}
     </div>
+    </ChatRulesProvider>
   );
 }

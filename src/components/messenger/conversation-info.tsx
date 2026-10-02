@@ -16,11 +16,13 @@ import {
   Link2,
   Loader2,
   LogOut,
+  MoreHorizontal,
   MoreVertical,
+  PenLine,
   Palette,
   Phone,
   Search,
-  Settings2,
+  Settings,
   Shield,
   Star,
   Timer,
@@ -31,11 +33,13 @@ import {
   X,
 } from "lucide-react";
 import { usePresenceText } from "@/components/presence-picker";
+import type { GroupConfig } from "@/lib/messenger/group-rules";
 import { useSignedUrl } from "@/lib/messenger/media";
 import { formatBytes, formatTime, messagePreview, toDate, URL_PATTERN } from "@/lib/messenger/format";
 import { conversationTitle, isMuted, toMessage, type Attachment, type ChatMessage, type Conversation, type Member } from "@/lib/messenger/types";
 import { useMessenger } from "./context";
 import { AddMembersDialog } from "./dialogs";
+import { ChatLinkDialog, GroupChatSettings } from "./group-chat-settings";
 import { uploadGroupPhoto } from "./new-conversation";
 import { ThemeSelector, WallpaperSelector } from "./theme-selector";
 import { ChatAvatar, ConversationAvatar, GhostButton, MenuItem, Modal, Popover, PrimaryButton } from "./ui";
@@ -391,7 +395,7 @@ function GroupSettingsDialog({ open, onClose, c }: { open: boolean; onClose: () 
     <Modal
       open={open}
       onClose={onClose}
-      title="Configurações do grupo"
+      title="Dados do chat"
       footer={
         <>
           <GhostButton onClick={onClose}>Cancelar</GhostButton>
@@ -448,11 +452,14 @@ function GroupSettingsDialog({ open, onClose, c }: { open: boolean; onClose: () 
   );
 }
 
-function MemberRow({ m, c, onChanged }: { m: Member; c: Conversation; onChanged: () => void }) {
+function MemberRow({ m, c, canPromote, onChanged }: { m: Member; c: Conversation; canPromote: boolean; onChanged: () => void }) {
   const { supabase, me, toast } = useMessenger();
   const [menu, setMenu] = useState(false);
   const isMe = m.id === me.id;
+  const presence = usePresenceText(m.id, m.presence);
   const canManage = !isMe && m.role !== "owner" && (c.role === "owner" || (c.role === "admin" && m.role === "member"));
+  // Dono nomeia e tira admins; um admin só nomeia quando "Adição de administradores" deixa.
+  const canToggleAdmin = c.role === "owner" || (c.role === "admin" && canPromote && m.role === "member");
 
   async function run(fn: () => PromiseLike<{ error: unknown }>, ok: string) {
     setMenu(false);
@@ -472,7 +479,7 @@ function MemberRow({ m, c, onChanged }: { m: Member; c: Conversation; onChanged:
           <span className="block truncate text-sm font-medium text-white">
             {isMe ? "Você" : m.name}
           </span>
-          <span className="block truncate text-xs text-white/40">@{m.username}</span>
+          <span className={clsx("block truncate text-xs", presence.status === "online" ? "text-chat" : "text-white/40")}>{presence.text}</span>
         </span>
       </Link>
       {m.role === "owner" && (
@@ -491,7 +498,7 @@ function MemberRow({ m, c, onChanged }: { m: Member; c: Conversation; onChanged:
             <MoreVertical className="h-4 w-4" />
           </button>
           <Popover open={menu} onClose={() => setMenu(false)} className="right-0 top-full mt-1 w-52">
-            {c.role === "owner" && (
+            {canToggleAdmin && (
               <MenuItem
                 icon={Shield}
                 label={m.role === "admin" ? "Remover admin" : "Tornar admin"}
@@ -528,7 +535,11 @@ export function ConversationInfo({
   onOpenMedia,
   onMembersChanged,
   onLeft,
+  config = null,
+  onConfigChanged,
 }: {
+  config?: GroupConfig | null;
+  onConfigChanged?: () => void;
   c: Conversation;
   members: Member[];
   favoritesVersion: number;
@@ -546,9 +557,16 @@ export function ConversationInfo({
   const [addOpen, setAddOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showAllMembers, setShowAllMembers] = useState(false);
+  const [chatSettingsOpen, setChatSettingsOpen] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [groupMuteOpen, setGroupMuteOpen] = useState(false);
+  const [memberQuery, setMemberQuery] = useState("");
   const muted = isMuted(c);
   const other = c.otherUser;
   const admin = c.role === "owner" || c.role === "admin";
+  // Enquanto a configuração carrega, vale o comportamento padrão (convidar/editar = administradores).
+  const can = config?.can ?? { invite: admin, edit: admin, pin: true, mentions: true, link: true, add_admins: c.role === "owner" };
   const canTtl = !c.isGroup || admin;
   const presence = usePresenceText(other?.id, other?.presence);
 
@@ -634,31 +652,56 @@ export function ConversationInfo({
     );
   }
 
+  const q = memberQuery.trim().toLowerCase();
   const sortedMembers = [...members].sort(
     (a, b) => ["owner", "admin", "member"].indexOf(a.role) - ["owner", "admin", "member"].indexOf(b.role) || a.name.localeCompare(b.name)
   );
+  const visibleMembers = q ? sortedMembers.filter((m) => m.name.toLowerCase().includes(q) || m.username.toLowerCase().includes(q)) : sortedMembers;
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between px-4 pb-1 pt-3">
+    <div className="relative flex h-full min-h-0 flex-col">
+      <div className="flex min-h-[48px] items-center justify-between px-4 pb-1 pt-3">
         <span className="text-sm font-semibold text-white/80">{c.isGroup ? "Informações do grupo" : "Informações do contato"}</span>
-        {onClose && (
-          <button type="button" onClick={onClose} aria-label="Fechar informações" className="rounded-full p-1.5 text-white/50 hover:bg-white/5 hover:text-white">
-            <X className="h-5 w-5" />
-          </button>
-        )}
+        <div className="flex items-center gap-0.5">
+          {/* Só quem administra o chat tem a página de configurações (como no VK). */}
+          {c.isGroup && admin && (
+            <button
+              type="button"
+              onClick={() => setChatSettingsOpen(true)}
+              aria-label="Configurações do chat"
+              title="Configurações do chat"
+              className="rounded-full p-1.5 text-white/60 hover:bg-white/5 hover:text-white"
+            >
+              <Settings className="h-5 w-5" />
+            </button>
+          )}
+          {onClose && (
+            <button type="button" onClick={onClose} aria-label="Fechar informações" className="rounded-full p-1.5 text-white/50 hover:bg-white/5 hover:text-white">
+              <X className="h-5 w-5" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="orbit-scrollbar min-h-0 flex-1 overflow-y-auto pb-6">
         <div className="flex flex-col items-center px-5 pb-5 pt-4 text-center">
           {c.isGroup ? (
-            <ConversationAvatar c={c} size={96} />
+            can.edit && !admin ? (
+              <button type="button" onClick={() => setSettingsOpen(true)} className="relative" aria-label="Alterar foto e nome do chat">
+                <ConversationAvatar c={c} size={96} />
+                <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border-2 border-space-surface bg-chat text-snow">
+                  <PenLine className="h-3.5 w-3.5" />
+                </span>
+              </button>
+            ) : (
+              <ConversationAvatar c={c} size={96} />
+            )
           ) : (
             <ChatAvatar name={other?.name ?? "?"} url={other?.avatarUrl} size={96} frame={other?.avatarFrame} />
           )}
           <h2 className="mt-4 font-display text-xl font-bold text-white">{conversationTitle(c)}</h2>
           {c.isGroup ? (
-            <p className="mt-0.5 text-sm text-white/50">Grupo · {c.memberCount} membros</p>
+            <p className="mt-0.5 text-sm text-white/50">{members.length || c.memberCount} participantes</p>
           ) : (
             <>
               <p className="text-sm text-white/50">@{other?.username}</p>
@@ -669,6 +712,26 @@ export function ConversationInfo({
           )}
           {c.isGroup && c.description && <p className="mt-3 max-w-xs text-sm text-white/65">{c.description}</p>}
 
+          {c.isGroup ? (
+            <div className="mt-5 flex w-full justify-center gap-2">
+              {[
+                ...(can.invite ? [{ icon: UserPlus, label: "Adicionar", onClick: () => setAddOpen(true) }] : []),
+                { icon: muted ? BellOff : Bell, label: muted ? "Silenciado" : "Notificações", onClick: () => setGroupMuteOpen((v) => !v), active: muted },
+                { icon: Search, label: "Busca", onClick: onSearch },
+                { icon: MoreHorizontal, label: "Mais", onClick: () => setMoreOpen((v) => !v) },
+              ].map(({ icon: Icon, label, onClick }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={onClick}
+                  className="flex min-w-0 flex-1 flex-col items-center gap-1.5 rounded-2xl bg-white/[0.04] px-0.5 py-3 text-[11px] font-medium tracking-tight text-white/75 transition hover:bg-chat/10 hover:text-white"
+                >
+                  <Icon className="h-[22px] w-[22px] text-chat" />
+                  <span className="max-w-full truncate">{label}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
           <div className="mt-5 grid w-full grid-cols-3 gap-2">
             {[
               { icon: Phone, label: "Áudio", onClick: () => toast("Chamadas de voz chegam em breve ao ÓrbitaX.") },
@@ -685,12 +748,79 @@ export function ConversationInfo({
               </button>
             ))}
           </div>
+          )}
+          {c.isGroup && (
+            <div className="relative w-full">
+              <Popover open={groupMuteOpen} onClose={() => setGroupMuteOpen(false)} className="left-0 right-0 top-2 text-left">
+                {muted && <MenuItem icon={Bell} label="Reativar notificações" onClick={() => { setGroupMuteOpen(false); mute(null); }} />}
+                <MenuItem icon={BellOff} label="Silenciar por 8 horas" onClick={() => { setGroupMuteOpen(false); mute(8); }} />
+                <MenuItem icon={BellOff} label="Silenciar por 1 semana" onClick={() => { setGroupMuteOpen(false); mute(24 * 7); }} />
+                <MenuItem icon={BellOff} label="Silenciar sempre" onClick={() => { setGroupMuteOpen(false); mute(24 * 365 * 70); }} />
+              </Popover>
+              <Popover open={moreOpen} onClose={() => setMoreOpen(false)} className="left-0 right-0 top-2 text-left">
+                {can.edit && (
+                  <MenuItem icon={PenLine} label="Alterar nome e foto" onClick={() => { setMoreOpen(false); setSettingsOpen(true); }} />
+                )}
+                {admin && <MenuItem icon={Settings} label="Configurações do chat" onClick={() => { setMoreOpen(false); setChatSettingsOpen(true); }} />}
+                <MenuItem
+                  icon={c.archivedAt ? ArchiveRestore : Archive}
+                  label={c.archivedAt ? "Desarquivar conversa" : "Arquivar conversa"}
+                  onClick={() => {
+                    setMoreOpen(false);
+                    setting(
+                      { archived: !c.archivedAt },
+                      { archivedAt: c.archivedAt ? null : new Date().toISOString() },
+                      c.archivedAt ? "Conversa desarquivada." : "Conversa arquivada."
+                    );
+                  }}
+                />
+                <MenuItem icon={LogOut} label="Sair do chat" danger onClick={() => { setMoreOpen(false); setConfirm("leave"); }} />
+              </Popover>
+            </div>
+          )}
           {!c.isGroup && other && (
             <Link href={`/perfil/${other.username}`} className="mt-3 flex items-center gap-1.5 text-sm font-semibold text-chat hover:underline">
               <UserRound className="h-4 w-4" /> Ver perfil
             </Link>
           )}
         </div>
+
+        {c.isGroup && can.link && (
+          <Section>
+            <Row icon={Link2} label="Link para o chat" hint="Convide pessoas com um link" onClick={() => setLinkOpen(true)} />
+          </Section>
+        )}
+
+        {c.isGroup && (
+          <Section title={`Participantes · ${members.length}`}>
+            {members.length > 4 && (
+              <label className="mb-2 flex items-center gap-2 rounded-xl bg-white/[0.05] px-3 py-2">
+                <Search className="h-4 w-4 shrink-0 text-white/40" />
+                <input
+                  value={memberQuery}
+                  onChange={(e) => setMemberQuery(e.target.value)}
+                  placeholder="Buscar participantes"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/35"
+                />
+                {memberQuery && (
+                  <button type="button" onClick={() => setMemberQuery("")} aria-label="Limpar busca" className="text-white/40 hover:text-white">
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </label>
+            )}
+            {can.invite && !q && <Row icon={UserPlus} label="Adicionar participantes" onClick={() => setAddOpen(true)} />}
+            {(showAllMembers || q ? visibleMembers : visibleMembers.slice(0, 8)).map((m) => (
+              <MemberRow key={m.id} m={m} c={c} canPromote={can.add_admins} onChanged={onMembersChanged} />
+            ))}
+            {q && visibleMembers.length === 0 && <p className="py-3 text-center text-xs text-white/40">Ninguém com esse nome no chat.</p>}
+            {!q && sortedMembers.length > 8 && !showAllMembers && (
+              <button type="button" onClick={() => setShowAllMembers(true)} className="mt-1 text-sm font-semibold text-chat hover:underline">
+                Ver todos os {sortedMembers.length}
+              </button>
+            )}
+          </Section>
+        )}
 
         <Section title="Mídia, links e arquivos">
           <SharedContent conversationId={c.id} onOpenMedia={onOpenMedia} onJump={onJump} compact />
@@ -743,25 +873,7 @@ export function ConversationInfo({
           <WallpaperSelector value={c.wallpaper} onChange={(id) => setting({ wallpaper: id }, { wallpaper: id })} />
         </Section>
 
-        {c.isGroup && (
-          <Section title={`Membros · ${members.length}`}>
-            {admin && (
-              <>
-                <Row icon={UserPlus} label="Adicionar pessoas" onClick={() => setAddOpen(true)} />
-                <Row icon={Settings2} label="Configurações do grupo" hint="Nome, foto e descrição" onClick={() => setSettingsOpen(true)} />
-                <div className="my-2 h-px bg-white/[0.06]" />
-              </>
-            )}
-            {(showAllMembers ? sortedMembers : sortedMembers.slice(0, 8)).map((m) => (
-              <MemberRow key={m.id} m={m} c={c} onChanged={onMembersChanged} />
-            ))}
-            {sortedMembers.length > 8 && !showAllMembers && (
-              <button type="button" onClick={() => setShowAllMembers(true)} className="mt-1 text-sm font-semibold text-chat hover:underline">
-                Ver todos os {sortedMembers.length}
-              </button>
-            )}
-          </Section>
-        )}
+
 
         <Section>
           <Row
@@ -822,6 +934,16 @@ export function ConversationInfo({
             }}
           />
           <GroupSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} c={c} />
+          {can.link && <ChatLinkDialog open={linkOpen} onClose={() => setLinkOpen(false)} c={c} />}
+          {admin && chatSettingsOpen && (
+            <GroupChatSettings
+              c={c}
+              config={config}
+              onClose={() => setChatSettingsOpen(false)}
+              onEdit={() => setSettingsOpen(true)}
+              onChanged={() => onConfigChanged?.()}
+            />
+          )}
         </>
       )}
     </div>
