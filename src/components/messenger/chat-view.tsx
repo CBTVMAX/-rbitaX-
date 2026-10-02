@@ -20,7 +20,8 @@ import {
 } from "@/lib/messenger/media";
 import { chatThemeStyle } from "@/lib/messenger/themes";
 import { ensureSavedId, saveMessageToSaved } from "@/lib/messenger/saved";
-import { isWallpaper, wallpaperStyle } from "@/lib/messenger/wallpapers";
+import { defaultWallpaper, isWallpaper, wallpaperStyle } from "@/lib/messenger/wallpapers";
+import { useLightApp } from "@/lib/messenger/use-light-app";
 import { messagePreview, toDate } from "@/lib/messenger/format";
 import {
   conversationTitle,
@@ -90,6 +91,7 @@ export function ChatView({
   jumpToMessageId?: string | null;
 }) {
   const { supabase, me, toast, patchConversation, reloadConversations, savedId, conversations, openConversation } = useMessenger();
+  const lightApp = useLightApp();
   const { refresh: refreshCounts } = useLiveCounts();
   const wide = useMediaQuery("(min-width: 1280px)");
 
@@ -871,8 +873,8 @@ export function ChatView({
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1" style={chatThemeStyle(c.theme)}>
       <section
-        className={clsx("relative flex h-full min-h-0 min-w-0 flex-1 flex-col", !isWallpaper(c.wallpaper) && "chat-space-bg")}
-        style={isWallpaper(c.wallpaper) ? wallpaperStyle(c.wallpaper) : undefined}
+        className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col"
+        style={wallpaperStyle(isWallpaper(c.wallpaper) ? c.wallpaper : defaultWallpaper(lightApp))}
         aria-label={c.isSaved ? "Salvos, seu espaço pessoal" : `Conversa com ${title}`}
       >
         <ChatHeader
