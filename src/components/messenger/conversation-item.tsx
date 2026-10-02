@@ -7,6 +7,8 @@ import { listTime, toDate } from "@/lib/messenger/format";
 import { conversationTitle, isMuted, type Conversation } from "@/lib/messenger/types";
 import { VerifiedBadge } from "@/components/verified-badge";
 import { ConversationAvatar } from "./ui";
+import { typingLabel, useTypingIn } from "@/lib/messenger/typing";
+import { TypingText } from "./typing-dots";
 
 export function DeliveryTicks({
   state,
@@ -45,6 +47,7 @@ export const ConversationItem = memo(function ConversationItem({
   const mine = m?.senderId === meId;
   const unread = c.unread > 0;
   const system = m?.type === "system";
+  const typing = typingLabel(useTypingIn(c.id, meId), c.isGroup);
   const prefix = !m || system || m.deleted ? "" : mine ? "Você: " : c.isGroup ? `${(m.senderName ?? "").split(" ")[0]}: ` : "";
 
   if (c.isSaved) {
@@ -121,6 +124,10 @@ export const ConversationItem = memo(function ConversationItem({
           </span>
         </span>
         <span className="mt-1 flex items-center gap-1.5 lg:mt-0.5">
+          {typing ? (
+            <TypingText label={typing} className="flex-1 text-[15px] lg:text-[13px]" />
+          ) : (
+          <>
           {mine && !system && !m?.deleted && (
             <DeliveryTicks state={lastMessageState(c) ?? "sent"} className="shrink-0 text-white/60" />
           )}
@@ -145,6 +152,8 @@ export const ConversationItem = memo(function ConversationItem({
           {/* Celular: a hora vem depois da prévia ("· 8m"), como no VK */}
           {m && <span className="shrink-0 text-[15px] text-white/40 lg:hidden">· {listTime(m.createdAt)}</span>}
           <span className="flex-1 lg:hidden" />
+          </>
+          )}
           {unread && (
             <span
               className={clsx(

@@ -10,6 +10,8 @@ import { AttachmentMenu, type AttachmentChoice } from "./attachment-menu";
 import { StickerPanel, type PanelTab } from "./sticker-panel";
 import { ChatStickerStore } from "./chat-sticker-store";
 import { ChatAvatar } from "./ui";
+import { useMessenger } from "./context";
+import { sendTyping } from "@/lib/messenger/typing";
 
 /** Opção da lista que aparece ao digitar @ num grupo. */
 type MentionOption = { handle: string; name: string; username: string | null; avatarUrl?: string | null; avatarFrame?: string | null; all?: boolean };
@@ -125,7 +127,10 @@ export function MessageComposer({
   mentionMembers?: Member[];
   meId?: string;
 }) {
+  const { supabase, me } = useMessenger();
   const [text, setText] = useState(() => drafts.get(conversationId) ?? "");
+  // Saiu da conversa (ou trocou de conversa) com o texto pela metade: para de mostrar "digitando".
+  useEffect(() => () => sendTyping(supabase, conversationId, me, false), [supabase, conversationId, me]);
   const [mention, setMention] = useState<{ query: string; start: number } | null>(null);
   const [mentionIdx, setMentionIdx] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -237,6 +242,7 @@ export function MessageComposer({
   }
 
   function submit() {
+    if (!inSaved) sendTyping(supabase, conversationId, me, false);
     if (pending.length) {
       api.media(
         pending.map((p) => p.file),
@@ -594,6 +600,7 @@ export function MessageComposer({
                 value={text}
                 onChange={(e) => {
                   setText(e.target.value);
+                  if (!inSaved) sendTyping(supabase, conversationId, me, e.target.value.trim().length > 0);
                   syncMention(e.target);
                 }}
                 onKeyDown={onKeyDown}

@@ -21,6 +21,8 @@ import {
   X,
 } from "lucide-react";
 import { usePresenceText } from "@/components/presence-picker";
+import { typingLabel, useTypingIn } from "@/lib/messenger/typing";
+import { TypingText } from "./typing-dots";
 import { useOnlineCount } from "@/lib/presence-live";
 import { formatTime, messagePreview, toDate } from "@/lib/messenger/format";
 import { conversationTitle, isMuted, MESSAGE_COLUMNS, toMessage, type ChatMessage, type Conversation, type Member } from "@/lib/messenger/types";
@@ -148,6 +150,7 @@ export function ChatHeader({
   const canAdd = c.isGroup && (c.role === "owner" || c.role === "admin");
   const other = c.otherUser;
   const presence = usePresenceText(c.isGroup ? null : other?.id, other?.presence);
+  const typing = typingLabel(useTypingIn(c.id, me.id), c.isGroup);
   const onlineInGroup = useOnlineCount(c.isGroup ? members.filter((m) => m.id !== me.id).map((m) => m.id) : []);
   const muted = isMuted(c);
   const { startCall } = useCalls();
@@ -226,7 +229,9 @@ export function ChatHeader({
                 {c.messageTtlSeconds && <Timer className="h-3.5 w-3.5 shrink-0 text-white/35" aria-label="Mensagens temporárias" />}
               </span>
               <span className="flex items-center gap-1.5 text-xs text-white/50">
-                {c.isGroup ? (
+                {typing ? (
+                  <TypingText label={typing} className={!compact ? "text-[13px]" : undefined} />
+                ) : c.isGroup ? (
                   <span className="truncate">
                     {c.memberCount} membros{onlineInGroup > 0 && <span className="text-emerald-400"> · {onlineInGroup} online</span>}
                   </span>
