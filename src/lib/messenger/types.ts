@@ -61,6 +61,8 @@ export type MessageMeta = {
   priceCoins?: number;
   recipientId?: string;
   recipientName?: string;
+  /** GIF/imagem enviado de "Meus adesivos": aparece como adesivo (sem balão nem selo GIF). */
+  personalSticker?: boolean;
   sticker?: string;
   /** How to draw the sticker (written by the database from the Sticker row). */
   stickerInfo?: StickerInfo | null;

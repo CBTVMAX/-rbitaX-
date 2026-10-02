@@ -25,6 +25,7 @@ export function StickerPackView({
   favorite: initialFavorite,
   balance: initialBalance,
   categories,
+  onBack,
 }: {
   pack: Pack;
   productId: string;
@@ -34,6 +35,8 @@ export function StickerPackView({
   favorite: boolean;
   balance: number;
   categories: { id: string; name: string; emoji: string }[];
+  /** Dentro do chat: "voltar" volta para a loja na mesma janela, sem trocar de página. */
+  onBack?: () => void;
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -78,7 +81,7 @@ export function StickerPackView({
     setInstalled(true);
     refreshCaches();
     toast(premium ? `Compra concluída: ${pack.name}. Já está no seu chat.` : `${pack.name} adicionado aos seus adesivos.`);
-    router.refresh();
+    if (!onBack) router.refresh();
   }
 
   async function toggleInstalled() {
@@ -165,7 +168,7 @@ export function StickerPackView({
     <div className="mx-auto max-w-5xl px-4 pb-28 pt-3 md:px-6 md:pb-12 md:pt-6">
       <button
         type="button"
-        onClick={() => (window.history.length > 1 ? router.back() : router.push("/loja/adesivos"))}
+        onClick={() => (onBack ? onBack() : window.history.length > 1 ? router.back() : router.push("/loja/adesivos"))}
         className="flex items-center gap-1.5 text-sm text-white/60 transition hover:text-white"
       >
         <ArrowLeft className="h-4 w-4" /> Adesivos
@@ -204,9 +207,15 @@ export function StickerPackView({
           {cats.length > 0 && (
             <div className="relative mt-3 flex flex-wrap gap-1.5">
               {cats.map((c) => (
-                <Link key={c.id} href={`/loja/adesivos?categoria=${c.id}`} className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-white/65 transition hover:text-white">
-                  {c.emoji} {c.name}
-                </Link>
+                onBack ? (
+                  <span key={c.id} className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-white/65">
+                    {c.emoji} {c.name}
+                  </span>
+                ) : (
+                  <Link key={c.id} href={`/loja/adesivos?categoria=${c.id}`} className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-white/65 transition hover:text-white">
+                    {c.emoji} {c.name}
+                  </Link>
+                )
               ))}
             </div>
           )}
@@ -285,10 +294,17 @@ export function StickerPackView({
       </div>
 
       {/* Sticky action on phones, above the tab bar */}
-      <div className="fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-20 flex gap-2 border-t border-white/10 bg-space-surface/95 px-4 py-2.5 backdrop-blur-xl md:hidden">{action}</div>
+      <div
+        className={clsx(
+          "fixed inset-x-0 z-20 flex gap-2 border-t border-white/10 bg-space-surface/95 px-4 py-2.5 backdrop-blur-xl md:hidden",
+          onBack ? "bottom-0 pb-[max(0.625rem,env(safe-area-inset-bottom))]" : "bottom-[calc(4.5rem+env(safe-area-inset-bottom))]"
+        )}
+      >
+        {action}
+      </div>
 
       {big && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm" onClick={() => setBig(null)} role="presentation">
+        <div data-store-dialog className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm" onClick={() => setBig(null)} role="presentation">
           <div className="animate-pop-in w-full max-w-[300px] rounded-3xl border border-white/10 bg-space-surface p-5 text-center shadow-2xl" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={big.label}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={owned ? stickerFileUrl(big) : stickerPreviewUrl(big)} alt={big.label} className="mx-auto h-48 w-48 object-contain" />
@@ -302,7 +318,7 @@ export function StickerPackView({
       )}
 
       {confirm && (
-        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 backdrop-blur-sm md:items-center" onClick={() => setConfirm(false)} role="presentation">
+        <div data-store-dialog className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 backdrop-blur-sm md:items-center" onClick={() => setConfirm(false)} role="presentation">
           <div
             className="animate-sheet-up w-full max-w-sm rounded-t-[28px] border border-white/10 bg-space-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:rounded-3xl"
             onClick={(e) => e.stopPropagation()}
@@ -354,7 +370,7 @@ export function StickerPackView({
       )}
 
       {reporting && (
-        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 backdrop-blur-sm md:items-center" onClick={() => setReporting(false)} role="presentation">
+        <div data-store-dialog className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 backdrop-blur-sm md:items-center" onClick={() => setReporting(false)} role="presentation">
           <div
             className="animate-sheet-up w-full max-w-sm rounded-t-[28px] border border-white/10 bg-space-surface p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:rounded-3xl"
             onClick={(e) => e.stopPropagation()}

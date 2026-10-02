@@ -619,6 +619,27 @@ export function ChatView({
         toast("Não foi possível ler esse GIF.", "error");
       }
     },
+    personalSticker: async (file) => {
+      try {
+        const img = await compressImage(file);
+        const ext = file.type === "image/gif" ? "gif" : "webp";
+        const path = chatFilePath(c.id, me.id, ext);
+        const local = URL.createObjectURL(file);
+        registerLocalUrl(path, local);
+        queue(
+          {
+            type: "gif",
+            content: "",
+            attachments: [{ path, kind: "image", size: file.size, mime: file.type, width: img.width, height: img.height }],
+            meta: { personalSticker: true },
+            uploads: [{ path, blob: file, mime: file.type }],
+          },
+          [local]
+        );
+      } catch {
+        toast("Não foi possível enviar esse adesivo.", "error");
+      }
+    },
     gifReuse: async (a) => {
       const path = chatFilePath(c.id, me.id, "gif");
       try {

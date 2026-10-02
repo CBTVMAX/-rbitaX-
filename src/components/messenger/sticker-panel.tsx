@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { Check, Clock, Flame, ImagePlus, Loader2, Lock, Play, Plus, Search, Send, ShoppingBag, Star, X } from "lucide-react";
+import { Check, Clock, Flame, ImagePlus, Loader2, Lock, Play, Plus, Search, Send, ShoppingBag, Smile, Sparkles, Star, Trash2, Wand2, X } from "lucide-react";
 import { EMOJI_CATEGORIES, recentEmoji, rememberEmoji } from "@/lib/messenger/emoji";
 import {
   loadFavoriteStickers,
@@ -28,6 +28,13 @@ import {
   type Sticker,
 } from "@/lib/stickers/catalog";
 import { useSignedUrl } from "@/lib/messenger/media";
+import {
+  addPersonalSticker,
+  loadPersonalStickers,
+  personalStickerFile,
+  removePersonalSticker,
+  type PersonalSticker,
+} from "@/lib/messenger/personal-stickers";
 import type { Attachment, StickerInfo } from "@/lib/messenger/types";
 import { CoinIcon, formatCoins } from "@/components/coins";
 import { useMessenger } from "./context";
@@ -45,18 +52,57 @@ export function stickerInfo(s: Sticker): StickerInfo {
   return { storage: s.storage, file: s.file, preview: s.preview, format: s.format, w: s.width, h: s.height, size: s.size, label: s.label };
 }
 
-function GifThumb({ a, onPick }: { a: Attachment; onPick: () => void }) {
+function GifThumb({ a, onPick, onMakeSticker }: { a: Attachment; onPick: () => void; onMakeSticker?: (src: string) => void }) {
   const src = useSignedUrl(a.path);
   if (src === "") return null;
   return (
-    <button type="button" onClick={onPick} className="relative aspect-square overflow-hidden rounded-xl bg-white/[0.06] transition hover:opacity-90 active:scale-95" aria-label="Enviar GIF">
-      {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
-      ) : (
-        <span className="block h-full w-full animate-pulse" />
+    <div className="group relative aspect-square">
+      <button type="button" onClick={onPick} className="relative h-full w-full overflow-hidden rounded-xl bg-white/[0.06] transition hover:opacity-90 active:scale-95" aria-label="Enviar GIF">
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt="" loading="lazy" className="h-full w-full object-cover" />
+        ) : (
+          <span className="block h-full w-full animate-pulse" />
+        )}
+      </button>
+      {src && onMakeSticker && (
+        <button
+          type="button"
+          onClick={() => onMakeSticker(src)}
+          aria-label="Transformar em adesivo"
+          title="Transformar em adesivo"
+          className="absolute bottom-1 right-1 flex h-7 items-center gap-1 rounded-full bg-black/60 px-2 text-[10px] font-semibold text-snow backdrop-blur transition hover:bg-orbit-purple/90 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+        >
+          <Wand2 className="h-3 w-3" /> Adesivo
+        </button>
       )}
-    </button>
+    </div>
+  );
+}
+
+/** Um adesivo da própria pessoa: toque envia; lixeira apaga (com confirmação). */
+function PersonalCell({ s, onSend, onRemove }: { s: PersonalSticker; onSend: () => void; onRemove: () => void }) {
+  return (
+    <div className="group relative">
+      <button
+        type="button"
+        onClick={onSend}
+        onContextMenu={(e) => (e.preventDefault(), onRemove())}
+        className="flex aspect-square w-full select-none items-center justify-center rounded-2xl transition hover:bg-white/[0.06] active:scale-90"
+        aria-label="Enviar meu adesivo"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={s.url} alt="" loading="lazy" draggable={false} className="pointer-events-none h-[84%] w-[84%] object-contain" />
+      </button>
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label="Apagar adesivo"
+        className="absolute right-0 top-0 rounded-full p-1 text-white/55 opacity-100 transition hover:text-red-300 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+      >
+        <Trash2 className="h-3.5 w-3.5 drop-shadow" />
+      </button>
+    </div>
   );
 }
 
@@ -177,7 +223,13 @@ export function StickerPanel({
   onClose,
   className,
   tabs,
+  onPersonalSticker,
+  onOpenStore,
 }: {
+  /** Envia um adesivo de "Meus adesivos" (sem isso, a seção não aparece — ex.: comentários). */
+  onPersonalSticker?: (file: File) => void;
+  /** Abre a loja por cima da conversa; sem isso, vai para a página da loja. */
+  onOpenStore?: (packId?: string) => void;
   /** Abas visíveis (ex.: comentários não têm GIF). Padrão: todas. */
   tabs?: PanelTab[];
   onEmoji: (emoji: string) => void;
@@ -208,7 +260,12 @@ export function StickerPanel({
   const [results, setResults] = useState<{ packIds: string[]; stickers: Sticker[] } | null>(null);
   const [preview, setPreview] = useState<Sticker | null>(null);
   const [busy, setBusy] = useState(false);
+  const [personal, setPersonal] = useState<PersonalSticker[] | null>(null);
+  const [draft, setDraft] = useState<{ file: File; url: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState<PersonalSticker | null>(null);
   const gifInput = useRef<HTMLInputElement>(null);
+  const stickerInput = useRef<HTMLInputElement>(null);
   const body = useRef<HTMLDivElement>(null);
 
   useEffect(() => setTab(initialTab === ("figurinhas" as PanelTab) ? "stickers" : initialTab), [initialTab]);
@@ -242,12 +299,24 @@ export function StickerPanel({
 
   // Lazy: a pack's stickers load only when its tab is opened.
   useEffect(() => {
-    if (tab !== "stickers" || section === "recentes" || section === "populares" || packStickers[section]) return;
+    if (tab !== "stickers" || section === "recentes" || section === "populares" || section === "meus" || packStickers[section]) return;
     loadPackStickers(supabase, section).then(
       (list) => setPackStickers((m) => ({ ...m, [section]: list })),
       () => setPackStickers((m) => ({ ...m, [section]: [] }))
     );
   }, [tab, section, packStickers, supabase]);
+
+  useEffect(() => {
+    if (!onPersonalSticker || personal !== null || (section !== "meus" && tab !== "gif")) return;
+    loadPersonalStickers(supabase, me.id).then(setPersonal, () => setPersonal([]));
+  }, [onPersonalSticker, personal, section, tab, supabase, me.id]);
+
+  useEffect(
+    () => () => {
+      if (draft) URL.revokeObjectURL(draft.url);
+    },
+    [draft]
+  );
 
   useEffect(() => {
     if (section === "populares" && popular === null)
@@ -341,7 +410,63 @@ export function StickerPanel({
     }
   }
 
-  const openStore = (packId?: string) => router.push(packId ? `/loja/adesivos/${packId}` : "/loja/adesivos");
+  const openStore = (packId?: string) => (onOpenStore ? onOpenStore(packId) : router.push(packId ? `/loja/adesivos/${packId}` : "/loja/adesivos"));
+
+  function pickSticker(file: File | undefined) {
+    if (!file) return;
+    setDraft({ file, url: URL.createObjectURL(file) });
+  }
+
+  async function saveDraft(sendToo: boolean) {
+    if (!draft || saving) return;
+    setSaving(true);
+    try {
+      const st = await addPersonalSticker(supabase, me.id, draft.file);
+      setPersonal((l) => [st, ...(l ?? []).filter((x) => x.path !== st.path)]);
+      setDraft(null);
+      setTab("stickers");
+      setSection("meus");
+      if (sendToo && onPersonalSticker) onPersonalSticker(await personalStickerFile(st));
+      else toast("Adesivo salvo em Meus adesivos.");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Não foi possível salvar o adesivo.", "error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function gifToSticker(src: string) {
+    try {
+      const res = await fetch(src);
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      setDraft({ file: new File([blob], "adesivo.gif", { type: blob.type || "image/gif" }), url: URL.createObjectURL(blob) });
+    } catch {
+      toast("Esse GIF não está mais disponível.", "error");
+    }
+  }
+
+  async function sendPersonal(st: PersonalSticker) {
+    if (!onPersonalSticker) return;
+    try {
+      onPersonalSticker(await personalStickerFile(st));
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Não foi possível enviar.", "error");
+    }
+  }
+
+  async function confirmRemove() {
+    if (!removing) return;
+    try {
+      await removePersonalSticker(supabase, me.id, removing);
+      setPersonal((l) => (l ?? []).filter((x) => x.path !== removing.path));
+      toast("Adesivo apagado.");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Não foi possível apagar.", "error");
+    } finally {
+      setRemoving(null);
+    }
+  }
 
   let list: Sticker[] | null = null;
   let title = "";
@@ -364,6 +489,9 @@ export function StickerPanel({
       list = popular;
       title = "Populares no ÓrbitaX";
       emptyText = "Os adesivos mais enviados da semana aparecem aqui.";
+    } else if (section === "meus") {
+      list = [];
+      title = "";
     } else {
       currentPack = byId.get(section);
       list = packStickers[section] ?? null;
@@ -384,7 +512,7 @@ export function StickerPanel({
       )}
       role="dialog"
       aria-label="Emojis, adesivos e GIFs"
-      onKeyDown={(e) => e.key === "Escape" && (preview ? setPreview(null) : onClose?.())}
+      onKeyDown={(e) => e.key === "Escape" && (draft ? setDraft(null) : removing ? setRemoving(null) : preview ? setPreview(null) : onClose?.())}
     >
       <button type="button" onClick={onClose} aria-label="Fechar" className="mx-auto mt-2 block h-1.5 w-10 shrink-0 rounded-full bg-white/20 transition hover:bg-white/35 md:hidden" />
 
@@ -450,6 +578,7 @@ export function StickerPanel({
           {[
             { id: "recentes", label: "Recentes", Icon: Clock },
             { id: "populares", label: "Populares", Icon: Flame },
+            ...(onPersonalSticker ? [{ id: "meus", label: "Meus adesivos", Icon: Smile }] : []),
           ].map(({ id, label, Icon }) => (
             <button
               key={id}
@@ -569,6 +698,15 @@ export function StickerPanel({
             >
               <ImagePlus className="h-4 w-4" /> Enviar GIF do aparelho
             </button>
+            {onPersonalSticker && (
+              <button
+                type="button"
+                onClick={() => stickerInput.current?.click()}
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-orbit-gradient py-3 text-sm font-semibold text-snow shadow-[0_8px_22px_rgb(var(--app-accent,139_92_246)/0.35)] transition hover:brightness-110"
+              >
+                <Sparkles className="h-4 w-4" /> Transformar GIF em adesivo
+              </button>
+            )}
             <p className="mb-2 mt-4 text-[11px] font-semibold uppercase tracking-wider text-white/40">GIFs das suas conversas</p>
             {gifs === null ? (
               <div className="flex justify-center py-6">
@@ -579,14 +717,62 @@ export function StickerPanel({
             ) : (
               <div className="grid grid-cols-3 gap-1.5">
                 {gifs.map((a) => (
-                  <GifThumb key={a.path} a={a} onPick={() => onGifReuse(a)} />
+                  <GifThumb key={a.path} a={a} onPick={() => onGifReuse(a)} onMakeSticker={onPersonalSticker ? gifToSticker : undefined} />
                 ))}
               </div>
             )}
           </div>
         )}
 
-        {(tab === "stickers" || tab === "favoritos" || searching) && (
+        <input
+          ref={stickerInput}
+          type="file"
+          accept="image/gif,image/png,image/webp,image/jpeg"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            pickSticker(f);
+          }}
+        />
+
+        {tab === "stickers" && section === "meus" && !searching && (
+          <div className="px-0.5">
+            <div className="mb-1.5 flex items-center justify-between gap-2 px-1.5">
+              <span className="text-[13px] font-semibold text-white/85">Meus adesivos</span>
+              <span className="text-[11px] text-white/40">GIF vira adesivo animado</span>
+            </div>
+            {personal === null ? (
+              <div className="grid grid-cols-4 gap-1">
+                {Array.from({ length: 8 }, (_, i) => (
+                  <span key={i} className="aspect-square animate-pulse rounded-2xl bg-white/[0.04]" />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 gap-1">
+                <button
+                  type="button"
+                  onClick={() => stickerInput.current?.click()}
+                  className="flex aspect-square flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-white/20 text-white/60 transition hover:border-chat/60 hover:bg-chat/10 hover:text-white"
+                >
+                  <Plus className="h-5 w-5" />
+                  <span className="text-[10px] font-semibold">Criar</span>
+                </button>
+                {personal.map((st) => (
+                  <PersonalCell key={st.path} s={st} onSend={() => sendPersonal(st)} onRemove={() => setRemoving(st)} />
+                ))}
+              </div>
+            )}
+            {personal?.length === 0 && (
+              <p className="px-6 pb-4 pt-5 text-center text-xs leading-relaxed text-white/45">
+                Toque em <strong className="text-white/70">Criar</strong> e escolha um GIF ou uma foto. Ele vira seu adesivo, fica salvo na sua conta e aparece aqui em qualquer aparelho.
+                Na aba GIFs, toque em <strong className="text-white/70">Adesivo</strong> num GIF da conversa para transformar.
+              </p>
+            )}
+          </div>
+        )}
+
+        {(tab === "stickers" || tab === "favoritos" || searching) && !(tab === "stickers" && section === "meus" && !searching) && (
           <>
             {searching && results && results.packIds.length > 0 && (
               <div className="mb-2 flex gap-1.5 overflow-x-auto px-1 [scrollbar-width:none]">
@@ -646,6 +832,47 @@ export function StickerPanel({
           </>
         )}
       </div>
+
+      {/* Criar adesivo: prévia do GIF/foto antes de salvar */}
+      {draft && (
+        <div className="animate-pop-in absolute inset-0 z-20 flex items-center justify-center bg-space-surface/90 p-5 backdrop-blur-md" onClick={() => !saving && setDraft(null)}>
+          <div className="w-full max-w-[300px] rounded-3xl border border-white/10 bg-space-surface p-4 text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm font-semibold text-white">Novo adesivo</p>
+            <span className="mx-auto mt-3 flex h-40 w-40 items-center justify-center rounded-2xl bg-[conic-gradient(rgb(255_255_255/0.06)_25%,transparent_0_50%,rgb(255_255_255/0.06)_0_75%,transparent_0)] bg-[length:16px_16px]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={draft.url} alt="" className="max-h-full max-w-full object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.4)]" />
+            </span>
+            <p className="mt-2 text-[11px] text-white/45">{draft.file.type === "image/gif" ? "Vai continuar animado." : "Vira um adesivo leve, com fundo transparente se a imagem tiver."}</p>
+            <div className="mt-3 flex gap-2">
+              <button type="button" disabled={saving} onClick={() => saveDraft(false)} className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-white/15 py-2 text-xs font-semibold text-white/85 transition hover:bg-white/5 disabled:opacity-60">
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Salvar
+              </button>
+              <button type="button" disabled={saving} onClick={() => saveDraft(true)} className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-orbit-gradient py-2 text-xs font-semibold text-snow disabled:opacity-60">
+                <Send className="h-3.5 w-3.5" /> Salvar e enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {removing && (
+        <div className="animate-pop-in absolute inset-0 z-20 flex items-center justify-center bg-space-surface/90 p-5 backdrop-blur-md" onClick={() => setRemoving(null)}>
+          <div className="w-full max-w-[280px] rounded-3xl border border-white/10 bg-space-surface p-4 text-center shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={removing.url} alt="" className="mx-auto h-24 w-24 object-contain" />
+            <p className="mt-2 text-sm font-semibold text-white">Apagar este adesivo?</p>
+            <p className="mt-1 text-[11px] text-white/45">Ele sai de Meus adesivos. As mensagens já enviadas continuam.</p>
+            <div className="mt-3 flex gap-2">
+              <button type="button" onClick={() => setRemoving(null)} className="flex-1 rounded-full border border-white/15 py-2 text-xs font-semibold text-white/85 hover:bg-white/5">
+                Cancelar
+              </button>
+              <button type="button" onClick={confirmRemove} className="flex-1 rounded-full bg-red-500 py-2 text-xs font-semibold text-snow hover:bg-red-500/90">
+                Apagar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Big preview: long press (phones) or right click */}
       {preview && (

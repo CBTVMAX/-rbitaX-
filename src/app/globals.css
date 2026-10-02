@@ -265,3 +265,19 @@ html[data-app-theme] body {
     animation: none;
   }
 }
+
+/* Arte que flutua devagar (destaque da Loja de Adesivos). */
+@keyframes ox-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(2deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[ox-float_5s_ease-in-out_infinite\] {
+    animation: none;
+  }
+}

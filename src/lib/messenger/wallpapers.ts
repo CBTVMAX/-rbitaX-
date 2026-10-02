@@ -12,12 +12,29 @@ export const WALLPAPERS = [
   { id: "aneis", label: "Anéis" },
 ] as const;
 
+/**
+ * Foto da própria pessoa como papel de parede: "custom:<id>/wallpapers/<arquivo>" no bucket público
+ * "media". Só quem escolheu vê (a escolha fica na configuração da conversa de cada um).
+ */
+const CUSTOM = /^custom:([0-9a-f-]{36}\/wallpapers\/[0-9a-f-]{36}\.(?:webp|jpg))$/;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+
+export function isCustomWallpaper(id: string | null | undefined): id is string {
+  return !!id && CUSTOM.test(id);
+}
+
+export function customWallpaperId(path: string) {
+  return `custom:${path}`;
+}
+
 export function wallpaperSrc(id: string, thumb = false) {
+  const custom = id.match(CUSTOM);
+  if (custom) return `${SUPABASE_URL}/storage/v1/object/public/media/${custom[1]}`;
   return `/wallpapers/${id}${thumb ? "-s" : ""}.webp`;
 }
 
 export function isWallpaper(id: string | null | undefined): id is string {
-  return !!id && WALLPAPERS.some((w) => w.id === id);
+  return !!id && (WALLPAPERS.some((w) => w.id === id) || CUSTOM.test(id));
 }
 
 /**
@@ -35,7 +52,10 @@ export function wallpaperStyle(id: string): CSSProperties {
     colorScheme: "dark",
     color: "rgb(229 231 245)",
     backgroundColor: "rgb(5 6 15)",
-    backgroundImage: `linear-gradient(180deg, rgb(5 6 15 / 0.35) 0%, rgb(5 6 15 / 0.18) 40%, rgb(5 6 15 / 0.45) 100%), url(${wallpaperSrc(id)})`,
+    // Foto própria pode ser clara: um véu um pouco mais forte mantém as mensagens legíveis.
+    backgroundImage: isCustomWallpaper(id)
+      ? `linear-gradient(180deg, rgb(5 6 15 / 0.5) 0%, rgb(5 6 15 / 0.32) 40%, rgb(5 6 15 / 0.58) 100%), url("${wallpaperSrc(id)}")`
+      : `linear-gradient(180deg, rgb(5 6 15 / 0.35) 0%, rgb(5 6 15 / 0.18) 40%, rgb(5 6 15 / 0.45) 100%), url(${wallpaperSrc(id)})`,
     backgroundSize: "cover",
     backgroundPosition: "center",
   } as CSSProperties;

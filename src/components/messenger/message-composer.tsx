@@ -8,6 +8,7 @@ import { formatDuration, messagePreview } from "@/lib/messenger/format";
 import type { Attachment, ChatMessage, Member, SendStatus, StickerInfo } from "@/lib/messenger/types";
 import { AttachmentMenu, type AttachmentChoice } from "./attachment-menu";
 import { StickerPanel, type PanelTab } from "./sticker-panel";
+import { ChatStickerStore } from "./chat-sticker-store";
 import { ChatAvatar } from "./ui";
 
 /** Opção da lista que aparece ao digitar @ num grupo. */
@@ -31,6 +32,8 @@ export type ComposerApi = {
   voice: (blob: Blob, mime: string) => void;
   gif: (file: File) => void;
   gifReuse: (a: Attachment) => void;
+  /** Adesivo criado pela própria pessoa (Meus adesivos). */
+  personalSticker: (file: File) => void;
   sticker: (id: string, info?: StickerInfo | null) => void;
   openPoll: () => void;
   openLocation: () => void;
@@ -124,6 +127,9 @@ export function MessageComposer({
   const [mentionIdx, setMentionIdx] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [panel, setPanel] = useState<null | PanelTab>(null);
+  // Loja de adesivos aberta por cima da conversa (undefined = fechada; null = início da loja).
+  const [store, setStore] = useState<string | null | undefined>(undefined);
+  const [panelKey, setPanelKey] = useState(0);
   const [diceOpen, setDiceOpen] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const [pending, setPending] = useState<{ file: File; url: string }[]>([]);
@@ -416,6 +422,7 @@ export function MessageComposer({
       {panel && (
         <div className={clsx("animate-sheet-up absolute bottom-full left-0 right-0", !compact && "md:bottom-full md:left-auto md:right-4 md:mb-2 md:w-[400px]")}>
           <StickerPanel
+            key={panelKey}
             initialTab={panel}
             onTabChange={(t) => (lastTab = t)}
             onClose={() => setPanel(null)}
@@ -432,8 +439,24 @@ export function MessageComposer({
               setPanel(null);
               api.gifReuse(a);
             }}
+            onPersonalSticker={(file) => {
+              setPanel(null);
+              api.personalSticker(file);
+            }}
+            onOpenStore={(packId) => setStore(packId ?? null)}
           />
         </div>
+      )}
+
+      {store !== undefined && (
+        <ChatStickerStore
+          initialPack={store}
+          onClose={() => {
+            setStore(undefined);
+            // O painel recarrega os packs (um pack comprado/adicionado já aparece).
+            setPanelKey((k) => k + 1);
+          }}
+        />
       )}
 
       {replyTo && (
