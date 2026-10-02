@@ -162,8 +162,8 @@ export function ChatHeader({
         "relative z-20 flex shrink-0 items-center gap-1 backdrop-blur-xl",
         compact
           ? "h-14 border-b border-white/10 bg-space-surface/75 px-1.5"
-          : // Celular: cartão flutuante arredondado (como no app); computador: barra.
-            "min-h-[68px] border-b border-white/[0.06] bg-[rgb(var(--chat-bar)/0.95)] px-1.5 pt-[env(safe-area-inset-top)] lg:h-16 lg:min-h-0 lg:border-white/10 lg:bg-space-surface/75 lg:px-4 md:gap-2"
+          : // Barra sólida (celular e computador, como no app).
+            "min-h-[68px] border-b border-white/[0.06] bg-[rgb(var(--chat-bar)/0.95)] px-1.5 pt-[env(safe-area-inset-top)] lg:min-h-[64px] lg:px-3 md:gap-2"
       )}
     >
       {showBack && (
@@ -214,13 +214,13 @@ export function ChatHeader({
                   <ConversationAvatar c={c} size={52} ringClass="border-space-surface" />
                 </span>
                 <span className="hidden lg:block">
-                  <ConversationAvatar c={c} size={42} ringClass="border-space-surface" />
+                  <ConversationAvatar c={c} size={46} ringClass="border-space-surface" />
                 </span>
               </>
             )}
             <span className="min-w-0">
               <span className="flex items-center gap-1.5">
-                <span className={clsx("truncate font-semibold text-white", compact ? "text-[15px]" : "text-[17px] lg:text-[15px]")}>{conversationTitle(c)}</span>
+                <span className={clsx("truncate font-semibold text-white", compact ? "text-[15px]" : "text-[17px] lg:text-[16px]")}>{conversationTitle(c)}</span>
                 {!c.isGroup && other?.isVerified && <VerifiedBadge />}
                 {muted && <BellOff className="h-3.5 w-3.5 shrink-0 text-white/35" aria-label="Silenciada" />}
                 {c.messageTtlSeconds && <Timer className="h-3.5 w-3.5 shrink-0 text-white/35" aria-label="Mensagens temporárias" />}
@@ -232,9 +232,9 @@ export function ChatHeader({
                   </span>
                 ) : (
                   <>
-                    <span className={clsx("truncate", !compact && "hidden lg:inline")}>@{other?.username}</span>
-                    <span className={clsx("text-white/25", !compact && "hidden lg:inline")}>·</span>
-                    <span className={clsx("flex min-w-0 items-center gap-1", !compact && "text-[13px] lg:text-xs", presence.color)}>
+                    <span className={clsx("truncate", !compact && "hidden")}>@{other?.username}</span>
+                    <span className={clsx("text-white/25", !compact && "hidden")}>·</span>
+                    <span className={clsx("flex min-w-0 items-center gap-1", !compact && "text-[13px]", presence.color)}>
                       <span className={clsx("h-1.5 w-1.5 shrink-0 rounded-full", presence.dot)} />
                       <span className="truncate">{presence.text}</span>
                     </span>
