@@ -126,6 +126,9 @@ export default async function CommunityPage(
   }
 
   const contacts = canSee ? await loadCommunityContacts(supabase, community.id) : null;
+  // Aba "Fichas" aparece quando a comunidade publicou a ficha (antes da migração, a função não existe).
+  const sheetInfo = canSee && me ? await supabase.rpc("sheet_template_get" as never, { p_community: community.id } as never) : null;
+  const hasSheets = !!(sheetInfo && !sheetInfo.error && (sheetInfo.data as { published?: unknown } | null)?.published);
 
   return (
     <CommunityShell current={current}>
@@ -147,6 +150,7 @@ export default async function CommunityPage(
         canAsCommunity={canAsCommunity}
         customTabs={customTabs}
         contacts={contacts}
+        hasSheets={hasSheets}
       />
     </CommunityShell>
   );

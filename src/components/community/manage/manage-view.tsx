@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { Activity, AlertTriangle, ArrowLeft, BarChart3, Bell, CalendarDays, ChevronRight, Contact, Download, Drama, FileStack, Hash, KeyRound, LayoutGrid, Lock, Palette, ScrollText, Settings2, ShieldAlert, Sparkles, UserCog, Users } from "lucide-react";
+import { Activity, AlertTriangle, ArrowLeft, BarChart3, Bell, CalendarDays, ChevronRight, Contact, Download, Drama, FileStack, FileText, Hash, KeyRound, LayoutGrid, Lock, Palette, ScrollText, Settings2, ShieldAlert, Sparkles, UserCog, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useStoreToast } from "@/components/store/store-view";
 import { accentOf, rank, type Community, type Role, type Viewer } from "@/lib/communities";
@@ -30,12 +30,12 @@ import { ActivitySection } from "./activity";
 import { WelcomeSection } from "./welcome";
 import { ContactsSection } from "./contacts";
 
-type Section = "geral" | "contatos" | "personalizacao" | "privacidade" | "conteudo" | "abas" | "assuntos" | "rpg" | "boasvindas" | "eventos" | "membros" | "equipe" | "permissoes" | "moderacao" | "notificacoes" | "atividade" | "estatisticas" | "downloads" | "registro" | "perigo";
+type Section = "geral" | "contatos" | "fichas" | "personalizacao" | "privacidade" | "conteudo" | "abas" | "assuntos" | "rpg" | "boasvindas" | "eventos" | "membros" | "equipe" | "permissoes" | "moderacao" | "notificacoes" | "atividade" | "estatisticas" | "downloads" | "registro" | "perigo";
 
 // Grupos como no "Gerenciar" do VK (Principal, Conteúdo, Comunicação, Membros, Avançado).
 const GROUP_OF: Record<Section, string> = {
   geral: "Principal", personalizacao: "Principal", privacidade: "Principal", abas: "Principal", assuntos: "Principal", boasvindas: "Principal", estatisticas: "Principal", atividade: "Principal",
-  conteudo: "Conteúdo", eventos: "Conteúdo", rpg: "Conteúdo", downloads: "Conteúdo",
+  conteudo: "Conteúdo", eventos: "Conteúdo", rpg: "Conteúdo", downloads: "Conteúdo", fichas: "Conteúdo",
   notificacoes: "Comunicação", moderacao: "Comunicação",
   membros: "Membros", equipe: "Membros", permissoes: "Membros", contatos: "Membros",
   registro: "Avançado", perigo: "Avançado",
@@ -49,6 +49,7 @@ const SECTIONS: { id: Section; label: string; desc: string; icon: React.Componen
   { id: "conteudo", label: "Conteúdo", desc: "Fixados, publicações e discussões", icon: FileStack, min: 2 },
   { id: "abas", label: "Abas do mural", desc: "Organize o conteúdo em abas e por hashtag", icon: LayoutGrid, min: 3 },
   { id: "assuntos", label: "Assuntos e hashtag", desc: "Sufixo da comunidade e nomes (ator/personagem) pesquisáveis", icon: Hash, min: 3 },
+  { id: "fichas", label: "Construtor de ficha", desc: "Monte a ficha que os membros preenchem e aprove as enviadas", icon: FileText, min: 3 },
   { id: "rpg", label: "RPG / Fichas", desc: "Ativar personagens, campos da ficha e aprovação", icon: Drama, min: 3 },
   { id: "boasvindas", label: "Boas-vindas e regras", desc: "Mensagem de entrada, regras e mensagem coletiva", icon: Sparkles, min: 3 },
   { id: "eventos", label: "Eventos", desc: "Criar, editar, cancelar e excluir", icon: CalendarDays, min: 3 },
@@ -121,6 +122,25 @@ export function ManageView(props: {
       break;
     case "contatos":
       content = <ContactsSection />;
+      break;
+    case "fichas":
+      content = (
+        <section className="space-y-3 rounded-3xl border border-white/[0.08] bg-space-card/70 p-4 md:p-5">
+          <h2 className="text-[15px] font-semibold text-white">Construtor de ficha</h2>
+          <p className="text-sm text-white/60">
+            Monte a ficha da comunidade do seu jeito: seções, perguntas, opções, atributos com pontos, campos de imagem, textos fixos e campos que só o narrador
+            preenche. Depois de publicar, os membros encontram em Comunidade → Fichas → Criar minha ficha.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`${base}/fichas/construtor`} className="flex h-11 items-center gap-2 rounded-full bg-orbit-gradient px-5 text-sm font-semibold text-snow shadow-glow">
+              Abrir o Construtor de ficha
+            </Link>
+            <Link href={`${base}/fichas`} className="flex h-11 items-center gap-2 rounded-full border border-white/15 px-5 text-sm font-semibold text-white/85">
+              Ver fichas enviadas
+            </Link>
+          </div>
+        </section>
+      );
       break;
     case "eventos":
       content = <EventsSection />;

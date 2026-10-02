@@ -9,6 +9,7 @@ import {
   AlignLeft,
   ArrowLeft,
   AtSign,
+  FileText,
   Images,
   Megaphone,
   Sparkles,
@@ -53,12 +54,13 @@ export type MemberPreview = { role: Role; createdAt: string; user: { id: string;
 const TAB_IDS: ContentTab[] = ["tudo", "posts", "fotos", "videos", "clipes", "musica", "gifs", "arquivos"];
 
 /** Abas da comunidade no estilo VK: Início, Discussões, Avisos… numa barra rolável, cada uma abre a página. */
-function Highlights({ slug, counts, isRpg, staff }: { slug: string; counts: { announcements: number; discussions: number; events: number } & ContentCounts; isRpg?: boolean; staff?: boolean }) {
+function Highlights({ slug, counts, isRpg, staff, sheets }: { slug: string; counts: { announcements: number; discussions: number; events: number } & ContentCounts; isRpg?: boolean; staff?: boolean; sheets?: boolean }) {
   const base = `/comunidades/${slug}`;
   const items: { href: string; label: string; count?: number }[] = [
     { href: base, label: "Início" },
     { href: `${base}/discussoes`, label: "Discussões", count: counts.discussions },
     { href: `${base}/avisos`, label: "Avisos", count: counts.announcements },
+    ...(sheets || staff ? [{ href: `${base}/fichas`, label: "Fichas" }] : []),
     ...(isRpg ? [{ href: `${base}/personagens`, label: "Personagens" }] : []),
     { href: `${base}/eventos`, label: "Eventos", count: counts.events },
     { href: `${base}/chats`, label: "Bate-papos" },
@@ -212,6 +214,8 @@ export function CommunityView(props: {
   customTabs: { id: string; name: string }[];
   /** Contatos com cargo livre; null enquanto a migração não rodou (aí mostramos a equipe). */
   contacts?: CommunityContact[] | null;
+  /** A comunidade publicou a ficha (Construtor de Ficha). */
+  hasSheets?: boolean;
 }) {
   const { community, viewer, membership, canSee } = props;
   const router = useRouter();
@@ -467,6 +471,7 @@ function Hub(p: HubProps) {
 
   const sectionTiles: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { href: `${base}/discussoes`, label: "Discussões", icon: MessagesSquare },
+    ...(p.hasSheets ? [{ href: `${base}/fichas`, label: "Fichas", icon: FileText }] : []),
     { href: `${base}/avisos`, label: "Avisos", icon: Megaphone },
     { href: `${base}/chats`, label: "Bate-papos", icon: MessageSquareText },
     { href: `${base}/eventos`, label: "Eventos", icon: CalendarDays },
@@ -652,7 +657,7 @@ function Hub(p: HubProps) {
             </button>
           </section>
         )}
-        {canSee && <Highlights slug={community.slug} counts={p.counts} isRpg={community.isRpg} staff={rank(role) >= 3} />}
+        {canSee && <Highlights slug={community.slug} counts={p.counts} isRpg={community.isRpg} staff={rank(role) >= 3} sheets={p.hasSheets} />}
         {canSee && <StoriesStrip canSee={canSee} />}
       </div>
       <div className="mx-auto mt-4 max-w-6xl px-4 pb-10 md:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:px-10">
