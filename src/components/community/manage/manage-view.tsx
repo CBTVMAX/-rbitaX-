@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { Activity, AlertTriangle, ArrowLeft, BarChart3, Bell, CalendarDays, ChevronRight, Download, Drama, FileStack, Hash, KeyRound, LayoutGrid, Lock, Palette, ScrollText, Settings2, ShieldAlert, Sparkles, UserCog, Users } from "lucide-react";
+import { Activity, AlertTriangle, ArrowLeft, BarChart3, Bell, CalendarDays, ChevronRight, Contact, Download, Drama, FileStack, Hash, KeyRound, LayoutGrid, Lock, Palette, ScrollText, Settings2, ShieldAlert, Sparkles, UserCog, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useStoreToast } from "@/components/store/store-view";
 import { accentOf, rank, type Community, type Role, type Viewer } from "@/lib/communities";
@@ -28,15 +28,16 @@ import { RpgSection } from "./rpg";
 import { DownloadsSection } from "./downloads";
 import { ActivitySection } from "./activity";
 import { WelcomeSection } from "./welcome";
+import { ContactsSection } from "./contacts";
 
-type Section = "geral" | "personalizacao" | "privacidade" | "conteudo" | "abas" | "assuntos" | "rpg" | "boasvindas" | "eventos" | "membros" | "equipe" | "permissoes" | "moderacao" | "notificacoes" | "atividade" | "estatisticas" | "downloads" | "registro" | "perigo";
+type Section = "geral" | "contatos" | "personalizacao" | "privacidade" | "conteudo" | "abas" | "assuntos" | "rpg" | "boasvindas" | "eventos" | "membros" | "equipe" | "permissoes" | "moderacao" | "notificacoes" | "atividade" | "estatisticas" | "downloads" | "registro" | "perigo";
 
 // Grupos como no "Gerenciar" do VK (Principal, Conteúdo, Comunicação, Membros, Avançado).
 const GROUP_OF: Record<Section, string> = {
   geral: "Principal", personalizacao: "Principal", privacidade: "Principal", abas: "Principal", assuntos: "Principal", boasvindas: "Principal", estatisticas: "Principal", atividade: "Principal",
   conteudo: "Conteúdo", eventos: "Conteúdo", rpg: "Conteúdo", downloads: "Conteúdo",
   notificacoes: "Comunicação", moderacao: "Comunicação",
-  membros: "Membros", equipe: "Membros", permissoes: "Membros",
+  membros: "Membros", equipe: "Membros", permissoes: "Membros", contatos: "Membros",
   registro: "Avançado", perigo: "Avançado",
 };
 const GROUP_ORDER = ["Principal", "Conteúdo", "Comunicação", "Membros", "Avançado"];
@@ -52,6 +53,7 @@ const SECTIONS: { id: Section; label: string; desc: string; icon: React.Componen
   { id: "boasvindas", label: "Boas-vindas e regras", desc: "Mensagem de entrada, regras e mensagem coletiva", icon: Sparkles, min: 3 },
   { id: "eventos", label: "Eventos", desc: "Criar, editar, cancelar e excluir", icon: CalendarDays, min: 3 },
   { id: "membros", label: "Membros", desc: "Cargos, pedidos, bloqueados e removidos", icon: Users, min: 2 },
+  { id: "contatos", label: "Contatos", desc: "Quem aparece em Contatos e com qual cargo", icon: Contact, min: 3 },
   { id: "equipe", label: "Equipe e cargos", desc: "Cargos personalizados, atribuições e permissões", icon: UserCog, min: 3 },
   { id: "permissoes", label: "Permissões", desc: "Quem pode publicar, comentar, enviar mídia…", icon: KeyRound, min: 3 },
   { id: "moderacao", label: "Moderação", desc: "Filtros, aprovações e denúncias", icon: ShieldAlert, min: 2 },
@@ -116,6 +118,9 @@ export function ManageView(props: {
           onSaved={(p) => setCommunity((c) => ({ ...c, ...p, category: p.category ?? c.category }))}
         />
       );
+      break;
+    case "contatos":
+      content = <ContactsSection />;
       break;
     case "eventos":
       content = <EventsSection />;

@@ -45,6 +45,7 @@ import { StoriesStrip } from "./stories";
 import { useTimeZone } from "@/lib/use-tz";
 import { DateBadge, eventLive, eventWhen, type CommunityEvent } from "./events";
 import { MutedNotice } from "./subpage";
+import type { CommunityContact } from "@/lib/community-contacts";
 import { EmptyState, OfficialBadge, RoleBadge, Sheet } from "./ui";
 
 export type MemberPreview = { role: Role; createdAt: string; user: { id: string; name: string; username: string; avatarUrl: string | null; isVerified: boolean } };
@@ -209,6 +210,8 @@ export function CommunityView(props: {
   staffBadges: { pending: number; requests: number; reports: number };
   canAsCommunity: boolean;
   customTabs: { id: string; name: string }[];
+  /** Contatos com cargo livre; null enquanto a migração não rodou (aí mostramos a equipe). */
+  contacts?: CommunityContact[] | null;
 }) {
   const { community, viewer, membership, canSee } = props;
   const router = useRouter();
@@ -544,18 +547,32 @@ function Hub(p: HubProps) {
       </div>
     </section>
   );
-  const contactsCard = canSee && staffMembers.length > 0 && (
+  // Contatos escolhidos pela administração, com o cargo que ela deu ("President MC®"); sem lista
+  // configurada, mostra o dono e a equipe com o cargo do sistema.
+  const contactList: { id: string; name: string; username: string; avatarUrl: string | null; title: string }[] =
+    p.contacts && p.contacts.length
+      ? p.contacts.map((c) => ({ ...c.user, title: c.title }))
+      : staffMembers.map((m) => ({ ...m.user, title: ROLE_TITLE[m.role] ?? "Equipe" }));
+  const canEditContacts = rank(role) >= 3 && p.contacts !== null && p.contacts !== undefined;
+  const contactsCard = canSee && (contactList.length > 0 || canEditContacts) && (
     <section className="rounded-3xl border border-white/[0.08] bg-space-card/70 p-4">
-      <h2 className="mb-2 text-sm font-semibold text-white">
-        Contatos <span className="font-normal text-white/45">{staffMembers.length}</span>
-      </h2>
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-white">
+          Contatos <span className="font-normal text-white/45">{contactList.length}</span>
+        </h2>
+        {canEditContacts && (
+          <Link href={`${base}/gerenciar?secao=contatos`} className="text-xs font-semibold text-orbit-cyan">
+            Alterar
+          </Link>
+        )}
+      </div>
       <div className="space-y-1">
-        {staffMembers.slice(0, 6).map((m) => (
-          <Link key={m.user.id} href={`/perfil/${m.user.username}`} className="flex items-center gap-3 rounded-xl py-1.5 hover:bg-white/[0.03]">
-            <Avatar name={m.user.name} url={m.user.avatarUrl} size={40} />
+        {contactList.slice(0, 10).map((c) => (
+          <Link key={c.id} href={`/perfil/${c.username}`} className="flex items-center gap-3 rounded-xl py-1.5 hover:bg-white/[0.03]">
+            <Avatar name={c.name} url={c.avatarUrl} size={40} />
             <span className="min-w-0">
-              <span className="block truncate text-sm font-medium text-white">{m.user.name}</span>
-              <span className="block truncate text-xs text-white/45">{ROLE_TITLE[m.role] ?? "Equipe"}</span>
+              <span className="block truncate text-sm font-medium text-white">{c.name}</span>
+              {c.title && <span className="block truncate text-xs text-white/45">{c.title}</span>}
             </span>
           </Link>
         ))}
