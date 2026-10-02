@@ -7,6 +7,7 @@ import { appAccentVars } from "@/lib/profile-colors";
 import { LiveActivityProvider } from "@/components/live-activity";
 import { AppSidebar, AppTopBar, MobileHeader, MobileTabBar } from "@/components/app-sidebar";
 import { PublicHeader } from "@/components/public-header";
+import { ChatDock } from "@/components/chat-dock";
 
 type Current = Awaited<ReturnType<typeof getCurrentUser>>;
 
@@ -37,6 +38,8 @@ export async function CommunityShell({ current, children }: { current: Current; 
         <AppSidebar username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} />
         <main className="min-h-screen pb-24 md:ml-64 md:pb-0 md:pt-16">{children}</main>
         <MobileTabBar username={profile.username} />
+        {/* O chat do Messenger acompanha a pessoa em todo o ÓrbitaX, inclusive nas comunidades. */}
+        <ChatDock me={{ id: current.authId, name: profile.name, username: profile.username, avatarUrl: profile.avatarUrl }} />
       </div>
     </LiveActivityProvider>
   );
