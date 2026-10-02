@@ -9,9 +9,10 @@ import type { Database } from "@/lib/database.types";
  */
 
 export type Role = "owner" | "admin" | "moderator" | "editor" | "member";
-export type PermissionKey = "post" | "comment" | "discussion" | "photo" | "video" | "poll" | "invite" | "link" | "mention" | "story" | "event";
+export type PermissionKey = "post" | "comment" | "discussion" | "photo" | "video" | "poll" | "invite" | "link" | "mention" | "story" | "event" | "suggest";
 export type PermissionLevel = "all" | "members" | "admins" | "owner";
-export type Permissions = Record<PermissionKey, PermissionLevel>;
+/** `suggest` (Sugerir posts) só existe depois que o dono decide; sem ela, ninguém sugere. */
+export type Permissions = Record<Exclude<PermissionKey, "suggest">, PermissionLevel> & { suggest?: PermissionLevel };
 export type Moderation = { wordFilter: string[]; approvePosts: boolean; approveComments: boolean; blockLinks: boolean; blockMedia: boolean };
 export type NotifyPrefs = { newPost: boolean; newDiscussion: boolean; announcements: boolean; joinRequests: boolean; events: boolean; newMembers: boolean };
 /** `image`: capa do quadro clicável no topo da comunidade (como os links do VK). */
@@ -232,6 +233,7 @@ export const PERMISSION_LABEL: Record<PermissionKey, string> = {
   mention: "Marcar usuários",
   story: "Publicar histórias",
   event: "Criar eventos",
+  suggest: "Sugerir posts",
 };
 export const LEVEL_LABEL: Record<PermissionLevel, string> = { all: "Todos", members: "Membros", admins: "Administradores", owner: "Somente proprietário" };
 
@@ -263,7 +265,8 @@ export const accentOf = (id: string | null) => ACCENTS.find((a) => a.id === id) 
 
 /** Can (probably) do this — mirrors community_can() for the UI. The database decides for real. */
 export function can(c: Pick<Community, "permissions" | "isPrivate">, role: Role | null, key: PermissionKey) {
-  const need = c.permissions?.[key] ?? (key === "story" || key === "event" ? "admins" : "members");
+  // "Sugerir posts" vem desligado: só vale quando o dono libera (Gerenciar → Permissões).
+  const need = c.permissions?.[key] ?? (key === "story" || key === "event" || key === "suggest" ? "admins" : "members");
   const r = rank(role);
   if (need === "all") return !c.isPrivate || r >= 1;
   if (need === "members") return r >= 1;
@@ -300,6 +303,7 @@ const ERRORS: [RegExp, string][] = [
   [/owner_only/, "Somente o proprietário pode alterar isso."],
   [/banned/, "Você está bloqueado nesta comunidade."],
   [/links_blocked/, "Links não são permitidos aqui."],
+  [/suggestions_off/, "Esta comunidade não está recebendo sugestões de posts."],
   [/too_many_suggestions/, "Você já tem 10 sugestões esperando a administração. Aguarde a análise."],
   [/not_member/, "Entre na comunidade para sugerir um post."],
   [/media_blocked/, "Mídia não é permitida aqui."],

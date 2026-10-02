@@ -8,7 +8,8 @@ import { useCommunity } from "../context";
 import { Card, ReadOnlyNote, SaveButton } from "./fields";
 
 const KEYS: { key: PermissionKey; hint: string }[] = [
-  { key: "post", hint: "Publicar direto no mural. Quem não pode usa \"Sugerir post\" e a moderação aprova (como no VK)" },
+  { key: "post", hint: "Publicar direto no mural, sem passar pela moderação" },
+  { key: "suggest", hint: "Quem não pode publicar envia um post para a administração aprovar (como no VK). Todos/Membros = quem participa pode sugerir; Administradores = desligado" },
   { key: "comment", hint: "Comentários em posts e respostas em discussões" },
   { key: "discussion", hint: "Abrir novos tópicos. Padrão: só a administração; libere para Membros se quiser" },
   { key: "photo", hint: "Fotos e álbuns" },
@@ -26,7 +27,12 @@ export function PermissionsSection({ onSaved }: { onSaved: (p: Permissions) => v
   const { community, role, supabase, toast } = useCommunity();
   const router = useRouter();
   const owner = role === "owner";
-  const initial: Permissions = { ...community.permissions, story: community.permissions.story ?? "admins", event: community.permissions.event ?? "admins" };
+  const initial: Permissions = {
+    ...community.permissions,
+    story: community.permissions.story ?? "admins",
+    event: community.permissions.event ?? "admins",
+    suggest: community.permissions.suggest ?? "admins",
+  };
   const [saved, setSaved] = useState<Permissions>(initial);
   const [perm, setPerm] = useState<Permissions>(initial);
   const [busy, setBusy] = useState(false);
@@ -34,9 +40,15 @@ export function PermissionsSection({ onSaved }: { onSaved: (p: Permissions) => v
 
   async function save() {
     setBusy(true);
-    const { error } = await supabase.rpc("community_update", { p_community: community.id, p: { permissions: perm } as never });
+    // "Sugerir posts" tem a própria função; o resto vai junto em community_update.
+    const { suggest, ...rest } = perm;
+    const { error } = await supabase.rpc("community_update", { p_community: community.id, p: { permissions: rest } as never });
+    const { error: e2 } =
+      !error && suggest !== saved.suggest
+        ? await supabase.rpc("community_set_suggestions" as never, { p_community: community.id, p_level: suggest ?? "admins" } as never)
+        : { error: null };
     setBusy(false);
-    if (error) return toast(communityError(error.message), true);
+    if (error || e2) return toast(communityError((error ?? e2)!.message), true);
     setSaved(perm);
     onSaved(perm);
     toast("Permissões atualizadas. Elas já valem para todos.");

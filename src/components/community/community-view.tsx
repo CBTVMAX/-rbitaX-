@@ -301,7 +301,8 @@ function Hub(p: HubProps) {
   const options = useCreateOptions();
   const canCreate = options.length > 0 && canSee;
   // Como no VK: quem participa mas não pode publicar no mural sugere o post para a administração.
-  const canSuggest = canSee && !!viewer && rank(role) >= 1 && !membership.muted && !can(community, role, "post");
+  // Só quando o dono liberou "Sugerir posts" em Permissões.
+  const canSuggest = canSee && !!viewer && rank(role) >= 1 && !membership.muted && !can(community, role, "post") && can(community, role, "suggest");
   const accent = accentOf(community.accentColor);
   const tz = useTimeZone();
 
