@@ -6,6 +6,7 @@ import { FriendButton, FriendRequestActions } from "@/components/friend-button";
 import { BlockedProfileNotice } from "@/components/block-user";
 import { ProfileAboutButton, ProfileAboutContent, type AboutData } from "@/components/profile-about";
 import { ProfileGiftsCard, ProfileMediaShowcase } from "@/components/profile-showcase";
+import { ProfilePhotos } from "@/components/profile-photos";
 import { ProfileGiftButton } from "@/components/profile-gift-button";
 import { ProfileFamily, type FamilyMember, type FamilyRequest } from "@/components/profile-family";
 import { ProfileTestimonials, type Testimonial, type PendingTestimonial } from "@/components/profile-testimonials";
@@ -868,16 +869,14 @@ export function ProfileView({
       </div>
     ) : undefined;
 
-  const photosTab = photos.length ? (
-    <div className="grid grid-cols-3 gap-1 md:gap-2">
-      {photos.map((m) => (
-        <a key={m.id} href={m.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg md:rounded-xl">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={m.url} alt="" className="aspect-square w-full object-cover transition hover:scale-105" />
-        </a>
-      ))}
-    </div>
-  ) : undefined;
+  const photosTab = (
+    <ProfilePhotos
+      owner={{ id: user.id, name: user.name, username: user.username, avatarUrl: user.avatarUrl ?? null }}
+      isMe={isMe}
+      viewerId={current?.authId ?? null}
+      total={photoTotal}
+    />
+  );
 
   const videosTab = videos.length ? (
     <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3 md:gap-2">
