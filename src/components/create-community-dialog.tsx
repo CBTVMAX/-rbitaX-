@@ -7,7 +7,7 @@ import { COMMUNITY_CATEGORIES } from "@/lib/community-categories";
 import { Plus, X } from "lucide-react";
 
 // userId is kept in the props for the callers; the database uses the signed-in account.
-export function CreateCommunityDialog(_props: { userId: string }) {
+export function CreateCommunityDialog({ label = "Criar uma comunidade" }: { userId: string; label?: string }) {
   const supabase = createClient();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -55,7 +55,7 @@ export function CreateCommunityDialog(_props: { userId: string }) {
         onClick={() => setOpen(true)}
         className="flex items-center gap-2 rounded-full bg-orbit-gradient px-4 py-2 text-sm font-semibold text-white shadow-glow"
       >
-        <Plus className="h-4 w-4" /> Criar uma comunidade
+        <Plus className="h-4 w-4" /> {label}
       </button>
 
       {open && (

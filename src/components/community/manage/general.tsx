@@ -9,6 +9,8 @@ import { ACCENTS, ACCEPT, accentOf, communityError, uploadCommunityFile, type Co
 import { useCommunity } from "../context";
 import { Confirm } from "../ui";
 import { Card, Field, inputCls, ReadOnlyNote, SaveButton } from "./fields";
+import { CoverCropDialog } from "@/components/cover-crop-dialog";
+import { AvatarEditor } from "@/components/avatar-editor";
 
 type Form = {
   name: string;
@@ -45,6 +47,8 @@ export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Par
   const [f, setF] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState<"avatarUrl" | "coverUrl" | null>(null);
+  // Como no perfil: a capa passa pelo recorte 7:2 e a foto pelo círculo antes de subir.
+  const [editing, setEditing] = useState<{ file: File; key: "avatarUrl" | "coverUrl" } | null>(null);
   const [privacyConfirm, setPrivacyConfirm] = useState(false);
   const avatarInput = useRef<HTMLInputElement>(null);
   const coverInput = useRef<HTMLInputElement>(null);
@@ -52,6 +56,21 @@ export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Par
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setF((x) => ({ ...x, [k]: v }));
   const changed = (Object.keys(f) as (keyof Form)[]).filter((k) => JSON.stringify(f[k]) !== JSON.stringify(saved[k]));
   const accent = accentOf(f.accentColor);
+
+  function pick(file: File | undefined, key: "avatarUrl" | "coverUrl") {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return toast("Escolha um arquivo de imagem.", true);
+    setEditing({ file, key });
+  }
+
+  async function applyEdited(blob: Blob) {
+    if (!editing) return;
+    const ext = blob.type === "image/webp" ? "webp" : "jpg";
+    const file = new File([blob], `${editing.key === "coverUrl" ? "capa" : "foto"}.${ext}`, { type: blob.type });
+    const key = editing.key;
+    setEditing(null);
+    await upload(file, key);
+  }
 
   async function upload(file: File | undefined, key: "avatarUrl" | "coverUrl") {
     if (!file || !viewer) return;
@@ -94,7 +113,7 @@ export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Par
       {show("appearance") && (
       <Card title="Aparência" desc="Foto, capa e cor de destaque aparecem no topo da comunidade e nos cards da lista.">
         <div className="overflow-hidden rounded-3xl border border-white/[0.08]">
-          <div className="relative h-32 md:h-40" style={{ background: `linear-gradient(135deg, ${accent.from}, rgb(${accent.rgb}) 55%, ${accent.to})` }}>
+          <div className="relative aspect-[7/2]" style={{ background: `linear-gradient(135deg, ${accent.from}, rgb(${accent.rgb}) 55%, ${accent.to})` }}>
             {f.coverUrl && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={f.coverUrl} alt="" className="h-full w-full object-cover" />
@@ -111,9 +130,9 @@ export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Par
             </div>
           </div>
           <div className="flex items-end gap-3 px-4 pb-4">
-            <div className="relative -mt-8">
-              <span className="block rounded-[22px] p-[3px]" style={{ background: `linear-gradient(135deg, ${accent.from}, ${accent.to})` }}>
-                <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-[19px] bg-space-card text-2xl font-bold text-white">
+            <div className="relative -mt-7">
+              <span className="block rounded-full p-[3px]" style={{ background: `linear-gradient(135deg, ${accent.from}, ${accent.to})` }}>
+                <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-[3px] border-space-card bg-space-card text-2xl font-bold text-white">
                   {f.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={f.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -133,8 +152,10 @@ export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Par
             )}
           </div>
         </div>
-        <input ref={avatarInput} type="file" accept={ACCEPT.image} hidden onChange={(e) => (upload(e.target.files?.[0], "avatarUrl"), (e.target.value = ""))} />
-        <input ref={coverInput} type="file" accept={ACCEPT.image} hidden onChange={(e) => (upload(e.target.files?.[0], "coverUrl"), (e.target.value = ""))} />
+        <input ref={avatarInput} type="file" accept={ACCEPT.image} hidden onChange={(e) => (pick(e.target.files?.[0], "avatarUrl"), (e.target.value = ""))} />
+        <input ref={coverInput} type="file" accept={ACCEPT.image} hidden onChange={(e) => (pick(e.target.files?.[0], "coverUrl"), (e.target.value = ""))} />
+        {editing?.key === "coverUrl" && <CoverCropDialog file={editing.file} onCancel={() => setEditing(null)} onConfirm={applyEdited} />}
+        {editing?.key === "avatarUrl" && <AvatarEditor file={editing.file} name={f.name} confirmLabel="Aplicar" onCancel={() => setEditing(null)} onConfirm={applyEdited} />}
         <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-white/50">Tema da comunidade</p>
         <div className="flex flex-wrap gap-2">
           {ACCENTS.map((a) => (
