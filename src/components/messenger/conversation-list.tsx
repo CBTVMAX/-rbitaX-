@@ -347,24 +347,29 @@ export function ConversationList({
           <PresenceStatus userId={me.id} initial={presence} editable className="text-[13px]" />
         </div>
 
-        <div className="hidden items-center justify-between gap-3 lg:flex">
-          <div className="min-w-0">
-            <h1 className="font-display text-[32px] font-bold leading-tight tracking-tight text-white lg:text-lg">Mensagens</h1>
-            <PresenceStatus userId={me.id} initial={presence} editable className="mt-1" />
-          </div>
+        {/* Computador: topo do VK — "Messenger" e ícones de ligações, arquivadas e nova conversa. */}
+        <div className="hidden items-center gap-1 lg:flex">
+          <h1 className="min-w-0 flex-1 truncate text-[15px] font-semibold text-white">Messenger</h1>
+          <Link href="/chamadas" aria-label="Chamadas" title="Chamadas" className="flex h-8 w-8 items-center justify-center rounded-lg text-white/55 transition hover:bg-white/[0.06] hover:text-white">
+            <Phone className="h-[18px] w-[18px]" />
+          </Link>
           <button
             type="button"
-            onClick={onNew}
-            aria-label="Nova conversa"
-            title="Nova conversa"
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ff4fa3] via-[#d63cf0] to-[#8b5cf6] text-snow shadow-[0_10px_30px_rgba(214,60,240,0.45)] transition hover:scale-105 active:scale-95 lg:h-8 lg:w-8"
+            onClick={() => setFilter(filter === "arquivadas" ? "todas" : "arquivadas")}
+            aria-label="Arquivadas"
+            title="Arquivadas"
+            aria-pressed={filter === "arquivadas"}
+            className={clsx("flex h-8 w-8 items-center justify-center rounded-lg transition hover:bg-white/[0.06]", filter === "arquivadas" ? "text-chat" : "text-white/55 hover:text-white")}
           >
-            <PenSquare className="h-6 w-6 lg:h-4 lg:w-4" />
+            <Archive className="h-[18px] w-[18px]" />
+          </button>
+          <button type="button" onClick={onNew} aria-label="Nova conversa" title="Nova conversa" className="flex h-8 w-8 items-center justify-center rounded-lg text-white/55 transition hover:bg-white/[0.06] hover:text-white">
+            <PenSquare className="h-[18px] w-[18px]" />
           </button>
         </div>
 
         <label className={clsx(
-            "mt-3 h-12 items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.05] pl-4 pr-2 transition lg:mt-3 lg:flex lg:h-auto lg:rounded-xl lg:py-1 lg:pl-3 lg:pr-1 focus-within:border-orbit-purple/60 focus-within:bg-white/[0.06]",
+            "mt-3 h-12 items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.05] pl-4 pr-2 transition lg:mt-2.5 lg:flex lg:h-auto lg:rounded-lg lg:border-transparent lg:bg-white/[0.07] lg:py-1 lg:pl-3 lg:pr-1 focus-within:border-orbit-purple/60 focus-within:bg-white/[0.06]",
             mobileSearch || searching ? "flex" : "hidden"
           )}
         >
@@ -433,13 +438,13 @@ export function ConversationList({
                       // Arquivadas já fica no ícone do topo no celular.
                       f.id === "arquivadas" && !on && "hidden lg:flex",
                       on
-                        ? "bg-white/[0.09] text-white lg:bg-orbit-gradient lg:text-snow lg:shadow-[0_0_16px_rgb(var(--app-accent,139_92_246)/0.35)]"
-                        : "text-white/55 hover:text-white lg:border lg:border-white/10"
+                        ? "bg-white/[0.09] text-white lg:border lg:border-white/25 lg:bg-transparent"
+                        : "text-white/55 hover:text-white lg:border lg:border-transparent"
                     )}
                   >
                     {f.label}
                     {n > 0 && (
-                      <span className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-white px-1.5 text-[12px] font-bold leading-none text-space-bg lg:h-auto lg:min-w-0 lg:bg-white/10 lg:px-1.5 lg:text-[10px] lg:text-white">
+                      <span className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-white px-1.5 text-[12px] font-bold leading-none text-space-bg lg:h-[18px] lg:min-w-[18px] lg:bg-chat lg:px-1 lg:text-[10.5px] lg:text-snow">
                         {n > 99 ? "99+" : n}
                       </span>
                     )}

@@ -76,18 +76,21 @@ function Meta({
   state,
   favorite,
   overlay,
+  plain,
 }: {
   m: ChatMessage;
   mine: boolean;
   state: DeliveryState;
   favorite: boolean;
   overlay?: boolean;
+  /** Fora de balão (lista do computador): cores neutras, mas com os tiques de entrega. */
+  plain?: boolean;
 }) {
   return (
     <span
       className={clsx(
         "inline-flex select-none items-center gap-1 whitespace-nowrap text-[11px] leading-none",
-        overlay ? "rounded-full bg-black/45 px-2 py-1 text-snow backdrop-blur" : mine ? "text-snow/75" : "text-white/45"
+        overlay ? "rounded-full bg-black/45 px-2 py-1 text-snow backdrop-blur" : mine && !plain ? "text-snow/75" : "text-white/45"
       )}
     >
       {favorite && <Star className="h-3 w-3 fill-current" aria-label="Favorita" />}
@@ -96,7 +99,7 @@ function Meta({
       {mine && state === "sending" && <Clock className="h-3 w-3" aria-label="Enviando" />}
       {mine && state === "failed" && <AlertCircle className="h-3.5 w-3.5 text-red-300" aria-label="Não enviada" />}
       {mine && (state === "sent" || state === "delivered" || state === "seen") && (
-        <DeliveryTicks state={state} className={state === "seen" ? (overlay ? "text-orbit-cyan" : "text-snow") : ""} />
+        <DeliveryTicks state={state} className={state === "seen" ? (overlay || plain ? "text-orbit-cyan" : "text-snow") : ""} />
       )}
     </span>
   );
@@ -128,6 +131,8 @@ export type BubbleProps = {
   onOpenOrigin?: (conversationId: string, messageId: string) => void;
   /** The chat is the member's "Salvos": no delivery ticks, copies show where they came from. */
   savedSpace?: boolean;
+  /** Computador: mensagens em lista, sem balão (foto, nome e hora), como no VK. */
+  flat?: boolean;
 };
 
 export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
@@ -135,6 +140,8 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
   // In "Salvos", a copy of someone else's message keeps their side and avatar.
   const origin = p.savedSpace ? m.meta.savedFrom : undefined;
   const mine = origin ? origin.senderId === p.meId : p.mine;
+  // Cores dos cartões/citações: sem balão colorido (modo lista), tudo usa as cores neutras.
+  const look = p.flat ? false : mine;
   const state: DeliveryState = p.savedSpace && (p.state === "sent" || p.state === "delivered" || p.state === "seen") ? "sent" : p.state;
   const sender: Member | undefined = origin && !mine
     ? { id: origin.senderId, name: origin.senderName, username: "", avatarUrl: origin.senderAvatarUrl ?? null, avatarFrame: origin.senderAvatarFrame ?? null, role: "member", lastReadAt: null }
@@ -191,12 +198,12 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
       onClick={() => m.replyToId && p.onJump(m.replyToId)}
       className={clsx(
         "mb-1.5 block w-full overflow-hidden rounded-xl border-l-[3px] px-2.5 py-1.5 text-left text-xs",
-        mine ? "border-snow/80 bg-black/15" : "border-chat bg-white/[0.06]",
+        look ? "border-snow/80 bg-black/15" : "border-chat bg-white/[0.06]",
         (media || card) && "mx-1.5 mt-1.5 w-[calc(100%-0.75rem)]"
       )}
     >
-      <span className={clsx("block truncate font-semibold", mine ? "text-snow" : "text-chat")}>{p.replySenderName ?? "Mensagem"}</span>
-      <span className={clsx("line-clamp-2", mine ? "text-snow/80" : "text-white/60")}>
+      <span className={clsx("block truncate font-semibold", look ? "text-snow" : "text-chat")}>{p.replySenderName ?? "Mensagem"}</span>
+      <span className={clsx("line-clamp-2", look ? "text-snow/80" : "text-white/60")}>
         {p.replyTo ? messagePreview(p.replyTo.type, p.replyTo.content, p.replyTo.meta, p.replyTo.attachments) : "Mensagem indisponível"}
       </span>
     </button>
@@ -209,7 +216,7 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
       title={`Abrir em ${origin.chatTitle}`}
       className={clsx(
         "mb-1 flex max-w-full items-center gap-1 text-left text-[11px] font-medium transition hover:underline",
-        mine ? "text-snow/80" : "text-chat",
+        look ? "text-snow/80" : "text-chat",
         (media || card) && "px-2.5 pt-2"
       )}
     >
@@ -222,7 +229,7 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
   );
 
   const forwarded = m.meta.forwarded && !deleted && (
-    <span className={clsx("mb-1 flex items-center gap-1 text-[11px] italic", mine ? "text-snow/75" : "text-white/45", (media || card) && "px-2.5 pt-2")}>
+    <span className={clsx("mb-1 flex items-center gap-1 text-[11px] italic", look ? "text-snow/75" : "text-white/45", (media || card) && "px-2.5 pt-2")}>
       <CornerUpRight className="h-3 w-3" /> Encaminhada
     </span>
   );
@@ -239,13 +246,13 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
       )}
       <span className="min-w-0">
         <span className="block font-semibold">
-          {sr.community ? `Respondeu à história · ${sr.community}` : mine ? "Você respondeu à história" : "Respondeu à sua história"}
+          {sr.community ? `Respondeu à história · ${sr.community}` : look ? "Você respondeu à história" : "Respondeu à sua história"}
         </span>
         <span className="block truncate opacity-80">{sr.preview}</span>
       </span>
     </>
   );
-  const storyClass = clsx("mb-1.5 flex max-w-[260px] items-center gap-2 rounded-xl px-2 py-1.5 text-[11px]", mine ? "bg-black/15 text-snow/85" : "bg-white/[0.06] text-white/60");
+  const storyClass = clsx("mb-1.5 flex max-w-[260px] items-center gap-2 rounded-xl px-2 py-1.5 text-[11px]", look ? "bg-black/15 text-snow/85" : "bg-white/[0.06] text-white/60");
   const story =
     sr && !deleted ? (
       sr.slug ? (
@@ -260,7 +267,7 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
   let body: React.ReactNode;
   if (deleted) {
     body = (
-      <span className={clsx("flex items-center gap-1.5 text-sm italic", mine ? "text-snow/80" : "text-white/50")}>
+      <span className={clsx("flex items-center gap-1.5 text-sm italic", look ? "text-snow/80" : "text-white/50")}>
         <Ban className="h-3.5 w-3.5" /> Mensagem apagada
       </span>
     );
@@ -268,25 +275,111 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
   else if (m.type === "gif") body = <GifView message={m} onOpen={() => p.onOpenMedia(m, 0)} />;
   else if (emojiOnly) body = <span className="text-5xl leading-tight">{m.content.trim()}</span>;
   else if (media) body = <MediaGrid message={m} onOpen={(i) => p.onOpenMedia(m, i)} />;
-  else if (m.type === "file") body = <div className="space-y-1">{m.attachments.map((a) => <FileCard key={a.path} a={a} mine={mine} sending={m.status === "sending"} />)}</div>;
-  else if (m.type === "voice") body = <VoicePlayer message={m} mine={mine} meta={<Meta m={m} mine={mine} state={state} favorite={favorite} />} />;
-  else if (m.type === "music") body = <MusicCard message={m} mine={mine} meta={<Meta m={m} mine={mine} state={state} favorite={favorite} />} />;
-  else if (m.type === "gift") body = <GiftCard message={m} mine={mine} />;
-  else if (m.type === "dice") body = <DiceCard message={m} mine={mine} />;
-  else if (m.type === "location") body = <LocationCard message={m} mine={mine} />;
-  else if (m.type === "contact") body = <ContactCard message={m} mine={mine} />;
-  else if (m.type === "poll") body = <PollCard message={m} mine={mine} votes={p.votes} meId={p.meId} onVote={(ix) => p.onVote(m, ix)} />;
+  else if (m.type === "file") body = <div className="space-y-1">{m.attachments.map((a) => <FileCard key={a.path} a={a} mine={look} sending={m.status === "sending"} />)}</div>;
+  else if (m.type === "voice") body = <VoicePlayer message={m} mine={look} meta={<Meta m={m} mine={look} state={state} favorite={favorite} />} />;
+  else if (m.type === "music") body = <MusicCard message={m} mine={look} meta={<Meta m={m} mine={look} state={state} favorite={favorite} />} />;
+  else if (m.type === "gift") body = <GiftCard message={m} mine={look} />;
+  else if (m.type === "dice") body = <DiceCard message={m} mine={look} />;
+  else if (m.type === "location") body = <LocationCard message={m} mine={look} />;
+  else if (m.type === "contact") body = <ContactCard message={m} mine={look} />;
+  else if (m.type === "poll") body = <PollCard message={m} mine={look} votes={p.votes} meId={p.meId} onVote={(ix) => p.onVote(m, ix)} />;
   else
     body = (
       <span className="whitespace-pre-wrap break-words text-[16px] leading-[1.45] lg:text-[14px] lg:leading-[1.45]">
         <RichText text={m.content} />
         {/* Reserva o espaço da hora no fim da última linha; a hora fica no canto (estilo app). */}
-        <span aria-hidden className={clsx("inline-block h-3 align-baseline", mine ? "w-[66px]" : "w-[44px]", (m.expiresAt || favorite) && "!w-[84px]")} />
+        <span aria-hidden className={clsx("inline-block h-3 align-baseline", look ? "w-[66px]" : "w-[44px]", (m.expiresAt || favorite) && "!w-[84px]")} />
       </span>
     );
   const textOnly = !deleted && !media && m.type === "text" && !emojiOnly;
 
   const showAvatarColumn = (group || !!origin) && !mine;
+
+  if (p.flat) {
+    const who = sender;
+    const name = origin ? origin.senderName : who?.name ?? (mine ? "Você" : "Ex-membro");
+    const boxed = card;
+    return (
+      <div
+        id={`msg-${m.id}`}
+        className={clsx(
+          "group/msg relative flex gap-3 px-5 py-[3px] transition-colors hover:z-20 hover:bg-white/[0.03] focus-within:z-20",
+          firstInRun && "mt-2.5",
+          p.highlight && "animate-msg-flash",
+          "animate-msg-in"
+        )}
+        onContextMenu={(e) => {
+          if (window.matchMedia("(pointer: coarse)").matches) {
+            e.preventDefault();
+            p.onLongPress(m);
+          }
+        }}
+      >
+        <span className="w-9 shrink-0">
+          {firstInRun ? (
+            <ChatAvatar name={name} url={who?.avatarUrl ?? null} size={36} frame={who?.avatarFrame} />
+          ) : (
+            <span className="block pt-[3px] text-right text-[10px] leading-4 text-white/35 opacity-0 transition group-hover/msg:opacity-100">{formatTime(m.createdAt)}</span>
+          )}
+        </span>
+        <div className="min-w-0 flex-1">
+          {firstInRun && (
+            <div className="flex items-baseline gap-2">
+              <span className={clsx("truncate text-[13px] font-semibold", group && !mine ? nameColor(m.senderId) : "text-chat")}>{name}</span>
+              <span className="ml-auto shrink-0">
+                <Meta m={m} mine={mine} state={state} favorite={favorite} plain />
+              </span>
+            </div>
+          )}
+          {savedHeader}
+          {forwarded}
+          {story}
+          {replyBlock && <div className="max-w-[420px]">{replyBlock}</div>}
+          <div className={clsx(boxed && "inline-block max-w-[420px] rounded-xl border border-white/10 bg-white/[0.04] p-2", media && "max-w-[420px] overflow-hidden rounded-xl")}>
+            {textOnly ? (
+              <span className="whitespace-pre-wrap break-words text-[14px] leading-[1.45] text-white/90">
+                <RichText text={m.content} />
+              </span>
+            ) : (
+              body
+            )}
+            {caption && (
+              <span className="block whitespace-pre-wrap break-words pt-1.5 text-[14px] leading-[1.45] text-white/90">
+                <RichText text={m.content} />
+              </span>
+            )}
+          </div>
+          {!firstInRun && (state === "sending" || state === "failed") && (
+            <span className="ml-1 align-middle"><Meta m={m} mine={mine} state={state} favorite={favorite} plain /></span>
+          )}
+          {state === "failed" && (
+            <button type="button" onClick={() => p.onRetry(m)} className="mt-0.5 block text-[11px] font-medium text-red-400 hover:underline">
+              Não enviada · Clique para tentar de novo
+            </button>
+          )}
+          {grouped.size > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {Array.from(grouped.entries()).map(([emoji, g]) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => p.onReact(m, emoji)}
+                  aria-label={`${emoji} ${g.count}`}
+                  className={clsx("flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-sm transition hover:scale-105", g.mine ? "border-chat/60 bg-chat/20" : "border-white/10 bg-white/[0.04]")}
+                >
+                  <span>{emoji}</span>
+                  {g.count > 1 && <span className="text-[11px] font-semibold text-white/75">{g.count}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="absolute -top-3 right-4 z-10 rounded-full border border-transparent transition group-hover/msg:border-white/10 group-hover/msg:bg-space-surface group-hover/msg:shadow-lg">
+          <HoverActions m={m} mine={false} favorite={favorite} myReaction={myReaction} inSaved={p.savedSpace} onReact={(e) => p.onReact(m, e)} onAction={(a) => p.onAction(m, a)} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

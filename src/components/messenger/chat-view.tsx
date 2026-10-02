@@ -104,6 +104,8 @@ export function ChatView({
   const wide = useMediaQuery("(min-width: 1280px)");
   // Abre sozinho só em telas bem largas; em notebook a conversa fica com o espaço todo até a pessoa abrir.
   const huge = useMediaQuery("(min-width: 1536px)");
+  // Computador: mensagens em lista, como no VK (o chat flutuante continua com balões).
+  const desktop = useMediaQuery("(min-width: 1024px)");
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -922,7 +924,7 @@ export function ChatView({
     <div className="flex h-full min-h-0 min-w-0 flex-1" style={chatThemeStyle(c.theme)}>
       <section
         className="relative flex h-full min-h-0 min-w-0 flex-1 flex-col"
-        style={wallpaperStyle(isWallpaper(c.wallpaper) ? c.wallpaper : defaultWallpaper(lightApp, simpleVisual))}
+        style={wallpaperStyle(isWallpaper(c.wallpaper) ? c.wallpaper : defaultWallpaper(lightApp, simpleVisual || desktop))}
         aria-label={c.isSaved ? "Salvos, seu espaço pessoal" : `Conversa com ${title}`}
       >
         <ChatHeader
@@ -988,6 +990,7 @@ export function ChatView({
           highlightId={highlightId}
           unreadFromId={unreadFromId}
           savedSpace={c.isSaved}
+          flat={desktop && !compact}
           intro={
             c.isSaved ? (
               <SavedIntro />

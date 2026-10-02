@@ -446,7 +446,7 @@ export function MessageComposer({
         "relative z-10 px-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 md:px-4 lg:pb-2 lg:pt-2",
         panel && !compact && "max-md:pb-0",
         // Celular: flutua sobre o fundo da conversa (sem barra), como no app; computador: barra.
-        compact ? "border-t border-white/10 bg-space-surface/80 backdrop-blur-xl" : "border-t border-white/[0.06] bg-[rgb(var(--chat-bar)/0.95)]"
+        compact ? "border-t border-white/10 bg-space-surface/80 backdrop-blur-xl" : "border-t border-white/[0.06] bg-[rgb(var(--chat-bar)/0.95)] lg:border-t-0 lg:bg-transparent lg:px-3 lg:pb-3"
       )}
     >
       {store !== undefined && (
@@ -549,7 +549,7 @@ export function MessageComposer({
         </div>
       )}
 
-      <div className="mx-auto flex max-w-3xl items-end gap-1.5 md:gap-2">
+      <div className="mx-auto flex max-w-3xl items-end gap-1.5 md:gap-2 lg:max-w-none lg:gap-1 lg:rounded-xl lg:border lg:border-white/10 lg:bg-white/[0.04] lg:px-1.5 lg:py-0.5">
         {recording ? (
           <>
             <button type="button" onClick={() => stopRecording(false)} aria-label="Descartar gravação" className={clsx(round, "text-red-400 hover:bg-red-500/10")}>
