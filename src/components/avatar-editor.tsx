@@ -11,6 +11,7 @@ import { Loader2, RotateCw, X, ZoomIn, ZoomOut } from "lucide-react";
  */
 const OUTPUT_MAX_WIDTH = 1024;
 const MAX_ZOOM = 3;
+const FULL_MAX_SIDE = 2048;
 
 type Crop = { x: number; y: number; w: number };
 type Rotation = 0 | 90 | 180 | 270;
@@ -25,15 +26,24 @@ function baseWidth(nat: Size, ratio: number) {
   return Math.min(nat.w, nat.h * ratio);
 }
 
+/** Largest window: the whole photo fits inside it (what is left over gets a blurred fill). */
+function fitWidth(nat: Size, ratio: number) {
+  return Math.max(nat.w, nat.h * ratio);
+}
+
+/** Zoom at which the whole photo fits inside the circle; 1 is "fill the circle". */
+function minZoom(nat: Size, ratio: number) {
+  return baseWidth(nat, ratio) / fitWidth(nat, ratio);
+}
+
+const between = (v: number, a: number, b: number) => Math.min(Math.max(v, Math.min(a, b)), Math.max(a, b));
+
 function clampCrop(c: Crop, nat: Size, ratio: number): Crop {
   const base = baseWidth(nat, ratio);
-  const w = Math.min(Math.max(c.w, base / MAX_ZOOM), base);
+  const w = Math.min(Math.max(c.w, base / MAX_ZOOM), fitWidth(nat, ratio));
   const h = w / ratio;
-  return {
-    w,
-    x: Math.min(Math.max(c.x, 0), Math.max(0, nat.w - w)),
-    y: Math.min(Math.max(c.y, 0), Math.max(0, nat.h - h)),
-  };
+  // Smaller than the photo: stays inside it. Larger (zoomed out): the photo stays inside the window.
+  return { w, x: between(c.x, 0, nat.w - w), y: between(c.y, 0, nat.h - h) };
 }
 
 /**
@@ -48,7 +58,9 @@ function paintAvatar(
   ratio: number,
   rot: Rotation,
   outW: number,
-  outH: number
+  outH: number,
+  /** The real avatar window; the stage paints a larger area around it but fills only for this one. */
+  fillFor: Crop = crop
 ) {
   ctx.clearRect(0, 0, outW, outH);
   ctx.imageSmoothingQuality = "high";
@@ -71,6 +83,20 @@ function paintAvatar(
   // framing instead of the photo.
   ctx.scale(sx, sy);
   ctx.translate(-crop.x, -crop.y);
+  // Zoomed out past the photo (to keep it whole): the empty part of the circle gets a blurred,
+  // darker copy of the same photo instead of bare bars.
+  const rs = rotatedSize(nat, rot);
+  const fh = fillFor.w / ratio;
+  if (fillFor.x < -0.5 || fillFor.y < -0.5 || fillFor.x + fillFor.w > rs.w + 0.5 || fillFor.y + fh > rs.h + 0.5) {
+    const k = Math.max(fillFor.w / rs.w, fh / rs.h) * 1.08;
+    ctx.save();
+    ctx.filter = `blur(${Math.max(4, Math.round(outW * 0.035))}px) brightness(0.72)`;
+    ctx.translate(fillFor.x + fillFor.w / 2, fillFor.y + fh / 2);
+    ctx.scale(k, k);
+    ctx.rotate(rad);
+    ctx.drawImage(img, -nat.w / 2, -nat.h / 2, nat.w, nat.h);
+    ctx.restore();
+  }
   ctx.translate(nat.w / 2, nat.h / 2);
   ctx.rotate(rad);
   ctx.translate(-nat.w / 2, -nat.h / 2);
@@ -93,13 +119,13 @@ function expandCrop(c: Crop): Crop {
 }
 
 /** Paints a canvas at its CSS size times the device pixel ratio. */
-function paintCanvas(c: HTMLCanvasElement | null, size: number, img: HTMLImageElement, nat: Size, crop: Crop, rot: Rotation) {
+function paintCanvas(c: HTMLCanvasElement | null, size: number, img: HTMLImageElement, nat: Size, crop: Crop, rot: Rotation, fillFor: Crop = crop) {
   if (!c || size < 10) return;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   c.width = Math.round(size * dpr);
   c.height = Math.round(size * dpr);
   const ctx = c.getContext("2d");
-  if (ctx) paintAvatar(ctx, img, nat, crop, AVATAR_RATIO, rot, c.width, c.height);
+  if (ctx) paintAvatar(ctx, img, nat, crop, AVATAR_RATIO, rot, c.width, c.height, fillFor);
 }
 
 /**
@@ -118,7 +144,8 @@ export function AvatarEditor({
   name?: string;
   confirmLabel?: string;
   onCancel: () => void;
-  onConfirm: (blob: Blob, ratio: number) => Promise<void>;
+  /** `full`: a foto inteira (girada, até 2048px), para o post e a história, como no VK. */
+  onConfirm: (blob: Blob, ratio: number, full?: Blob) => Promise<void>;
 }) {
   const [nat, setNat] = useState<Size | null>(null);
   const [crop, setCrop] = useState<Crop>({ x: 0, y: 0, w: 1 });
@@ -174,7 +201,7 @@ export function AvatarEditor({
   const applyZoom = useCallback(
     (next: number) => {
       if (!nat) return;
-      const z = Math.min(Math.max(next, 1), MAX_ZOOM);
+      const z = Math.min(Math.max(next, minZoom(rotatedSize(nat, rotation), ratio)), MAX_ZOOM);
       setZoom(z);
       setCrop((c) => {
         const rs = rotatedSize(nat, rotation);
@@ -255,18 +282,38 @@ export function AvatarEditor({
     );
   }
 
+  /** The whole photo with the chosen rotation, for the post and the story. */
+  async function toFullBlob(): Promise<Blob | null> {
+    const img = imgRef.current;
+    if (!img || !nat) return null;
+    const rs = rotatedSize(nat, rotation);
+    const k = Math.min(1, FULL_MAX_SIDE / Math.max(rs.w, rs.h));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(rs.w * k);
+    canvas.height = Math.round(rs.h * k);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.imageSmoothingQuality = "high";
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.drawImage(img, (-nat.w * k) / 2, (-nat.h * k) / 2, nat.w * k, nat.h * k);
+    return new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => (b ? resolve(b) : canvas.toBlob(resolve, "image/jpeg", 0.9)), "image/webp", 0.9)
+    );
+  }
+
   async function confirm() {
     if (!nat) return;
     setSaving(true);
     setError(null);
-    const outW = Math.round(Math.min(OUTPUT_MAX_WIDTH, crop.w));
-    const blob = await toBlob(outW, Math.round(outW / ratio));
+    const outW = Math.round(Math.min(OUTPUT_MAX_WIDTH, Math.max(crop.w, 512)));
+    const [blob, full] = await Promise.all([toBlob(outW, Math.round(outW / ratio)), toFullBlob()]);
     if (!blob) {
       setSaving(false);
       return setError("Não foi possível preparar a imagem.");
     }
     try {
-      await onConfirm(blob, ratio);
+      await onConfirm(blob, ratio, full ?? undefined);
     } catch {
       setError("Não foi possível salvar a foto. Tente novamente.");
     }
@@ -279,7 +326,7 @@ export function AvatarEditor({
     const stage = stageRef.current;
     if (!img || !nat || !stage) return;
     const paint = () => {
-      paintCanvas(stageCanvas.current, stage.clientWidth, img, nat, expandCrop(crop), rotation);
+      paintCanvas(stageCanvas.current, stage.clientWidth, img, nat, expandCrop(crop), rotation, crop);
       for (const c of [previewBig.current, previewSmall.current, previewRow.current]) if (c) paintCanvas(c, c.clientWidth, img, nat, crop, rotation);
     };
     paint();
@@ -288,7 +335,7 @@ export function AvatarEditor({
     return () => ro.disconnect();
   }, [nat, crop, rotation]);
 
-  const lowRes = nat && crop.w < 400;
+  const lowRes = nat && crop.w < 300;
   const displayName = name?.trim() || "Seu nome";
 
   return createPortal(
@@ -298,18 +345,18 @@ export function AvatarEditor({
       aria-modal="true"
       aria-label="Seleção de miniatura"
     >
-      <div className="flex min-h-0 w-full flex-1 flex-col md:max-w-[820px] md:flex-none md:overflow-hidden md:rounded-3xl md:border md:border-white/10 md:bg-space-surface md:text-white md:shadow-2xl">
-        <header className="flex shrink-0 items-center gap-3 px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] md:border-b md:border-white/[0.08] md:px-6 md:py-4">
+      <div className="flex min-h-0 w-full flex-1 flex-col md:max-w-[640px] md:flex-none md:overflow-hidden md:rounded-3xl md:border md:border-white/10 md:bg-space-surface md:text-white md:shadow-2xl">
+        <header className="flex shrink-0 items-center gap-3 px-3 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] md:border-b md:border-white/[0.08] md:px-5 md:py-3">
           <button type="button" onClick={onCancel} aria-label="Cancelar" className="flex h-10 w-10 items-center justify-center rounded-full text-snow/80 hover:bg-white/10 md:order-last md:ml-auto md:h-9 md:w-9 md:text-white/60">
             <X className="h-6 w-6 md:h-5 md:w-5" />
           </button>
-          <h2 className="text-[17px] font-semibold md:text-lg">Seleção de miniatura</h2>
+          <h2 className="text-[17px] font-semibold md:text-base">Seleção de miniatura</h2>
         </header>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:gap-6 md:overflow-visible md:p-6">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:gap-5 md:overflow-visible md:px-5 md:py-4">
           <div className="flex flex-1 flex-col md:min-w-0">
-            <p className="hidden text-sm text-white/55 md:mb-4 md:block">
-              Escolha a área que vai aparecer nas publicações, nos comentários e nas mensagens. Arraste a foto e use o zoom para ajustar.
+            <p className="hidden text-[13px] leading-snug text-white/55 md:mb-3 md:block">
+              Arraste para escolher a área do círculo. Diminua o zoom para caber a foto inteira.
             </p>
             {error && <p className="mx-4 mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300 md:mx-0">{error}</p>}
 
@@ -321,7 +368,7 @@ export function AvatarEditor({
                 onPointerUp={endPointer}
                 onPointerCancel={endPointer}
                 onWheel={onWheel}
-                className="relative aspect-square w-full max-w-[min(100vw,58dvh)] cursor-grab touch-none select-none overflow-hidden bg-[#0d0f1a] active:cursor-grabbing md:max-w-[440px] md:rounded-2xl"
+                className="relative aspect-square w-full max-w-[min(100vw,58dvh)] cursor-grab touch-none select-none overflow-hidden bg-[#0d0f1a] active:cursor-grabbing md:max-w-[320px] md:rounded-2xl"
               >
                 <canvas ref={stageCanvas} className="absolute inset-0 h-full w-full" />
                 {!nat && !error && (
@@ -332,19 +379,23 @@ export function AvatarEditor({
                 {nat && (
                   <>
                     {/* Fora do círculo fica escuro; dentro é exatamente o que vira o avatar. */}
-                    <span aria-hidden className="pointer-events-none absolute inset-[9%] rounded-full border-2 border-white/85 shadow-[0_0_0_9999px_rgba(0,0,0,0.68)]" />
+                    {/* Máscara em SVG (um retângulo com o furo do círculo): funciona em qualquer navegador e tema. */}
+                    <svg aria-hidden viewBox="0 0 100 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 h-full w-full">
+                      <path d="M0 0H100V100H0Z M9 50a41 41 0 1 0 82 0a41 41 0 1 0 -82 0Z" fillRule="evenodd" fill="rgba(0,0,0,0.62)" />
+                      <circle cx="50" cy="50" r="41" fill="none" stroke="#fff" strokeOpacity="0.9" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                    </svg>
                   </>
                 )}
               </div>
             </div>
 
-            <div className="mx-auto mt-3 flex w-full max-w-[440px] items-center gap-3 px-4 md:px-0">
+            <div className="mx-auto mt-3 flex w-full max-w-[480px] items-center gap-3 px-4 md:max-w-[320px] md:px-0">
               <button type="button" onClick={() => applyZoom(zoom - 0.2)} aria-label="Diminuir zoom" className="text-snow/60 hover:text-snow md:text-white/60 md:hover:text-white">
                 <ZoomOut className="h-5 w-5" />
               </button>
               <input
                 type="range"
-                min={1}
+                min={nat ? minZoom(rotatedSize(nat, rotation), ratio) : 1}
                 max={MAX_ZOOM}
                 step={0.01}
                 value={zoom}
@@ -359,19 +410,19 @@ export function AvatarEditor({
                 <RotateCw className="h-5 w-5" />
               </button>
             </div>
-            {lowRes && <p className="mx-auto mt-2 max-w-[440px] px-4 text-xs text-amber-300/90 md:px-0">Pouca resolução nesse enquadramento. Diminua o zoom ou use uma foto maior.</p>}
+            {lowRes && <p className="mx-auto mt-2 max-w-[320px] px-4 text-xs text-amber-300/90 md:px-0">Pouca resolução nesse enquadramento. Diminua o zoom ou use uma foto maior.</p>}
           </div>
 
-          <aside className="shrink-0 px-4 pt-4 md:w-[220px] md:px-0 md:pt-0">
+          <aside className="shrink-0 px-4 pt-4 md:w-[200px] md:px-0 md:pt-0">
             {/* Computador: miniaturas em dois tamanhos, como no VK. */}
             <div className="hidden md:block">
-              <p className="mb-3 text-sm font-medium text-white/70">Miniaturas</p>
+              <p className="mb-2 text-[13px] font-medium text-white/70">Miniaturas</p>
               <div className="flex items-end gap-4">
-                <canvas ref={previewBig} className="h-[100px] w-[100px] rounded-full bg-white/[0.06]" />
-                <canvas ref={previewSmall} className="h-[50px] w-[50px] rounded-full bg-white/[0.06]" />
+                <canvas ref={previewBig} className="h-[84px] w-[84px] rounded-full bg-white/[0.06]" />
+                <canvas ref={previewSmall} className="h-[44px] w-[44px] rounded-full bg-white/[0.06]" />
               </div>
             </div>
-            <p className="mb-2 text-[13px] text-snow/50 md:mt-6 md:text-white/50">Exemplo de avatar</p>
+            <p className="mb-2 text-[13px] text-snow/50 md:mt-4 md:text-white/50">Exemplo de avatar</p>
             <div className="flex items-center gap-3 rounded-2xl bg-white/[0.07] p-3 md:bg-white/[0.04]">
               <canvas ref={previewRow} className="h-11 w-11 shrink-0 rounded-full bg-white/[0.06]" />
               <span className="min-w-0">
@@ -382,7 +433,7 @@ export function AvatarEditor({
           </aside>
         </div>
 
-        <footer className="flex shrink-0 flex-col-reverse gap-2 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 md:flex-row md:justify-end md:border-t md:border-white/[0.08] md:px-6 md:py-4">
+        <footer className="flex shrink-0 flex-col-reverse gap-2 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 md:flex-row md:justify-end md:border-t md:border-white/[0.08] md:px-5 md:py-3">
           <button type="button" onClick={onCancel} className="h-12 rounded-2xl px-5 text-[15px] font-medium text-snow/80 hover:bg-white/10 md:h-10 md:rounded-xl md:border md:border-white/15 md:text-sm md:text-white/80">
             Voltar
           </button>

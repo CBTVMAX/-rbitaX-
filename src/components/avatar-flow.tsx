@@ -51,6 +51,8 @@ export function AvatarFlow({
   const [step, setStep] = useState<Step>(open ? (initialFile ? "edit" : "menu") : null);
   const [file, setFile] = useState<File | null>(initialFile ?? null);
   const [cropped, setCropped] = useState<Blob | null>(null);
+  // Foto inteira (como no VK): o avatar usa o recorte, mas o post e a história mostram a foto toda.
+  const [full, setFull] = useState<Blob | null>(null);
   const [ratio, setRatio] = useState(1);
   const [asProfile, setAsProfile] = useState(true);
   // Nova foto de perfil: post e história já vêm marcados (a pessoa desmarca o que não quiser).
@@ -66,6 +68,7 @@ export function AvatarFlow({
     setStep(null);
     setFile(null);
     setCropped(null);
+    setFull(null);
     setError(null);
     onClose();
   }
@@ -96,7 +99,8 @@ export function AvatarFlow({
     setStep("edit");
   }
 
-  async function onEditDone(blob: Blob, r: number) {
+  async function onEditDone(blob: Blob, r: number, whole?: Blob) {
+    setFull(whole ?? null);
     // Keep the editor's own output — it already contains the zoom, pan and rotation the user chose.
     setCropped(blob);
     setRatio(r);
@@ -116,9 +120,29 @@ export function AvatarFlow({
       if (asProfile) {
         await saveAvatarUrl(supabase, userId, mediaUrl);
       }
+      // Post e história levam a foto inteira (o recorte é só a miniatura do avatar), como no VK.
+      let wholeUrl = mediaUrl;
+      let wholeRatio = ratio;
+      let wholeType = cropped.type || "image/jpeg";
+      if (full && (asStory || (asPost && asProfile))) {
+        const ext = full.type === "image/webp" ? "webp" : "jpg";
+        const path = `${userId}/posts/avatar-${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("media").upload(path, full, { contentType: full.type, cacheControl: "31536000" });
+        if (!upErr) {
+          wholeUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+          wholeType = full.type;
+          try {
+            const bmp = await createImageBitmap(full);
+            wholeRatio = bmp.width / bmp.height;
+            bmp.close();
+          } catch {
+            /* mantém a proporção do recorte */
+          }
+        }
+      }
       if (asStory) {
         const { error: storyError } = await supabase.rpc("story_create", {
-          p: { type: "image", mediaUrl, hours: 24, meta: { source: "avatar", ratio } },
+          p: { type: "image", mediaUrl: wholeUrl, hours: 24, meta: { source: "avatar", ratio: wholeRatio } },
         });
         if (storyError) throw new Error("STORY_FAILED");
       }
@@ -137,8 +161,8 @@ export function AvatarFlow({
           id: crypto.randomUUID(),
           postId,
           type: "image",
-          url: mediaUrl,
-          mimeType: cropped.type || "image/jpeg",
+          url: wholeUrl,
+          mimeType: wholeType,
           position: 0,
         });
         if (mediaError) throw new Error("POST_FAILED");
