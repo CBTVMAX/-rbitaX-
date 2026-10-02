@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { Camera, Check, Globe, ImagePlus, Loader2, Lock, Plus, Trash2, X } from "lucide-react";
@@ -49,6 +49,37 @@ export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Par
   const [uploading, setUploading] = useState<"avatarUrl" | "coverUrl" | null>(null);
   // Como no perfil: a capa passa pelo recorte 7:2 e a foto pelo círculo antes de subir.
   const [editing, setEditing] = useState<{ file: File; key: "avatarUrl" | "coverUrl" } | null>(null);
+  const [linkUpload, setLinkUpload] = useState<number | null>(null);
+  const linkInput = useRef<HTMLInputElement>(null);
+  const linkTarget = useRef<number>(0);
+  const [topics, setTopics] = useState<{ id: string; title: string }[]>([]);
+
+  useEffect(() => {
+    if (!show("info")) return;
+    supabase
+      .from("CommunityDiscussion")
+      .select("id, title")
+      .eq("communityId", community.id)
+      .eq("status", "visible")
+      .order("isPinned", { ascending: false })
+      .order("lastActivityAt", { ascending: false })
+      .limit(30)
+      .then(({ data }) => setTopics(data ?? []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [community.id]);
+
+  async function uploadLinkImage(file: File | undefined) {
+    const i = linkTarget.current;
+    if (!file || !viewer) return;
+    setLinkUpload(i);
+    try {
+      const r = await uploadCommunityFile(supabase, viewer.id, community.id, file, "image");
+      setF((x) => ({ ...x, links: x.links.map((l, k) => (k === i ? { ...l, image: r.url } : l)) }));
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Falha no envio da imagem.", true);
+    }
+    setLinkUpload(null);
+  }
   const [privacyConfirm, setPrivacyConfirm] = useState(false);
   const avatarInput = useRef<HTMLInputElement>(null);
   const coverInput = useRef<HTMLInputElement>(null);
@@ -87,7 +118,11 @@ export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Par
   async function save(force = false) {
     if (!changed.length) return;
     if (changed.includes("isPrivate") && !f.isPrivate && !force) return setPrivacyConfirm(true);
-    const links = f.links.map((l) => ({ label: l.label.trim(), url: l.url.trim() })).filter((l) => l.label || l.url);
+    // Endereço do próprio ÓrbitaX pode ser colado sem o domínio ("/comunidades/…").
+    const absolute = (u: string) => (u.startsWith("/") ? `${window.location.origin}${u}` : u);
+    const links = f.links
+      .map((l) => ({ label: l.label.trim(), url: absolute(l.url.trim()), ...(l.image ? { image: l.image } : {}) }))
+      .filter((l) => l.label || l.url);
     if (links.some((l) => !/^https?:\/\/\S+\.\S+/.test(l.url) || !l.label)) return toast("Cada link precisa de um nome e de um endereço começando com https://", true);
     const patch: Record<string, unknown> = {};
     for (const k of changed) patch[k] = k === "links" ? links : typeof f[k] === "string" ? (f[k] as string).trim() : f[k];
@@ -218,26 +253,74 @@ export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Par
       )}
 
       {show("info") && (
-      <Card title="Links" desc="Site, canal, suporte… até 8 links.">
+      <div id="links" className="scroll-mt-24">
+      <Card title="Atalhos com capa" desc="Aparecem como quadros clicáveis no topo da comunidade (ex.: Inscrição, Regras, Hierarquia). Até 8.">
         <div className="space-y-2">
           {f.links.map((l, i) => (
-            <div key={i} className="flex flex-col gap-2 rounded-2xl bg-white/[0.02] p-2 sm:flex-row">
-              <input value={l.label} onChange={(e) => set("links", f.links.map((x, k) => (k === i ? { ...x, label: e.target.value } : x)))} maxLength={40} placeholder="Nome (ex.: Site oficial)" className={clsx(inputCls, "sm:w-48")} />
-              <div className="flex flex-1 gap-2">
-                <input value={l.url} onChange={(e) => set("links", f.links.map((x, k) => (k === i ? { ...x, url: e.target.value } : x)))} placeholder="https://" inputMode="url" className={inputCls} />
-                <button type="button" onClick={() => set("links", f.links.filter((_, k) => k !== i))} aria-label="Remover link" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 text-white/60 hover:text-red-300">
-                  <X className="h-4 w-4" />
-                </button>
+            <div key={i} className="flex gap-3 rounded-2xl bg-white/[0.02] p-2">
+              <button
+                type="button"
+                onClick={() => ((linkTarget.current = i), linkInput.current?.click())}
+                aria-label="Escolher capa do atalho"
+                className="relative flex aspect-[3/2] w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed border-white/20 bg-white/[0.03] text-white/50 hover:text-white sm:w-28"
+              >
+                {l.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={l.image} alt="" className="h-full w-full object-cover" />
+                ) : linkUpload === i ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <span className="flex flex-col items-center gap-1 text-[10px]">
+                    <ImagePlus className="h-5 w-5" /> Capa
+                  </span>
+                )}
+                {l.image && linkUpload === i && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <Loader2 className="h-5 w-5 animate-spin text-white" />
+                  </span>
+                )}
+              </button>
+              <div className="min-w-0 flex-1 space-y-2">
+                <div className="flex gap-2">
+                  <input value={l.label} onChange={(e) => set("links", f.links.map((x, k) => (k === i ? { ...x, label: e.target.value } : x)))} maxLength={40} placeholder="Título (ex.: INSCRIÇÃO MEMBROS)" className={inputCls} />
+                  <button type="button" onClick={() => set("links", f.links.filter((_, k) => k !== i))} aria-label="Remover atalho" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 text-white/60 hover:text-red-300">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <input value={l.url} onChange={(e) => set("links", f.links.map((x, k) => (k === i ? { ...x, url: e.target.value } : x)))} placeholder="Endereço (https://… ou /comunidades/…)" inputMode="url" className={inputCls} />
+                {topics.length > 0 && (
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      const t = topics.find((x) => x.id === e.target.value);
+                      if (!t) return;
+                      set(
+                        "links",
+                        f.links.map((x, k) => (k === i ? { ...x, url: `${window.location.origin}/comunidades/${community.slug}/discussoes/${t.id}`, label: x.label || t.title.slice(0, 40) } : x))
+                      );
+                    }}
+                    className={clsx(inputCls, "text-white/70")}
+                  >
+                    <option value="">Abrir uma discussão da comunidade…</option>
+                    {topics.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.title}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
           ))}
           {f.links.length < 8 && (
             <button type="button" onClick={() => set("links", [...f.links, { label: "", url: "" }])} className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-dashed border-white/20 px-4 text-xs font-semibold text-white/70 hover:text-white">
-              <Plus className="h-4 w-4" /> Adicionar link
+              <Plus className="h-4 w-4" /> Adicionar atalho
             </button>
           )}
         </div>
+        <input ref={linkInput} type="file" accept={ACCEPT.image} hidden onChange={(e) => (uploadLinkImage(e.target.files?.[0]), (e.target.value = ""))} />
       </Card>
+      </div>
       )}
 
       {show("privacy") && (

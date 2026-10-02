@@ -14,7 +14,8 @@ export type PermissionLevel = "all" | "members" | "admins" | "owner";
 export type Permissions = Record<PermissionKey, PermissionLevel>;
 export type Moderation = { wordFilter: string[]; approvePosts: boolean; approveComments: boolean; blockLinks: boolean; blockMedia: boolean };
 export type NotifyPrefs = { newPost: boolean; newDiscussion: boolean; announcements: boolean; joinRequests: boolean; events: boolean; newMembers: boolean };
-export type CommunityLink = { label: string; url: string };
+/** `image`: capa do quadro clicável no topo da comunidade (como os links do VK). */
+export type CommunityLink = { label: string; url: string; image?: string | null };
 
 export type Community = {
   id: string;
