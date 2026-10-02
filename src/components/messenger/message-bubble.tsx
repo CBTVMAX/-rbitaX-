@@ -18,6 +18,7 @@ import {
   StickerView,
   VoicePlayer,
 } from "./message-content";
+import { useChatRules } from "@/lib/messenger/group-rules";
 import { DeliveryTicks } from "./conversation-item";
 import { HoverActions, type DeliveryState, type MessageAction } from "./message-actions";
 import { ChatAvatar } from "./ui";
@@ -139,8 +140,11 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
     ? { id: origin.senderId, name: origin.senderName, username: "", avatarUrl: origin.senderAvatarUrl ?? null, avatarFrame: origin.senderAvatarFrame ?? null, role: "member", lastReadAt: null }
     : p.sender;
   const press = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rules = useChatRules();
 
   if (m.type === "system") {
+    // "Mensagens do sistema no chat" desligado nas configurações do grupo: os avisos não aparecem.
+    if (!rules.systemMessages) return null;
     return (
       <div className="my-2 flex justify-center px-6">
         <span className="rounded-full border border-white/10 bg-space-surface/70 px-3.5 py-1.5 text-center text-xs text-white/60 backdrop-blur">

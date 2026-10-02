@@ -13,6 +13,7 @@ const PROTECTED_PREFIXES = [
   "/diamantes",
   "/loja",
   "/admin",
+  "/convite",
 ];
 
 // Pages a signed-in person may open before confirming the two-step verification code.
@@ -26,7 +27,7 @@ const MFA_FREE = ["/entrar", "/auth", "/api", "/redefinir-senha", "/termos", "/p
 const STRICT_APP_PREFIXES = [
   "/feed", "/mensagens", "/comunidades", "/perfil", "/configuracoes",
   "/notificacoes", "/amigos", "/diamantes", "/loja", "/admin",
-  "/explorar", "/musica", "/videos",
+  "/explorar", "/musica", "/videos", "/convite",
 ];
 
 /**
