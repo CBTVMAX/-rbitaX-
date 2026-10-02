@@ -349,7 +349,7 @@ export function ConversationList({
 
         <div className="hidden items-center justify-between gap-3 lg:flex">
           <div className="min-w-0">
-            <h1 className="font-display text-[32px] font-bold leading-tight tracking-tight text-white lg:text-xl">Mensagens</h1>
+            <h1 className="font-display text-[32px] font-bold leading-tight tracking-tight text-white lg:text-lg">Mensagens</h1>
             <PresenceStatus userId={me.id} initial={presence} editable className="mt-1" />
           </div>
           <button
@@ -357,9 +357,9 @@ export function ConversationList({
             onClick={onNew}
             aria-label="Nova conversa"
             title="Nova conversa"
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ff4fa3] via-[#d63cf0] to-[#8b5cf6] text-snow shadow-[0_10px_30px_rgba(214,60,240,0.45)] transition hover:scale-105 active:scale-95 lg:h-10 lg:w-10"
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ff4fa3] via-[#d63cf0] to-[#8b5cf6] text-snow shadow-[0_10px_30px_rgba(214,60,240,0.45)] transition hover:scale-105 active:scale-95 lg:h-8 lg:w-8"
           >
-            <PenSquare className="h-6 w-6 lg:h-[18px] lg:w-[18px]" />
+            <PenSquare className="h-6 w-6 lg:h-4 lg:w-4" />
           </button>
         </div>
 
