@@ -49,7 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           presence={profile.presence}
         />
         <AppSidebar username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} />
-        <main className="min-h-screen pb-24 md:ml-64 md:pb-0 md:pt-16">{children}</main>
+        <main className="min-h-screen pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:ml-[14rem] md:pb-0 md:pt-[3.5rem]">{children}</main>
         <MobileTabBar username={profile.username} />
         <ChatDock me={{ id: current.authId, name: profile.name, username: profile.username, avatarUrl: profile.avatarUrl }} />
         <PushPrompt />

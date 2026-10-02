@@ -204,7 +204,7 @@ export default async function ComunidadesPage(
               <h2 className="mb-3 text-sm font-semibold text-white/80">⭐ Favoritas</h2>
               <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] md:mx-0 md:px-0">
                 {favorites.map((c) => (
-                  <Link key={c.id} href={`/comunidades/${c.slug}`} className="flex min-h-[56px] shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-space-card/80 py-2 pl-2 pr-4 transition hover:border-orbit-purple/40">
+                  <Link key={c.id} href={`/comunidades/${c.slug}`} className="flex min-h-[48px] shrink-0 items-center gap-2.5 rounded-2xl border border-white/10 bg-space-card/80 py-2 pl-2 pr-4 transition hover:border-orbit-purple/40">
                     <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-orbit-gradient text-sm font-bold text-snow">
                       {c.avatarUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element

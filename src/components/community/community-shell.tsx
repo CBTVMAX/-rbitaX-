@@ -38,7 +38,7 @@ export async function CommunityShell({ current, children }: { current: Current; 
         <AppTopBar userId={current.authId} username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} presence={profile.presence} />
         <MobileHeader userId={current.authId} username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} presence={profile.presence} />
         <AppSidebar username={profile.username} name={profile.name} avatarUrl={profile.avatarUrl} />
-        <main className="min-h-screen pb-24 md:ml-64 md:pb-0 md:pt-16">{children}</main>
+        <main className="min-h-screen pb-[calc(4.25rem+env(safe-area-inset-bottom))] md:ml-[14rem] md:pb-0 md:pt-[3.5rem]">{children}</main>
         <MobileTabBar username={profile.username} />
         {/* O chat do Messenger acompanha a pessoa em todo o ÓrbitaX, inclusive nas comunidades. */}
         <ChatDock me={{ id: current.authId, name: profile.name, username: profile.username, avatarUrl: profile.avatarUrl }} />

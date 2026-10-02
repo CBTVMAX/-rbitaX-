@@ -205,7 +205,7 @@ export function PostComposer({
     const action = "flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-white/75 transition hover:bg-white/5 hover:text-white";
 
     return (
-      <form id="composer" onSubmit={submit} className="scroll-mt-24 rounded-2xl border border-white/10 bg-space-surface/80 p-3 md:p-4">
+      <form id="composer" onSubmit={submit} className="scroll-mt-[96px] rounded-2xl border border-white/10 bg-space-surface/80 p-3 md:p-4">
         <div className="flex items-center gap-3">
           <span className="rounded-full bg-orbit-gradient p-[2px]">
             <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-space-card md:h-11 md:w-11">
@@ -246,7 +246,7 @@ export function PostComposer({
         {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
 
         <div className="mt-3 flex items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-0.5 md:pl-14">
+          <div className="flex flex-wrap items-center gap-0.5 md:pl-[56px]">
             <input ref={fileRef} type="file" accept="image/*,video/*" multiple hidden onChange={pickFile} />
             <input ref={audioRef} type="file" accept="audio/*" multiple hidden onChange={pickFile} />
             <button type="button" onClick={() => fileRef.current?.click()} className={action}>

@@ -83,7 +83,7 @@ export function MembersView({ canSee, initial }: { canSee: boolean; initial: Mem
       canSee={canSee}
       action={
         canInvite ? (
-          <button type="button" onClick={() => setInvite(true)} className="flex h-11 items-center gap-1.5 rounded-full bg-orbit-gradient px-4 text-sm font-semibold text-snow shadow-glow">
+          <button type="button" onClick={() => setInvite(true)} className="flex h-10 items-center gap-1.5 rounded-full bg-orbit-gradient px-4 text-sm font-semibold text-snow shadow-glow">
             <UserPlus className="h-4 w-4" /> Convidar
           </button>
         ) : undefined
@@ -123,7 +123,7 @@ export function MembersView({ canSee, initial }: { canSee: boolean; initial: Mem
         ) : (
           <div className="overflow-hidden rounded-3xl border border-white/[0.08] bg-space-card/70">
             {sorted.map((m) => (
-              <Link key={m.user.id} href={`/perfil/${m.user.username}`} className="flex min-h-[64px] items-center gap-3 border-b border-white/[0.05] px-4 py-2.5 transition last:border-0 hover:bg-white/[0.03]">
+              <Link key={m.user.id} href={`/perfil/${m.user.username}`} className="flex min-h-[56px] items-center gap-3 border-b border-white/[0.05] px-4 py-2.5 transition last:border-0 hover:bg-white/[0.03]">
                 <span className="relative">
                   <Avatar name={m.user.name} url={m.user.avatarUrl} size={42} />
                   <PresenceDot userId={m.user.id} value={null} className="absolute bottom-0 right-0 h-3 w-3 border-2 border-space-card" />

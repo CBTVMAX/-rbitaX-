@@ -186,11 +186,11 @@ function MusicEditor({ userId, current, onClose }: { userId: string; current: Pr
           {error && <p className="text-xs text-red-300">{error}</p>}
           <div className="flex items-center gap-2">
             {current && (
-              <button type="button" onClick={remove} disabled={busy} className="flex h-11 items-center gap-2 rounded-full border border-red-400/40 px-4 text-sm font-semibold text-red-300 disabled:opacity-60">
+              <button type="button" onClick={remove} disabled={busy} className="flex h-10 items-center gap-2 rounded-full border border-red-400/40 px-4 text-sm font-semibold text-red-300 disabled:opacity-60">
                 <Trash2 className="h-4 w-4" /> Remover
               </button>
             )}
-            <button type="button" onClick={save} disabled={busy} className="ml-auto flex h-11 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow disabled:opacity-60">
+            <button type="button" onClick={save} disabled={busy} className="ml-auto flex h-10 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow disabled:opacity-60">
               {busy && <Loader2 className="h-4 w-4 animate-spin" />} Salvar
             </button>
           </div>

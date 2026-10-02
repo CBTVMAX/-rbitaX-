@@ -230,7 +230,7 @@ function MusicTab({ items, done, loading, more, onOpen }: { items: CommunityPost
     <div className="space-y-3">
       <div className="overflow-hidden rounded-3xl border border-white/[0.08] bg-space-card/80">
         {tracks.map((t, i) => (
-          <div key={t.post.id} className={clsx("flex min-h-[64px] items-center gap-3 border-b border-white/[0.05] px-3 py-2 last:border-0", index === i && "bg-orbit-purple/[0.08]")}>
+          <div key={t.post.id} className={clsx("flex min-h-[56px] items-center gap-3 border-b border-white/[0.05] px-3 py-2 last:border-0", index === i && "bg-orbit-purple/[0.08]")}>
             <button
               type="button"
               onClick={() => toggle(i)}
@@ -317,7 +317,7 @@ function FilesTab({ items, done, loading, more }: { items: CommunityPost[]; done
           const k = fileKind(m.mimeType, name);
           const Icon = k.icon;
           return (
-            <div key={m.id} className="flex min-h-[68px] items-center gap-3 border-b border-white/[0.05] px-3 py-2.5 last:border-0">
+            <div key={m.id} className="flex min-h-[58px] items-center gap-3 border-b border-white/[0.05] px-3 py-2.5 last:border-0">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-orbit-cyan">
                 <Icon className="h-5 w-5" />
               </span>
@@ -615,7 +615,7 @@ export function ContentCenter({
 
   return (
     <section id="conteudo" className="space-y-3">
-      <div className="sticky top-14 z-20 -mx-4 border-b border-white/[0.06] bg-space-bg/85 px-2 backdrop-blur-xl md:top-16 md:mx-0 md:rounded-2xl md:border md:px-1.5">
+      <div className="sticky top-14 z-20 -mx-4 border-b border-white/[0.06] bg-space-bg/85 px-2 backdrop-blur-xl md:top-14 md:mx-0 md:rounded-2xl md:border md:px-1.5">
         <div className="flex gap-0.5 overflow-x-auto py-1.5 [scrollbar-width:none]" role="tablist" aria-label="Central de conteúdo">
           {CONTENT_TABS.map((t) => {
             const Icon = t.icon;

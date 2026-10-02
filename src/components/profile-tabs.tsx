@@ -114,7 +114,7 @@ export function ProfileTabs({
 
   return (
     <div className="space-y-3 md:space-y-4">
-      <div ref={barRef} className="relative scroll-mt-20">
+      <div ref={barRef} className="relative scroll-mt-[80px]">
         <div className="ox-card flex items-center rounded-2xl border border-white/10 bg-space-surface">
           <div role="tablist" aria-label="Seções do perfil" className="no-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto p-1.5 md:gap-0 md:px-2 md:py-0">
             {PRIMARY.map(({ id, label, icon: Icon }) => (

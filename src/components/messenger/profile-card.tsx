@@ -68,7 +68,7 @@ export function ProfileCard({
         >
           <div className="absolute inset-0 bg-gradient-to-t from-space-surface via-transparent" />
         </div>
-        <div className="-mt-12 flex flex-col items-center px-5 text-center">
+        <div className="-mt-[48px] flex flex-col items-center px-5 text-center">
           <span className="rounded-full ring-4 ring-space-surface">
             <ChatAvatar name={user.name} url={user.avatarUrl} size={88} frame={user.avatarFrame} />
           </span>

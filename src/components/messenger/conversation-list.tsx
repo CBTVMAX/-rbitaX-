@@ -319,7 +319,7 @@ export function ConversationList({
         <div className="flex items-center gap-3 lg:hidden">
           <ChatAvatar name={me.name} url={me.avatarUrl} size={40} frame={me.avatarFrame} />
           <div className="min-w-0 flex-1">
-            <h1 className="truncate font-display text-[26px] font-bold leading-tight tracking-tight text-white">Messenger</h1>
+            <h1 className="truncate font-display text-[24px] font-bold leading-tight tracking-tight text-white">Messenger</h1>
           </div>
           <Link href="/chamadas" aria-label="Chamadas" className="flex h-11 w-11 items-center justify-center rounded-full text-white/85 transition hover:bg-white/[0.06]">
             <Phone className="h-[22px] w-[22px]" />
@@ -464,7 +464,7 @@ export function ConversationList({
           type="button"
           onClick={onNew}
           aria-label="Nova conversa"
-          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-space-card text-white shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition active:scale-95 lg:hidden"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-space-card text-white shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition active:scale-95 lg:hidden"
         >
           <PenSquare className="h-6 w-6" />
         </button>

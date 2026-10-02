@@ -83,7 +83,7 @@ export default function RedefinirSenhaPage() {
                   autoComplete={f.auto}
                   value={f.value}
                   onChange={(e) => f.set(e.target.value)}
-                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-9 text-sm text-white outline-none focus:border-orbit-purple"
+                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-[36px] pr-[36px] text-sm text-white outline-none focus:border-orbit-purple"
                 />
                 <button
                   type="button"

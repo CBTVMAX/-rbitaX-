@@ -167,7 +167,7 @@ export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Par
             </div>
           </div>
           <div className="flex items-end gap-3 px-4 pb-4">
-            <div className="relative -mt-7">
+            <div className="relative -mt-[28px]">
               <span className="block rounded-full p-[3px]" style={{ background: `linear-gradient(135deg, ${accent.from}, ${accent.to})` }}>
                 <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-[3px] border-space-card bg-space-card text-2xl font-bold text-white">
                   {f.avatarUrl ? (
@@ -226,7 +226,7 @@ export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Par
                 value={f.username}
                 onChange={(e) => set("username", e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, "").slice(0, 30))}
                 disabled={!owner}
-                className={clsx(inputCls, "pl-8")}
+                className={clsx(inputCls, "pl-[32px]")}
               />
             </div>
           </Field>
@@ -257,7 +257,7 @@ export function GeneralSection({ onSaved, part = "all" }: { onSaved: (patch: Par
       )}
 
       {show("info") && (
-      <div id="links" className="scroll-mt-24">
+      <div id="links" className="scroll-mt-[96px]">
       <Card title="Atalhos com capa" desc="Quadros clicáveis no topo da comunidade (ex.: Inscrição, Regras, Hierarquia). Capa no formato 2:1, como 1800×900 px, e um título em cada um. Até 8.">
         <div className="space-y-2">
           {f.links.map((l, i) => (

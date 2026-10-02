@@ -41,7 +41,7 @@ export function Toggle({ checked, onChange, label, desc, disabled }: { checked: 
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className="flex min-h-[56px] w-full items-center gap-3 rounded-2xl px-1 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-50"
+      className="flex min-h-[48px] w-full items-center gap-3 rounded-2xl px-1 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-50"
     >
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium text-white/90">{label}</span>
@@ -60,7 +60,7 @@ export function SaveButton({ busy, disabled, onClick, children = "Salvar alteraÃ
       type="button"
       onClick={onClick}
       disabled={busy || disabled}
-      className="flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow transition disabled:opacity-40 disabled:shadow-none"
+      className="flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow transition disabled:opacity-40 disabled:shadow-none"
     >
       {busy && <Loader2 className="h-4 w-4 animate-spin" />} {children}
     </button>

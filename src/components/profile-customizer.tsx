@@ -158,7 +158,7 @@ function Preview({ color, frameId, props }: { color: string; frameId: string | n
         )}
       </div>
       <div className="px-4 pb-4">
-        <div className={clsx("relative h-20 w-20", frame ? "-mt-8 mb-6 ml-4" : "-mt-10")}>
+        <div className={clsx("relative h-20 w-20", frame ? "-mt-[32px] mb-6 ml-4" : "-mt-[40px]")}>
           {frame && <div aria-hidden className="pointer-events-none absolute -inset-[30%]" style={frameBackdropStyle(frame)} />}
           <div
             className={clsx(

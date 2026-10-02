@@ -44,7 +44,8 @@ export function useGroupConfig(supabase: Client, conversationId: string, enabled
   const reload = useCallback(async () => {
     if (!enabled) return;
     const { data, error } = await supabase.rpc("group_config", { p_conversation_id: conversationId });
-    if (!error && data) setConfig(data as unknown as GroupConfig);
+    // Só aceita o formato esperado (um objeto com as regras resolvidas); qualquer outra coisa é ignorada.
+    if (!error && data && typeof data === "object" && !Array.isArray(data) && "can" in data) setConfig(data as unknown as GroupConfig);
     // O papel na conversa (virou admin, deixou de ser) muda o que a pessoa pode fazer: recarrega.
   }, [supabase, conversationId, enabled, role]); // eslint-disable-line react-hooks/exhaustive-deps
 

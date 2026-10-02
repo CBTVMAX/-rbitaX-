@@ -186,7 +186,7 @@ export function AdminShell({
         </div>
       )}
 
-      <div className="lg:ml-64">
+      <div className="lg:ml-[16rem]">
         {/* Topbar */}
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-white/10 bg-space-bg/85 px-4 py-3 backdrop-blur md:px-6">
           <button type="button" onClick={() => setDrawer(true)} aria-label="Menu" className="rounded-full p-2 text-white/70 hover:bg-white/5 lg:hidden">

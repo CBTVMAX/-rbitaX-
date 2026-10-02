@@ -989,7 +989,7 @@ export function ProfileView({
               online={online}
               accent={accent}
               frame={frame}
-              className={frame ? "mx-6 -mt-9 mb-6 h-[124px] w-[124px] shrink-0 lg:mx-7 lg:-mt-11 lg:mb-7 lg:h-[144px] lg:w-[144px]" : "-mt-[52px] h-[148px] w-[148px] shrink-0 lg:-mt-[60px] lg:h-[172px] lg:w-[172px]"}
+              className={frame ? "mx-5 -mt-[30px] mb-5 h-[108px] w-[108px] shrink-0 lg:mx-6 lg:-mt-[36px] lg:mb-6 lg:h-[124px] lg:w-[124px]" : "-mt-[44px] h-[128px] w-[128px] shrink-0 lg:-mt-[52px] lg:h-[148px] lg:w-[148px]"}
             />
             {/* Como no VK: nome, uma linha de bio e uma linha com cidade · comunidade · Mais; ações à direita. */}
             <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-x-4 gap-y-3 pt-3">
@@ -1134,10 +1134,10 @@ export function ProfileView({
                 online={online}
                 accent={accent}
                 frame={frame}
-                className={frame ? "mb-5 ml-5 -mt-[clamp(18px,5vw,22px)] h-[clamp(84px,24vw,98px)] w-[clamp(84px,24vw,98px)]" : "-mt-[clamp(28px,7.5vw,32px)] h-[clamp(100px,29vw,118px)] w-[clamp(100px,29vw,118px)]"}
+                className={frame ? "mb-4 ml-4 -mt-[clamp(16px,4.5vw,20px)] h-[clamp(76px,21vw,88px)] w-[clamp(76px,21vw,88px)]" : "-mt-[clamp(26px,7vw,30px)] h-[clamp(88px,25vw,104px)] w-[clamp(88px,25vw,104px)]"}
               />
             </div>
-            <div className="mt-3">{identity()}</div>
+            <div className="mt-2">{identity()}</div>
             {bioAndMeta(false, true)}
             <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-white/55">
               {location && (

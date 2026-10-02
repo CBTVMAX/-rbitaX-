@@ -79,7 +79,7 @@ export default async function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-3 py-4 md:px-4 md:py-6">
       <div>
-        <h1 className="font-display text-xl font-bold text-white md:text-2xl lg:text-3xl">Configurações</h1>
+        <h1 className="font-display text-xl font-bold text-white md:text-2xl">Configurações</h1>
         <p className="mt-1 text-sm text-white/60">Gerencie sua conta, sua privacidade e o visual do Órbita X.</p>
       </div>
 

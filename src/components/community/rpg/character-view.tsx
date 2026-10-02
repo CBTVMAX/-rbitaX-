@@ -89,7 +89,7 @@ export function RpgCharacterView({ initial, config }: { initial: RpgCharacter; c
           )}
         </div>
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
-          <span className="-mt-16 flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-space-surface bg-space-card">
+          <span className="-mt-[64px] flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-space-surface bg-space-card">
             {character.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={character.avatarUrl} alt="" className="h-full w-full object-cover" />

@@ -128,7 +128,7 @@ function SearchBox({ className }: { className?: string }) {
       <input
         name="q"
         placeholder="Pesquisar pessoas, comunidades, conteúdos..."
-        className="w-full rounded-xl border border-white/10 bg-space-card/70 py-2.5 pl-10 pr-4 text-sm text-white outline-none placeholder:text-white/40 focus:border-orbit-purple/60"
+        className="w-full rounded-xl border border-white/10 bg-space-card/70 py-2.5 pl-[40px] pr-4 text-sm text-white outline-none placeholder:text-white/40 focus:border-orbit-purple/60"
       />
     </form>
   );
@@ -153,9 +153,9 @@ export function AppTopBar({
   useEffect(() => setOpen(false), [pathname]);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-30 hidden h-16 items-center border-b border-white/10 bg-space-bg/90 backdrop-blur md:flex">
-      <Link href="/feed" className="flex w-64 shrink-0 items-center px-5">
-        <OrbitWordmarkThemed className="h-10 w-auto" />
+    <header className="fixed inset-x-0 top-0 z-30 hidden h-14 items-center border-b border-white/10 bg-space-bg/90 backdrop-blur md:flex">
+      <Link href="/feed" className="flex w-56 shrink-0 items-center px-5">
+        <OrbitWordmarkThemed className="h-9 w-auto" />
       </Link>
 
       <SearchBox className="w-full max-w-sm lg:max-w-md" />
@@ -168,14 +168,14 @@ export function AppTopBar({
               key={href}
               href={href}
               className={clsx(
-                "relative flex flex-col items-center gap-0.5 px-2.5 py-1.5 text-[11px] transition lg:px-3",
+                "relative flex flex-col items-center gap-0.5 px-2.5 py-1 text-[11px] transition lg:px-3",
                 active ? "text-white" : "text-white/60 hover:text-white"
               )}
             >
               <Icon className="h-5 w-5" />
               {label}
               {badge && <CountBadge count={counts[badge]} className="absolute -top-1 left-1/2 ml-1" />}
-              {active && <span className="absolute -bottom-[9px] left-2 right-2 h-0.5 rounded-full bg-orbit-gradient" />}
+              {active && <span className="absolute -bottom-[7px] left-2 right-2 h-0.5 rounded-full bg-orbit-gradient" />}
             </Link>
           );
         })}
@@ -226,12 +226,12 @@ export function AppSidebar({ username }: { username: string; name: string; avata
   const { counts } = useLiveCounts();
 
   return (
-    <aside className="fixed bottom-0 left-0 top-16 z-20 hidden w-64 flex-col border-r border-white/10 bg-space-bg/80 backdrop-blur md:flex">
-      <nav className="orbit-scrollbar flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
+    <aside className="fixed bottom-0 left-0 top-14 z-20 hidden w-56 flex-col border-r border-white/10 bg-space-bg/80 backdrop-blur md:flex">
+      <nav className="orbit-scrollbar flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
         {sidebarItems(username).map(({ href, label, icon: Icon, badge }) => {
           const active = href ? isActive(pathname, href) : false;
           const classes = clsx(
-            "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition",
+            "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition",
             active
               ? "border border-orbit-purple/40 bg-gradient-to-r from-orbit-blue/30 to-orbit-purple/20 text-white shadow-glow"
               : href
@@ -254,7 +254,7 @@ export function AppSidebar({ username }: { username: string; name: string; avata
         <button
           type="button"
           onClick={() => setMoreOpen((v) => !v)}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-white/75 transition hover:bg-white/5 hover:text-white"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm text-white/75 transition hover:bg-white/5 hover:text-white"
         >
           <MoreHorizontal className="h-5 w-5" /> Mais
           {!moreOpen && <CountBadge count={counts.notifications} className="ml-auto" />}
@@ -310,7 +310,7 @@ function CoinBadge() {
 function CoinsCard() {
   const balance = useCoinBalance();
   return (
-    <div className="m-3 flex items-center justify-between rounded-xl border border-white/10 bg-space-surface/50 px-4 py-3">
+    <div className="m-3 flex items-center justify-between rounded-xl border border-white/10 bg-space-surface/50 px-3.5 py-2.5">
       <Link href="/diamantes" className="flex items-center gap-2 text-sm text-white/80 hover:text-white">
         <DiamondIcon className="h-4 w-4 text-sky-400" />
         <span>Diamantes</span>
@@ -472,7 +472,7 @@ export function MobileTabBar({ username }: { username: string }) {
         )}
       >
         <span className="relative">
-          <Icon className="h-6 w-6" />
+          <Icon className="h-[22px] w-[22px]" />
           {badge && <CountBadge count={counts[badge]} className="absolute -right-3 -top-1.5 h-4 min-w-4 px-1 text-[10px]" />}
         </span>
         {label}
@@ -482,7 +482,7 @@ export function MobileTabBar({ username }: { username: string }) {
 
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-end border-t border-white/10 bg-space-bg/95 px-2 pb-2 pt-2 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex items-end border-t border-white/10 bg-space-bg/95 px-2 pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur md:hidden">
         {items.slice(0, 2).map(tab)}
         <div className="flex flex-1 justify-center">
           {/* O "+" abre o menu "Publicar" (História, Post, Foto, Vídeos, Clipe) */}
@@ -491,9 +491,9 @@ export function MobileTabBar({ username }: { username: string }) {
             aria-label="Publicar"
             aria-haspopup="dialog"
             onClick={openPublish}
-            className="-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-orbit-gradient text-snow shadow-glow transition active:scale-95"
+            className="-mt-[22px] flex h-[52px] w-[52px] items-center justify-center rounded-full bg-orbit-gradient text-snow shadow-glow transition active:scale-95"
           >
-            <Plus className="h-7 w-7" />
+            <Plus className="h-[26px] w-[26px]" />
           </button>
         </div>
         {items.slice(2).map(tab)}

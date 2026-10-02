@@ -234,7 +234,7 @@ function ChatRoom({ room, me, supabase, onBack }: { room: Room; me: Me; supabase
   }
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-3xl flex-col md:h-[calc(100vh-5rem)]">
+    <div className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-3xl flex-col md:h-[calc(100vh-4.5rem)]">
       <header className="flex items-center gap-3 border-b border-white/10 px-3 py-2.5">
         <button type="button" onClick={onBack} aria-label="Voltar aos bate-papos" className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-white/80 hover:bg-white/5">
           <ArrowLeft className="h-5 w-5" />

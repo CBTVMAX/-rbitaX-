@@ -212,7 +212,7 @@ export function SheetBuilder() {
         </p>
       )}
 
-      <div className="relative z-20 -mx-4 flex flex-wrap items-center gap-2 border-b border-white/[0.06] bg-space-bg/90 px-4 py-3 backdrop-blur md:sticky md:top-16 md:mx-0 md:rounded-2xl md:border">
+      <div className="relative z-20 -mx-4 flex flex-wrap items-center gap-2 border-b border-white/[0.06] bg-space-bg/90 px-4 py-3 backdrop-blur md:sticky md:top-14 md:mx-0 md:rounded-2xl md:border">
         <div className="mr-auto min-w-0">
           <p className="text-[11px] uppercase tracking-wide text-white/45">{status}</p>
           <p className="text-xs text-white/55">
@@ -257,8 +257,8 @@ export function SheetBuilder() {
               <RulesNotice t={t} />
               <SheetBody t={t} mode="form" answers={previewAnswers} onChange={(id, v) => setPreviewAnswers((a) => ({ ...a, [id]: v }))} upload={async () => ""} />
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <span className="flex h-11 items-center justify-center rounded-xl border border-white/15 px-5 text-sm text-white/70">Salvar rascunho</span>
-                <span className="flex h-11 items-center justify-center rounded-xl px-6 text-sm font-semibold text-white" style={{ background: t.style.accent }}>
+                <span className="flex h-10 items-center justify-center rounded-xl border border-white/15 px-5 text-sm text-white/70">Salvar rascunho</span>
+                <span className="flex h-10 items-center justify-center rounded-xl px-6 text-sm font-semibold text-white" style={{ background: t.style.accent }}>
                   Enviar ficha
                 </span>
               </div>

@@ -192,7 +192,7 @@ function EntrarForm() {
                 value={mfaCode}
                 onChange={(e) => setMfaCode(e.target.value)}
                 placeholder="000000"
-                className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm tracking-[0.3em] text-white outline-none focus:border-orbit-purple"
+                className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-[36px] pr-3 text-sm tracking-[0.3em] text-white outline-none focus:border-orbit-purple"
               />
             </div>
           </div>
@@ -314,7 +314,7 @@ function EntrarForm() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+55 (11) 91234-5678"
-                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
+                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-[36px] pr-3 text-sm text-white outline-none focus:border-orbit-purple"
                 />
               </div>
             </div>
@@ -348,7 +348,7 @@ function EntrarForm() {
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
                   placeholder="000000"
-                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm tracking-[0.3em] text-white outline-none focus:border-orbit-purple"
+                  className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-[36px] pr-3 text-sm tracking-[0.3em] text-white outline-none focus:border-orbit-purple"
                 />
               </div>
             </div>
@@ -387,7 +387,7 @@ function EntrarForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seuemail@exemplo.com"
-                className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-3 text-sm text-white outline-none focus:border-orbit-purple"
+                className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-[36px] pr-3 text-sm text-white outline-none focus:border-orbit-purple"
               />
             </div>
           </div>
@@ -401,7 +401,7 @@ function EntrarForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Digite sua senha"
-                className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-9 pr-9 text-sm text-white outline-none focus:border-orbit-purple"
+                className="w-full rounded-lg border border-white/10 bg-space-card py-2 pl-[36px] pr-[36px] text-sm text-white outline-none focus:border-orbit-purple"
               />
               <button
                 type="button"

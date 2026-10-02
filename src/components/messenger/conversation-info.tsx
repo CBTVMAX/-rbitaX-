@@ -660,7 +660,7 @@ export function ConversationInfo({
 
   return (
     <div className="relative flex h-full min-h-0 flex-col">
-      <div className="flex min-h-[48px] items-center justify-between px-4 pb-1 pt-3">
+      <div className="flex min-h-[44px] items-center justify-between px-4 pb-1 pt-3">
         <span className="text-sm font-semibold text-white/80">{c.isGroup ? "Informações do grupo" : "Informações do contato"}</span>
         <div className="flex items-center gap-0.5">
           {/* Só quem administra o chat tem a página de configurações (como no VK). */}

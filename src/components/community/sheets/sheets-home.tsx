@@ -99,12 +99,12 @@ export function SheetsHome() {
 
       <div className="flex flex-wrap gap-2">
         {canCreate && (
-          <Link href={`${base}/nova`} className="flex h-11 items-center gap-2 rounded-2xl bg-orbit-gradient px-5 text-sm font-semibold text-snow shadow-glow">
+          <Link href={`${base}/nova`} className="flex h-10 items-center gap-2 rounded-2xl bg-orbit-gradient px-5 text-sm font-semibold text-snow shadow-glow">
             <Plus className="h-4 w-4" /> {t?.settings.buttonLabel || "Criar minha ficha"}
           </Link>
         )}
         {manage && (
-          <Link href={`${base}/construtor`} className="flex h-11 items-center gap-2 rounded-2xl border border-orbit-purple/40 bg-orbit-purple/10 px-5 text-sm font-semibold text-white">
+          <Link href={`${base}/construtor`} className="flex h-10 items-center gap-2 rounded-2xl border border-orbit-purple/40 bg-orbit-purple/10 px-5 text-sm font-semibold text-white">
             <Wrench className="h-4 w-4" /> Construtor de ficha
           </Link>
         )}
@@ -136,12 +136,12 @@ export function SheetsHome() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <label className="flex h-11 min-w-0 flex-1 basis-60 items-center gap-2 rounded-xl border border-white/10 bg-space-card/60 px-3.5">
+            <label className="flex h-10 min-w-0 flex-1 basis-60 items-center gap-2 rounded-xl border border-white/10 bg-space-card/60 px-3.5">
               <Search className="h-4 w-4 text-white/40" />
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Pesquisar personagem…" className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35" />
             </label>
             {filterFields.map((f) => (
-              <select key={f.id} value={filters[f.id] ?? ""} onChange={(e) => setFilters((x) => ({ ...x, [f.id]: e.target.value }))} className="h-11 rounded-xl border border-white/10 bg-space-card/60 px-3 text-sm text-white">
+              <select key={f.id} value={filters[f.id] ?? ""} onChange={(e) => setFilters((x) => ({ ...x, [f.id]: e.target.value }))} className="h-10 rounded-xl border border-white/10 bg-space-card/60 px-3 text-sm text-white">
                 <option value="">{f.label}: todos</option>
                 {(f.options ?? []).map((o) => (
                   <option key={o} value={o}>
@@ -150,7 +150,7 @@ export function SheetsHome() {
                 ))}
               </select>
             ))}
-            <select value={sort} onChange={(e) => setSort(e.target.value as "recent" | "name")} className="h-11 rounded-xl border border-white/10 bg-space-card/60 px-3 text-sm text-white">
+            <select value={sort} onChange={(e) => setSort(e.target.value as "recent" | "name")} className="h-10 rounded-xl border border-white/10 bg-space-card/60 px-3 text-sm text-white">
               <option value="recent">Mais recentes</option>
               <option value="name">Nome (A–Z)</option>
             </select>

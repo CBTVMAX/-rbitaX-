@@ -94,7 +94,7 @@ export function CharacterEditor({
       footer={
         <div className="flex items-center gap-2">
           {error ? <p className="min-w-0 flex-1 text-xs text-red-300">{error}</p> : <span className="min-w-0 flex-1 truncate text-xs text-white/45">em {community.name}</span>}
-          <button type="button" onClick={save} disabled={busy} className="flex h-11 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow disabled:opacity-60">
+          <button type="button" onClick={save} disabled={busy} className="flex h-10 items-center gap-2 rounded-full bg-orbit-gradient px-6 text-sm font-semibold text-snow shadow-glow disabled:opacity-60">
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} Salvar ficha
           </button>
         </div>
@@ -165,7 +165,7 @@ export function CharacterEditor({
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={values[f.id]} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
                       )}
-                      <button type="button" onClick={() => { fieldImgFor.current = f.id; fieldImgInput.current?.click(); }} className="flex h-11 items-center gap-2 rounded-2xl border border-white/10 px-4 text-sm text-white/80 hover:bg-white/5">
+                      <button type="button" onClick={() => { fieldImgFor.current = f.id; fieldImgInput.current?.click(); }} className="flex h-10 items-center gap-2 rounded-2xl border border-white/10 px-4 text-sm text-white/80 hover:bg-white/5">
                         <Camera className="h-4 w-4" /> {values[f.id] ? "Trocar imagem" : "Enviar imagem"}
                       </button>
                     </div>

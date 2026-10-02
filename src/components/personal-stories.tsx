@@ -241,7 +241,7 @@ export function PersonalStoryViewer({
 
   const reactionCount = viewers?.filter((v) => v.emoji).length ?? 0;
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
-  const menuItem = "flex min-h-[48px] w-full items-center gap-3 px-4 text-left text-sm text-white hover:bg-white/[0.06] disabled:opacity-50";
+  const menuItem = "flex min-h-[44px] w-full items-center gap-3 px-4 text-left text-sm text-white hover:bg-white/[0.06] disabled:opacity-50";
 
   return createPortal(
     <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black" role="dialog" aria-label={`História de ${story.user.name}`}>
@@ -416,7 +416,7 @@ export function PersonalStoryViewer({
         ) : (
           <div className="space-y-0.5">
             {viewers.map((v) => (
-              <Link key={v.userId} href={`/perfil/${v.username}`} onClick={onClose} className="flex min-h-[56px] items-center gap-3 rounded-2xl px-2 hover:bg-white/[0.04]">
+              <Link key={v.userId} href={`/perfil/${v.username}`} onClick={onClose} className="flex min-h-[48px] items-center gap-3 rounded-2xl px-2 hover:bg-white/[0.04]">
                 <span className="relative shrink-0">
                   {v.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element

@@ -121,11 +121,11 @@ export function SheetForm({ sheetId }: { sheetId?: string }) {
       <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t border-white/10 bg-space-bg/95 px-4 py-3 backdrop-blur md:sticky md:bottom-3 md:rounded-2xl md:border">
         <div className="mx-auto flex max-w-5xl flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           {!approved && (
-            <button type="button" onClick={() => save(false)} disabled={!!busy} className="flex h-11 items-center justify-center gap-2 rounded-xl border border-white/15 px-5 text-sm font-medium text-white/85 hover:bg-white/5 disabled:opacity-50">
+            <button type="button" onClick={() => save(false)} disabled={!!busy} className="flex h-10 items-center justify-center gap-2 rounded-xl border border-white/15 px-5 text-sm font-medium text-white/85 hover:bg-white/5 disabled:opacity-50">
               {busy === "draft" && <Loader2 className="h-4 w-4 animate-spin" />} Salvar rascunho
             </button>
           )}
-          <button type="button" onClick={() => save(true)} disabled={!!busy} className="flex h-11 items-center justify-center gap-2 rounded-xl px-6 text-sm font-semibold text-white disabled:opacity-50" style={{ background: t.style.accent }}>
+          <button type="button" onClick={() => save(true)} disabled={!!busy} className="flex h-10 items-center justify-center gap-2 rounded-xl px-6 text-sm font-semibold text-white disabled:opacity-50" style={{ background: t.style.accent }}>
             {busy === "send" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             {approved ? "Salvar alterações" : t.settings.requireApproval ? "Enviar para aprovação" : "Publicar ficha"}
           </button>

@@ -148,7 +148,7 @@ export function DiscussionView(props: { community: Community; viewer: Viewer; ro
 
   return (
     <CommunityContext.Provider value={ctx}>
-      <div style={{ ["--app-accent" as string]: accent.rgb }} className="mx-auto max-w-3xl px-4 pb-40 pt-4 md:px-6 md:pb-12 md:pt-6">
+      <div style={{ ["--app-accent" as string]: accent.rgb }} className="mx-auto max-w-3xl px-4 pb-[9rem] pt-4 md:px-6 md:pb-12 md:pt-6">
         <Link href={`${base}/discussoes`} className="inline-flex min-h-[44px] items-center gap-2 rounded-full pr-3 text-sm text-white/65 hover:text-white">
           <ArrowLeft className="h-4 w-4" />
           <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-lg bg-space-card text-xs font-bold text-white">
@@ -352,7 +352,7 @@ export function DiscussionView(props: { community: Community; viewer: Viewer; ro
                   key={m.label}
                   type="button"
                   onClick={m.run}
-                  className={clsx("flex min-h-[48px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm transition hover:bg-white/5", m.danger ? "text-red-300" : "text-white/85")}
+                  className={clsx("flex min-h-[44px] w-full items-center gap-3 rounded-2xl px-3 text-left text-sm transition hover:bg-white/5", m.danger ? "text-red-300" : "text-white/85")}
                 >
                   <Icon className="h-[18px] w-[18px]" /> {m.label}
                 </button>
