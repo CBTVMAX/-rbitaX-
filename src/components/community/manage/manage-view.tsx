@@ -31,6 +31,16 @@ import { WelcomeSection } from "./welcome";
 
 type Section = "geral" | "personalizacao" | "privacidade" | "conteudo" | "abas" | "assuntos" | "rpg" | "boasvindas" | "eventos" | "membros" | "equipe" | "permissoes" | "moderacao" | "notificacoes" | "atividade" | "estatisticas" | "downloads" | "registro" | "perigo";
 
+// Grupos como no "Gerenciar" do VK (Principal, Conteúdo, Comunicação, Membros, Avançado).
+const GROUP_OF: Record<Section, string> = {
+  geral: "Principal", personalizacao: "Principal", privacidade: "Principal", abas: "Principal", assuntos: "Principal", boasvindas: "Principal", estatisticas: "Principal", atividade: "Principal",
+  conteudo: "Conteúdo", eventos: "Conteúdo", rpg: "Conteúdo", downloads: "Conteúdo",
+  notificacoes: "Comunicação", moderacao: "Comunicação",
+  membros: "Membros", equipe: "Membros", permissoes: "Membros",
+  registro: "Avançado", perigo: "Avançado",
+};
+const GROUP_ORDER = ["Principal", "Conteúdo", "Comunicação", "Membros", "Avançado"];
+
 const SECTIONS: { id: Section; label: string; desc: string; icon: React.ComponentType<{ className?: string }>; min: number }[] = [
   { id: "geral", label: "Editar informações", desc: "Nome, @, categoria, descrição, regras e links", icon: Settings2, min: 3 },
   { id: "personalizacao", label: "Personalização", desc: "Foto, capa e tema da comunidade", icon: Palette, min: 3 },
@@ -69,7 +79,7 @@ export function ManageView(props: {
   const [community, setCommunity] = useState(props.community);
   const [badges, setBadges] = useState(props.badges);
   const [composer, setComposer] = useState<ComposerKind | null>(null);
-  const allowed = SECTIONS.filter((s) => rank(role) >= s.min);
+  const allowed = SECTIONS.filter((s) => rank(role) >= s.min).sort((a, b) => GROUP_ORDER.indexOf(GROUP_OF[a.id]) - GROUP_ORDER.indexOf(GROUP_OF[b.id]));
   const valid = (s: string): s is Section => allowed.some((x) => x.id === s);
   // Empty = the section list (phones). Desktop always shows a section.
   const [section, setSection] = useState<Section | "">(valid(props.initialSection) ? props.initialSection : "");
@@ -159,11 +169,16 @@ export function ManageView(props: {
 
   const nav = (
     <nav aria-label="Seções de gerenciamento" className="space-y-1">
-      {allowed.map((s) => {
+      {allowed.map((s, idx) => {
         const Icon = s.icon;
         const b = badgeFor(s.id);
         const on = active === s.id;
+        const groupStart = idx === 0 || GROUP_OF[allowed[idx - 1].id] !== GROUP_OF[s.id];
         return (
+          <div key={s.id}>
+          {groupStart && (
+            <p className={clsx("px-3 pb-1 text-[12px] font-semibold uppercase tracking-wider text-white/40", idx > 0 && "mt-4 border-t border-white/[0.06] pt-4")}>{GROUP_OF[s.id]}</p>
+          )}
           <button
             key={s.id}
             type="button"
@@ -184,6 +199,7 @@ export function ManageView(props: {
             {b > 0 && <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-orbit-pink px-1.5 text-[11px] font-bold text-snow">{b}</span>}
             <ChevronRight className="h-4 w-4 shrink-0 text-white/30 lg:hidden" />
           </button>
+          </div>
         );
       })}
     </nav>

@@ -107,14 +107,6 @@ function MenuRow({ item, onDone }: { item: Item; onDone: () => void }) {
   );
 }
 
-function Toggle({ on }: { on: boolean }) {
-  return (
-    <span className={clsx("relative h-6 w-11 shrink-0 rounded-full transition", on ? "bg-orbit-gradient" : "bg-white/15")}>
-      <span className={clsx("absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition", on ? "left-[22px]" : "left-0.5")} />
-    </span>
-  );
-}
-
 /** The ⋯ menu of a community: member tools and, for the team, shortcuts to every management area. */
 export function CommunityMenu({
   open,
@@ -179,8 +171,6 @@ export function CommunityMenu({
 
   const done = onClose;
   const memberItems: Item[] = [
-    viewer && { key: "fav", icon: Star, label: favorite ? "Favorita" : "Favoritar", hint: "Aparece no topo da sua lista de comunidades", onClick: toggleFavorite, right: <Toggle on={favorite} /> },
-    member && { key: "notify", icon: notify ? Bell : BellOff, label: "Notificações", hint: notify ? "Novos posts, eventos, discussões e avisos" : "Desativadas para esta comunidade", onClick: toggleNotify, right: <Toggle on={notify} /> },
     { key: "share", icon: Share2, label: "Compartilhar", onClick: () => (done(), share()) },
     member && can(community, role, "invite") && { key: "invite", icon: UserPlus, label: "Convidar amigos", onClick: () => setSheet("invite") },
     member && { key: "stories", icon: Archive, label: "Arquivo de histórias", href: `${base}/historias` },
@@ -195,7 +185,7 @@ export function CommunityMenu({
       },
     },
     { key: "qr", icon: QrCode, label: "QR Code", onClick: () => setSheet("qr") },
-    { key: "similar", icon: Sparkles, label: "Comunidades semelhantes", onClick: () => setSheet("similar") },
+    { key: "similar", icon: Sparkles, label: "Comunidades parecidas", onClick: () => setSheet("similar") },
     { key: "install", icon: Smartphone, label: "Adicionar à tela inicial", onClick: () => setSheet("install") },
     member && role !== "owner" && { key: "leave", icon: LogOut, label: "Sair da comunidade", danger: true, onClick: () => setLeaving(true) },
   ].filter(Boolean) as Item[];
@@ -219,6 +209,31 @@ export function CommunityMenu({
     <>
       <Sheet open={open && !sheet && !leaving} onClose={onClose} title={community.name}>
         <div className="space-y-4 pt-1">
+          {/* Como no "Mais" do VK: Favoritos e Notificações em destaque no topo. */}
+          {viewer && (
+            <div className={clsx("grid gap-2", member ? "grid-cols-2" : "grid-cols-1")}>
+              <button
+                type="button"
+                onClick={toggleFavorite}
+                aria-pressed={favorite}
+                className={clsx("flex flex-col items-center gap-1.5 rounded-2xl border px-3 py-3 text-sm font-medium transition", favorite ? "border-amber-300/40 bg-amber-300/10 text-amber-200" : "border-white/10 text-orbit-cyan hover:bg-white/[0.04]")}
+              >
+                <Star className={clsx("h-6 w-6", favorite && "fill-amber-300")} />
+                {favorite ? "Nos favoritos" : "Favoritos"}
+              </button>
+              {member && (
+                <button
+                  type="button"
+                  onClick={toggleNotify}
+                  aria-pressed={notify}
+                  className={clsx("flex flex-col items-center gap-1.5 rounded-2xl border px-3 py-3 text-sm font-medium transition", notify ? "border-orbit-cyan/40 bg-orbit-cyan/10 text-orbit-cyan" : "border-white/10 text-white/60 hover:bg-white/[0.04]")}
+                >
+                  {notify ? <Bell className="h-6 w-6" /> : <BellOff className="h-6 w-6" />}
+                  {notify ? "Notificações ativas" : "Notificações"}
+                </button>
+              )}
+            </div>
+          )}
           <div className="space-y-0.5">
             {memberItems.map((i) => (
               <MenuRow key={i.key} item={i} onDone={done} />
