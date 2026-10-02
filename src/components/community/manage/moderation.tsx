@@ -350,9 +350,19 @@ export function ModerationSection({ badges, onBadges }: { badges: { pending: num
           {posts.map((p) => (
             <div key={p.id} className="space-y-2">
               <div className="flex flex-wrap items-center gap-2 px-1">
+                {tab === "pendentes" && p.meta?.suggested && (
+                  <span className="rounded-full bg-orbit-cyan/15 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-orbit-cyan">Sugestão de membro</span>
+                )}
                 {tab === "pendentes"
                   ? approveBtn(p.id, () =>
-                      act(p.id, supabase.rpc("community_post_action", { p_post: p.id, p_action: "approve" }), "Publicação aprovada e no ar.", () => (setPosts((l) => (l ?? []).filter((x) => x.id !== p.id)), dropPending()))
+                      act(
+                        p.id,
+                        p.meta?.suggested
+                          ? supabase.rpc("community_review_suggestion" as never, { p_post: p.id, p_approve: true } as never)
+                          : supabase.rpc("community_post_action", { p_post: p.id, p_action: "approve" }),
+                        p.meta?.suggested ? "Sugestão publicada. O autor foi avisado." : "Publicação aprovada e no ar.",
+                        () => (setPosts((l) => (l ?? []).filter((x) => x.id !== p.id)), dropPending())
+                      )
                     )
                   : (
                     <button
@@ -366,7 +376,14 @@ export function ModerationSection({ badges, onBadges }: { badges: { pending: num
                   )}
                 {tab === "pendentes" &&
                   rejectBtn(p.id, () =>
-                    act(p.id + "x", supabase.rpc("community_post_action", { p_post: p.id, p_action: "remove" }), "Publicação rejeitada.", () => (setPosts((l) => (l ?? []).filter((x) => x.id !== p.id)), dropPending()))
+                    act(
+                      p.id + "x",
+                      p.meta?.suggested
+                        ? supabase.rpc("community_review_suggestion" as never, { p_post: p.id, p_approve: false } as never)
+                        : supabase.rpc("community_post_action", { p_post: p.id, p_action: "remove" }),
+                      p.meta?.suggested ? "Sugestão recusada. O autor foi avisado." : "Publicação rejeitada.",
+                      () => (setPosts((l) => (l ?? []).filter((x) => x.id !== p.id)), dropPending())
+                    )
                   )}
               </div>
               <CommunityPostCard post={p} onDeleted={(id) => setPosts((l) => (l ?? []).filter((x) => x.id !== id))} />

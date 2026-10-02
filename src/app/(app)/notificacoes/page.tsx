@@ -53,6 +53,9 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   community_invite: Users,
   community_repost: Repeat2,
   community_discussion_like: Heart,
+  community_suggestion: Megaphone,
+  community_suggestion_ok: ShieldCheck,
+  community_suggestion_no: ShieldAlert,
   comment_reply: Reply,
   story_reaction: CircleDot,
 };

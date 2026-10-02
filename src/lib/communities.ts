@@ -77,6 +77,8 @@ export type Membership = {
 export type Author = { id: string; name: string; username: string; avatarUrl: string | null; isVerified: boolean };
 export type MediaItem = { id: string; type: string; url: string; thumbnailUrl: string | null; width: number | null; height: number | null; mimeType: string | null; position: number; sizeBytes?: number | null; name?: string | null };
 export type PostMeta = {
+  /** Sugerido por um membro ("Sugerir post") e esperando a administração. */
+  suggested?: boolean;
   poll?: { question: string; options: string[]; multiple: boolean };
   music?: { title: string; artist: string };
   tag?: PostTag;
@@ -298,6 +300,8 @@ const ERRORS: [RegExp, string][] = [
   [/owner_only/, "Somente o proprietário pode alterar isso."],
   [/banned/, "Você está bloqueado nesta comunidade."],
   [/links_blocked/, "Links não são permitidos aqui."],
+  [/too_many_suggestions/, "Você já tem 10 sugestões esperando a administração. Aguarde a análise."],
+  [/not_member/, "Entre na comunidade para sugerir um post."],
   [/media_blocked/, "Mídia não é permitida aqui."],
   [/comments_disabled/, "Os comentários estão desativados nesta publicação."],
   [/discussion_closed/, "Esta discussão foi fechada."],
