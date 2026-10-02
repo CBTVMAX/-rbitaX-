@@ -30,6 +30,8 @@ export function CommentsSheet({
   viewerId,
   summary,
   onCountChange,
+  embedded = false,
+  intro,
 }: {
   open: boolean;
   onClose: () => void;
@@ -38,6 +40,10 @@ export function CommentsSheet({
   viewerId: string;
   summary?: React.ReactNode;
   onCountChange?: (delta: number) => void;
+  /** Dentro de outra tela (ex.: painel do visualizador de fotos): sem fundo escuro nem cabeçalho. */
+  embedded?: boolean;
+  /** Conteúdo acima dos comentários, rolando junto (só no modo embutido). */
+  intro?: React.ReactNode;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [comments, setComments] = useState<ThreadComment[] | null>(null);
@@ -63,7 +69,7 @@ export function CommentsSheet({
   }, [open, comments, postId, supabase]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || embedded) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -72,7 +78,7 @@ export function CommentsSheet({
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [open, onClose]);
+  }, [open, onClose, embedded]);
 
   const ids = useMemo(() => (comments ?? []).map((c) => c.id), [comments]);
   const { enabled: likesEnabled, likes, toggle } = useCommentLikes(ids, viewerId, postAuthor.id);
@@ -173,14 +179,9 @@ export function CommentsSheet({
     </div>
   );
 
-  return createPortal(
-    <div className="fixed inset-0 z-[96] flex items-end justify-center bg-black/60 backdrop-blur-[2px] md:items-center md:p-6" onClick={onClose} role="presentation">
-      <div
-        role="dialog"
-        aria-label="Comentários"
-        onClick={(e) => e.stopPropagation()}
-        className="animate-pop-in flex h-[88dvh] w-full max-w-[640px] flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-space-surface shadow-2xl md:h-[80vh] md:rounded-3xl"
-      >
+  const panel = (
+    <>
+        {!embedded && (
         <header className="shrink-0 border-b border-white/[0.07] px-4 pb-3 pt-3">
           <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-white/15 md:hidden" />
           <div className="flex items-center gap-3">
@@ -191,8 +192,10 @@ export function CommentsSheet({
           </div>
           {summary && <div className="mt-1 pl-1 text-[13px] text-white/50">{summary}</div>}
         </header>
+        )}
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
+          {embedded && intro}
           {comments === null ? (
             <div className="flex justify-center py-10">
               <Loader2 className="h-5 w-5 animate-spin text-white/40" />
@@ -273,6 +276,20 @@ export function CommentsSheet({
             </button>
           </div>
         </form>
+    </>
+  );
+
+  if (embedded) return <div className="flex h-full min-h-0 flex-col bg-space-surface">{panel}</div>;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[96] flex items-end justify-center bg-black/60 backdrop-blur-[2px] md:items-center md:p-6" onClick={onClose} role="presentation">
+      <div
+        role="dialog"
+        aria-label="Comentários"
+        onClick={(e) => e.stopPropagation()}
+        className="animate-pop-in flex h-[88dvh] w-full max-w-[640px] flex-col overflow-hidden rounded-t-3xl border border-white/10 bg-space-surface shadow-2xl md:h-[80vh] md:rounded-3xl"
+      >
+        {panel}
       </div>
     </div>,
     document.body

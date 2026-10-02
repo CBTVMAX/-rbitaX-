@@ -13,6 +13,14 @@ import { commentDate } from "@/components/comments/comment-kit";
 
 type Media = { id: string; type: string; url: string };
 
+/** Abre a foto no visualizador da aba Fotos (sem recarregar a página). */
+function openPhoto(e: React.MouseEvent, id: string) {
+  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+  e.preventDefault();
+  window.history.replaceState(null, "", `?foto=${encodeURIComponent(id)}`);
+  window.location.hash = "tab-fotos";
+}
+
 /** Topo dos posts, como no VK: abas Foto/Vídeo com um mosaico 3×2 e "Mostrar tudo"; e "Criar entrada". */
 export function ProfileMediaShowcase({ photos, videos, isMe, className }: { photos: Media[]; videos: Media[]; isMe: boolean; className?: string }) {
   const [tab, setTab] = useState<"foto" | "video">(photos.length || !videos.length ? "foto" : "video");
@@ -55,7 +63,7 @@ export function ProfileMediaShowcase({ photos, videos, isMe, className }: { phot
                   </span>
                 </a>
               ) : (
-                <a key={m.id} href={m.url} target="_blank" rel="noopener noreferrer" className="block aspect-square overflow-hidden bg-space-card">
+                <a key={m.id} href={`?foto=${m.id}#tab-fotos`} onClick={(e) => openPhoto(e, m.id)} className="block aspect-square overflow-hidden bg-space-card">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={m.url} alt="" loading="lazy" className="h-full w-full object-cover transition hover:scale-105" />
                 </a>
