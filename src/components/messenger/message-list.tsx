@@ -173,7 +173,7 @@ export function MessageList({
               <Fragment key={m.id}>
                 {newDay && (
                   <div className="sticky top-1 z-[2] my-3 flex justify-center">
-                    <span className="rounded-full border border-white/10 bg-space-surface/85 px-3 py-1 text-[11px] font-medium text-white/60 shadow-sm backdrop-blur">
+                    <span className="rounded-full border border-white/15 bg-space-surface/80 px-4 py-1.5 text-[13px] font-medium text-white/80 shadow-sm backdrop-blur lg:px-3 lg:py-1 lg:text-[11px] lg:text-white/60">
                       {dayLabel(m.createdAt)}
                     </span>
                   </div>
