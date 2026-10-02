@@ -143,7 +143,7 @@ export function CoverCropDialog({
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(img, crop.x, crop.y, crop.w, crop.w / ratio, 0, 0, outW, outH);
     const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob((b) => (b ? resolve(b) : canvas.toBlob(resolve, "image/jpeg", 0.9)), "image/webp", 0.9)
+      canvas.toBlob((b) => (b ? resolve(b) : canvas.toBlob(resolve, "image/jpeg", 0.93)), "image/webp", 0.93)
     );
     if (!blob) {
       setSaving(false);
