@@ -990,7 +990,7 @@ export function ProfileView({
               online={online}
               accent={accent}
               frame={frame}
-              className={frame ? "mx-9 -mt-7 mb-9 h-[112px] w-[112px] shrink-0" : "-mt-[72px] h-[152px] w-[152px] shrink-0"}
+              className={frame ? "mx-6 -mt-16 mb-6 h-[140px] w-[140px] shrink-0 lg:mx-7 lg:-mt-[76px] lg:mb-7 lg:h-[164px] lg:w-[164px]" : "-mt-[84px] h-[168px] w-[168px] shrink-0 lg:-mt-[100px] lg:h-[200px] lg:w-[200px]"}
             />
             {/* Como no VK: nome, uma linha de bio e uma linha com cidade · comunidade · Mais; ações à direita. */}
             <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-x-4 gap-y-3 pt-3">
@@ -1106,7 +1106,7 @@ export function ProfileView({
 
         {/* ================= CELULAR ================= */}
         <section className="md:hidden">
-          <div className="relative aspect-[16/9] w-full overflow-hidden">
+          <div className="relative aspect-[16/10] w-full overflow-hidden">
             {coverImage}
             <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/45 to-transparent" />
             <NavBack fallback="/feed" className={`${glassButton} absolute left-3 top-3`} />
@@ -1123,7 +1123,7 @@ export function ProfileView({
             </div>
           </div>
 
-          <div className="ox-card relative -mt-6 rounded-t-[28px] bg-space-surface px-4 pb-5">
+          <div className="ox-card relative -mt-4 rounded-t-[28px] bg-space-surface px-4 pb-5">
             {/* Avatar à esquerda, sobrepondo só o canto da capa (no centro ele cobria a capa). */}
             <div className="flex justify-start">
               <ProfileAvatar
@@ -1135,7 +1135,7 @@ export function ProfileView({
                 online={online}
                 accent={accent}
                 frame={frame}
-                className={frame ? "-mt-6 mb-6 ml-6 h-[76px] w-[76px]" : "-mt-14 h-[100px] w-[100px]"}
+                className={frame ? "mb-5 ml-5 -mt-[clamp(52px,15vw,62px)] h-[clamp(104px,31vw,124px)] w-[clamp(104px,31vw,124px)]" : "-mt-[clamp(64px,19vw,78px)] h-[clamp(128px,38vw,156px)] w-[clamp(128px,38vw,156px)]"}
               />
             </div>
             <div className="mt-3">{identity()}</div>
