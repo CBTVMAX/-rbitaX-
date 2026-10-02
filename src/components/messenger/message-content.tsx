@@ -703,6 +703,22 @@ export function GifView({ message, onOpen }: { message: ChatMessage; onOpen: () 
   const signed = useSignedUrl(local ? null : a?.path);
   const src = local ?? signed;
   const ratio = a?.width && a?.height ? a.width / a.height : 1;
+  if (message.meta.personalSticker) {
+    // Adesivo da própria pessoa: sem fundo, sem selo GIF, no tamanho de um adesivo.
+    const base = 156;
+    const box = ratio >= 1 ? { width: base, height: Math.round(base / Math.min(ratio, 1.8)) } : { width: Math.round(base * Math.max(ratio, 0.6)), height: base };
+    return (
+      <button type="button" onClick={onOpen} className="relative block" style={box} aria-label="Adesivo">
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt="Adesivo" className="h-full w-full object-contain drop-shadow-[0_6px_14px_rgba(0,0,0,0.35)]" />
+        ) : (
+          <span className="block h-full w-full animate-pulse rounded-3xl bg-white/[0.06]" />
+        )}
+        {message.status === "sending" && <Uploading />}
+      </button>
+    );
+  }
   return (
     <button type="button" onClick={onOpen} className="relative block overflow-hidden rounded-2xl bg-white/[0.06]" style={{ width: `min(${ratio >= 1 ? 260 : 200}px, 62vw)`, aspectRatio: `${Math.min(Math.max(ratio, 0.6), 1.9)}` }}>
       {src ? (

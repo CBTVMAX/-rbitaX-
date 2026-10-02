@@ -354,7 +354,7 @@ export const MessageBubble = memo(function MessageBubble(p: BubbleProps) {
             </span>
           )}
 
-          {inlineMeta ? null : emojiOnly || m.type === "sticker" ? (
+          {inlineMeta ? null : emojiOnly || m.type === "sticker" || (m.type === "gif" && m.meta.personalSticker) ? (
             <span className={clsx("mt-0.5 flex", mine ? "justify-end" : "justify-start")}>
               <Meta m={m} mine={mine} state={state} favorite={favorite} overlay />
             </span>

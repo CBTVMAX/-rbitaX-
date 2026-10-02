@@ -81,7 +81,7 @@ export function messagePreview(type: MessageType | string, content: string, meta
     case "music":
       return `🎵 ${meta.title || attachments[0]?.name || "Música"}`;
     case "gif":
-      return "GIF";
+      return meta.personalSticker ? "Figurinha" : "GIF";
     case "sticker":
       return "Figurinha";
     case "location":
