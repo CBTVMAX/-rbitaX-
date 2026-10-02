@@ -4,7 +4,7 @@ import { ChevronRight, Search, Users } from "lucide-react";
 import { CommunityJoinButton } from "@/components/community-join-button";
 import { CreateCommunityDialog } from "@/components/create-community-dialog";
 import { RecentCommunities } from "@/components/recent-communities";
-import { categoryLabel, COMMUNITY_CATEGORIES } from "@/lib/community-categories";
+import { categoryLabel, FEATURED_CATEGORIES } from "@/lib/community-categories";
 import { OfficialBadge } from "@/components/community/ui";
 import { CommunityAvatar } from "@/components/community-avatar";
 
@@ -178,7 +178,7 @@ export function CommunitiesHome({
         <section className={clsx(card, "p-4")}>
           <h2 className="mb-3 text-[17px] font-semibold text-white">Categorias</h2>
           <div className="flex flex-wrap gap-2">
-            {COMMUNITY_CATEGORIES.map(({ slug, label, icon: Icon }) => (
+            {FEATURED_CATEGORIES.map(({ slug, label, icon: Icon }) => (
               <Link key={slug} href={`/comunidades?categoria=${slug}`} className="flex items-center gap-1.5 rounded-full border border-white/10 px-3 py-1.5 text-xs text-white/75 transition hover:border-white/25 hover:text-white">
                 <Icon className="h-3.5 w-3.5 text-orbit-cyan" /> {label}
               </Link>

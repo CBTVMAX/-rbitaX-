@@ -5,7 +5,7 @@ import { PublicHeader } from "@/components/public-header";
 import { CommunityShell } from "@/components/community/community-shell";
 import { CreateCommunityDialog } from "@/components/create-community-dialog";
 import { CommunityJoinButton } from "@/components/community-join-button";
-import { COMMUNITY_CATEGORIES, categoryLabel } from "@/lib/community-categories";
+import { FEATURED_CATEGORIES, categoryLabel } from "@/lib/community-categories";
 import { Search, Users, Plus, Star, Lock } from "lucide-react";
 import { clsx } from "clsx";
 import { VerifiedBadge } from "@/components/verified-badge";
@@ -184,7 +184,7 @@ export default async function ComunidadesPage(
             <section className="mb-8">
               <h2 className="mb-3 text-sm font-semibold text-white/80">Categorias</h2>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
-                {COMMUNITY_CATEGORIES.map(({ slug, label, icon: Icon }) => (
+                {FEATURED_CATEGORIES.map(({ slug, label, icon: Icon }) => (
                   <Link
                     key={slug}
                     href={`/comunidades?categoria=${slug}`}
@@ -485,7 +485,7 @@ export default async function ComunidadesPage(
             <section className="mb-12">
               <h2 className="mb-4 text-base font-semibold text-white/80">Explore por categorias</h2>
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
-                {COMMUNITY_CATEGORIES.map(({ slug, label, icon: Icon }) => (
+                {FEATURED_CATEGORIES.map(({ slug, label, icon: Icon }) => (
                   <Link
                     key={slug}
                     href={`/comunidades?categoria=${slug}`}
