@@ -2,13 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { Archive, FileText, Image as ImageIcon, Link2, Loader2, Mic, PenSquare, Search, SlidersHorizontal, Video, X } from "lucide-react";
+import Link from "next/link";
+import { Archive, FileText, Phone, Image as ImageIcon, Link2, Loader2, Mic, PenSquare, Search, SlidersHorizontal, Video, X } from "lucide-react";
 import { PresenceStatus } from "@/components/presence-picker";
 import { listTime } from "@/lib/messenger/format";
 import { useSignedUrl } from "@/lib/messenger/media";
 import { conversationTitle, type Attachment, type Conversation } from "@/lib/messenger/types";
 import { ConversationItem } from "./conversation-item";
-import { ConversationAvatar, OrbitIllustration, PrimaryButton } from "./ui";
+import { ChatAvatar, ConversationAvatar, OrbitIllustration, PrimaryButton } from "./ui";
 import { useMessenger } from "./context";
 
 export type ListFilter = "todas" | "nao-lidas" | "grupos" | "arquivadas";
@@ -275,6 +276,8 @@ export function ConversationList({
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<SearchKind>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // Celular (estilo VK): a busca fica atrás da lupa do topo.
+  const [mobileSearch, setMobileSearch] = useState(false);
 
   const saved = conversations.find((c) => c.isSaved) ?? null;
   const others = useMemo(() => conversations.filter((c) => !c.isSaved), [conversations]);
@@ -303,12 +306,45 @@ export function ConversationList({
     setQuery("");
     setKind("all");
     setFiltersOpen(false);
+    setMobileSearch(false);
   }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="px-4 pb-3 pt-5 lg:pt-4">
-        <div className="flex items-center justify-between gap-3">
+      <div className="px-4 pb-2 pt-3 lg:pb-3 lg:pt-4">
+        {/* Celular: topo compacto como no VK (foto · Messenger · ligações · arquivadas · busca). */}
+        <div className="flex items-center gap-3 lg:hidden">
+          <ChatAvatar name={me.name} url={me.avatarUrl} size={40} frame={me.avatarFrame} />
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate font-display text-[26px] font-bold leading-tight tracking-tight text-white">Messenger</h1>
+          </div>
+          <Link href="/chamadas" aria-label="Chamadas" className="flex h-11 w-11 items-center justify-center rounded-full text-white/85 transition hover:bg-white/[0.06]">
+            <Phone className="h-[22px] w-[22px]" />
+          </Link>
+          <button
+            type="button"
+            onClick={() => setFilter(filter === "arquivadas" ? "todas" : "arquivadas")}
+            aria-label="Arquivadas"
+            aria-pressed={filter === "arquivadas"}
+            className={clsx("relative flex h-11 w-11 items-center justify-center rounded-full transition hover:bg-white/[0.06]", filter === "arquivadas" ? "text-chat" : "text-white/85")}
+          >
+            <Archive className="h-[22px] w-[22px]" />
+            {counts.arquivadas > 0 && filter !== "arquivadas" && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-white/60" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => (mobileSearch || searching ? clearSearch() : setMobileSearch(true))}
+            aria-label={mobileSearch || searching ? "Fechar busca" : "Pesquisar"}
+            className="flex h-11 w-11 items-center justify-center rounded-full text-white/85 transition hover:bg-white/[0.06]"
+          >
+            {mobileSearch || searching ? <X className="h-[22px] w-[22px]" /> : <Search className="h-[22px] w-[22px]" />}
+          </button>
+        </div>
+        <div className="mt-1 lg:hidden">
+          <PresenceStatus userId={me.id} initial={presence} editable className="text-[13px]" />
+        </div>
+
+        <div className="hidden items-center justify-between gap-3 lg:flex">
           <div className="min-w-0">
             <h1 className="font-display text-[32px] font-bold leading-tight tracking-tight text-white lg:text-2xl">Mensagens</h1>
             <PresenceStatus userId={me.id} initial={presence} editable className="mt-1" />
@@ -324,13 +360,18 @@ export function ConversationList({
           </button>
         </div>
 
-        <label className="mt-5 flex h-[52px] items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.05] pl-4 pr-2 transition lg:mt-4 lg:h-auto lg:rounded-2xl lg:py-1.5 lg:pl-3.5 lg:pr-1.5 focus-within:border-orbit-purple/60 focus-within:bg-white/[0.06]">
+        <label className={clsx(
+            "mt-3 h-12 items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.05] pl-4 pr-2 transition lg:mt-4 lg:flex lg:h-auto lg:rounded-2xl lg:py-1.5 lg:pl-3.5 lg:pr-1.5 focus-within:border-orbit-purple/60 focus-within:bg-white/[0.06]",
+            mobileSearch || searching ? "flex" : "hidden"
+          )}
+        >
           <Search className="h-4 w-4 shrink-0 text-white/40" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Escape" && clearSearch()}
             placeholder="Pesquisar conversas e mensagens..."
+            autoFocus={mobileSearch}
             aria-label="Pesquisar conversas e mensagens"
             className="min-w-0 flex-1 bg-transparent py-1 text-[15px] text-white outline-none placeholder:text-white/45 lg:text-sm"
           />
@@ -351,7 +392,7 @@ export function ConversationList({
           )}
         </label>
 
-        <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1 pt-1.5 [scrollbar-width:none] lg:mt-3 lg:gap-1 lg:pt-0" role="tablist">
+        <div className="-mx-1 mt-3 flex gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" role="tablist">
           {searching
             ? KINDS.map((k) => {
                 const on = kind === k.id;
@@ -384,15 +425,18 @@ export function ConversationList({
                     aria-selected={on}
                     onClick={() => setFilter(f.id)}
                     className={clsx(
-                      "relative flex shrink-0 items-center gap-1 rounded-full px-5 py-2.5 text-[15px] font-medium transition lg:px-3 lg:py-1.5 lg:text-[13px]",
+                      // Celular: abas de texto como no VK (a ativa num bloco discreto); computador: pílulas.
+                      "flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-[16px] font-medium transition lg:rounded-full lg:px-3 lg:py-1.5 lg:text-[13px]",
+                      // Arquivadas já fica no ícone do topo no celular.
+                      f.id === "arquivadas" && !on && "hidden lg:flex",
                       on
-                        ? "bg-gradient-to-r from-[#2b6cff] to-[#8b5cf6] text-snow shadow-[0_6px_20px_rgba(70,100,255,0.4)]"
-                        : "border border-white/12 bg-white/[0.03] text-white/75 hover:border-white/20 hover:text-white"
+                        ? "bg-white/[0.09] text-white lg:bg-orbit-gradient lg:text-snow lg:shadow-[0_0_16px_rgb(var(--app-accent,139_92_246)/0.35)]"
+                        : "text-white/55 hover:text-white lg:border lg:border-white/10"
                     )}
                   >
                     {f.label}
                     {n > 0 && (
-                      <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-orbit-pink px-1 text-[11px] font-bold leading-none text-snow ring-2 ring-space-bg">
+                      <span className="flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-white px-1.5 text-[12px] font-bold leading-none text-space-bg lg:h-auto lg:min-w-0 lg:bg-white/10 lg:px-1.5 lg:text-[10px] lg:text-white">
                         {n > 99 ? "99+" : n}
                       </span>
                     )}
@@ -409,6 +453,18 @@ export function ConversationList({
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
+      )}
+
+      {/* Celular: botão de nova conversa flutuante, como no VK. */}
+      {!searching && (
+        <button
+          type="button"
+          onClick={onNew}
+          aria-label="Nova conversa"
+          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-space-card text-white shadow-[0_10px_30px_rgba(0,0,0,0.45)] transition active:scale-95 lg:hidden"
+        >
+          <PenSquare className="h-6 w-6" />
+        </button>
       )}
 
       <div className="orbit-scrollbar min-h-0 flex-1 overflow-y-auto">

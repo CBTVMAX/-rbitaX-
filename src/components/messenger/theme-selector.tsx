@@ -149,7 +149,7 @@ export function WallpaperSelector({ value, onChange }: { value: string | null; o
                 style={
                   w.id
                     ? { backgroundImage: `url(${wallpaperSrc(w.id, true)})` }
-                    : // "Padrão" mostra o fundo que vale sem escolha: Doodles no claro, Universo no escuro.
+                    : // "Padrão" mostra o fundo que vale sem escolha: Órbita Clara no claro, Universo no escuro.
                       { backgroundImage: `url(${wallpaperSrc(defaultWallpaper(light), true)})` }
                 }
               >
