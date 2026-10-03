@@ -167,7 +167,16 @@ export function AddFamilyDialog({ onClose, excludeIds = [] }: { onClose: () => v
     setError(null);
     const { error: e } = await supabase.rpc("family_add", { p_relative_id: picked.id, p_relation: relation });
     setBusy(false);
-    if (e) { setError(/rate/.test(e.message) ? "Muitos pedidos. Aguarde um pouco." : "Não foi possível enviar o pedido."); return; }
+    if (e) {
+      setError(
+        /rate/.test(e.message)
+          ? "Muitos pedidos. Aguarde um pouco."
+          : /partner_exists/.test(e.message)
+            ? "Você já tem um parceiro(a). Troque em Editar perfil › Relacionamento."
+            : "Não foi possível enviar o pedido."
+      );
+      return;
+    }
     onClose();
     router.refresh();
   }

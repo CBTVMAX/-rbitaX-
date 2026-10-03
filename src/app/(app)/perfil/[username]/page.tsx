@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { parseAbout } from "@/lib/profile-options";
 import { parseFriendState } from "@/lib/friends";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, PUBLIC_USER_COLUMNS } from "@/lib/current-user";
@@ -261,7 +262,9 @@ export default async function ProfilePage(props: {
 
   // Privacy (idade, signo, cidade…) is applied by the database for whoever is viewing.
   const { data: detailRows } = await supabase.rpc("public_profile_details", { target_user_id: user.id });
-  const info: ProfileInfo | null = Array.isArray(detailRows) && detailRows[0] ? detailRows[0] : null;
+  const { data: aboutRaw } = await supabase.rpc("profile_about", { p_user: user.id });
+  const baseInfo: ProfileInfo | null = Array.isArray(detailRows) && detailRows[0] ? detailRows[0] : null;
+  const info: ProfileInfo | null = baseInfo ? { ...baseInfo, extra: parseAbout(aboutRaw) } : null;
 
   // Cargos e funções: crachás personalizados por comunidade (§18/§41). Só o que o observador pode ver.
   const { data: badgeRows } = await supabase.rpc("community_member_badges", { p_user: user.id });

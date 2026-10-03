@@ -140,8 +140,8 @@ type PostViewRow = { createdAt: string; id: string; postId: string; userId: stri
 type PostViewInsert = { createdAt?: string; id: string; postId: string; userId: string };
 type PostViewUpdate = Partial<PostViewInsert>;
 
-type ProfileRow = { birthDate: string | null; createdAt: string; gender: string | null; id: string; interests: string | null; links: string | null; location: string | null; occupation: string | null; showAge: boolean; relationshipStatus: string | null; showInterests: boolean; showRelationship: boolean; showLocation: boolean; showSign: boolean; updatedAt: string; userId: string; website: string | null; zodiacSign: string | null; familyVisibility: string };
-type ProfileInsert = { birthDate?: string | null; createdAt?: string; gender?: string | null; id: string; interests?: string | null; links?: string | null; location?: string | null; occupation?: string | null; showAge?: boolean; relationshipStatus?: string | null; showInterests?: boolean; showRelationship?: boolean; showLocation?: boolean; showSign?: boolean; updatedAt?: string; userId: string; website?: string | null; zodiacSign?: string | null; familyVisibility?: string };
+type ProfileRow = { birthDate: string | null; createdAt: string; gender: string | null; id: string; interests: string | null; links: string | null; location: string | null; occupation: string | null; showAge: boolean; relationshipStatus: string | null; relationship: string | null; about: Json; showInterests: boolean; showRelationship: boolean; showLocation: boolean; showSign: boolean; updatedAt: string; userId: string; website: string | null; zodiacSign: string | null; familyVisibility: string };
+type ProfileInsert = { birthDate?: string | null; createdAt?: string; gender?: string | null; id: string; interests?: string | null; links?: string | null; location?: string | null; occupation?: string | null; showAge?: boolean; relationshipStatus?: string | null; relationship?: string | null; showInterests?: boolean; showRelationship?: boolean; showLocation?: boolean; showSign?: boolean; updatedAt?: string; userId: string; website?: string | null; zodiacSign?: string | null; familyVisibility?: string };
 type ProfileUpdate = Partial<ProfileInsert>;
 
 type ReportRow = { createdAt: string; details: string | null; id: string; reason: string; reporterId: string; resolvedAt: string | null; resolvedById: string | null; status: string; targetId: string; targetType: string; communityId: string | null };
@@ -383,6 +383,8 @@ export type Database = {
       family_relations: { Args: Record<string, never>; Returns: string[] };
       family_default_inverse: { Args: { p_relation: string }; Returns: string };
       family_add: { Args: { p_relative_id: string; p_relation: string }; Returns: Json };
+      save_profile_about: { Args: { p: Json }; Returns: Json };
+      profile_about: { Args: { p_user: string }; Returns: Json };
       family_respond: { Args: { p_link_id: string; p_accept: boolean; p_relation?: string | null }; Returns: Json };
       family_remove: { Args: { p_relative_id: string }; Returns: void };
       family_of: { Args: { p_user_id: string }; Returns: { relativeId: string; relation: string; username: string; name: string; avatarUrl: string | null; isVerified: boolean }[] };

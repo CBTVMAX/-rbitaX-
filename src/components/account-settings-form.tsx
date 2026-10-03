@@ -12,7 +12,10 @@ import { isRectangularAvatar } from "@/lib/avatar-aspect";
 import { CoverCropDialog } from "@/components/cover-crop-dialog";
 import { normalizeUsername, usernameError } from "@/lib/username";
 import { zodiacFor } from "@/lib/zodiac";
-import { GENDER_OPTIONS, RELATIONSHIP_OPTIONS } from "@/lib/profile-options";
+import { GENDER_OPTIONS, PARTNER_STATUSES, partnerRelation, RELATIONSHIP_OPTIONS, type ProfileAbout } from "@/lib/profile-options";
+import { PartnerPicker, type PartnerChoice } from "@/components/profile-edit/partner-picker";
+import { CareerSection, EducationSection, LifeSection, OriginSection } from "@/components/profile-edit/about-sections";
+import { dateSelectClass, Field, inputClass, Section, SectionHeader, selectClass, SelectWrap, Toggle } from "@/components/profile-edit/form-ui";
 import {
   AtSign,
   Calendar,
@@ -64,116 +67,12 @@ export type EditProfileInitial = {
   showRelationship: boolean;
   familyVisibility: string;
   hasProfileRow: boolean;
+  /** Parceiro atual (vínculo Cônjuge/Companheiro(a)), confirmado ou aguardando. */
+  partner: (PartnerChoice & { relation: string }) | null;
+  about: ProfileAbout;
 };
 
 type UsernameState = "unchanged" | "invalid" | "checking" | "available" | "taken";
-
-const inputClass =
-  "w-full rounded-xl border border-white/10 bg-space-bg/60 px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/35 focus:border-orbit-purple/70";
-const selectClass = `${inputClass} appearance-none pr-[40px]`;
-const dateSelectClass =
-  "w-full appearance-none rounded-xl border border-white/10 bg-space-bg/60 py-3 pl-3 pr-[28px] text-sm text-white outline-none transition focus:border-orbit-purple/70";
-
-function SectionHeader({
-  title,
-  subtitle,
-  icon: Icon,
-  desktopOnly = false,
-}: {
-  title: string;
-  subtitle?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  desktopOnly?: boolean;
-}) {
-  return (
-    <div className={clsx("mb-4 items-start gap-2.5 lg:mb-5 lg:gap-3", desktopOnly ? "hidden lg:flex" : "flex")}>
-      <Icon className="mt-0.5 h-5 w-5 shrink-0 text-orbit-blue lg:h-6 lg:w-6" />
-      <div>
-        <h2 className="text-base font-semibold text-orbit-blue lg:text-lg">{title}</h2>
-        {subtitle && <p className="mt-0.5 hidden text-xs text-white/55 lg:block">{subtitle}</p>}
-      </div>
-    </div>
-  );
-}
-
-function Section({
-  title,
-  subtitle,
-  icon,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-2xl border border-white/10 bg-space-surface/80 p-4 md:p-5">
-      <SectionHeader title={title} subtitle={subtitle} icon={icon} />
-      <div className="space-y-5 lg:space-y-4">{children}</div>
-    </section>
-  );
-}
-
-function Field({
-  label,
-  icon: Icon,
-  stacked = false,
-  children,
-}: {
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  stacked?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className={clsx(
-        "grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-3",
-        !stacked && "lg:grid-cols-[1.5rem_8.5rem_minmax(0,1fr)]"
-      )}
-    >
-      <Icon className={clsx("mt-0.5 h-5 w-5 text-orbit-blue/80", !stacked && "lg:mt-3")} />
-      <label className={clsx("mb-2 text-sm text-white/80", !stacked && "lg:mb-0 lg:mt-3")}>{label}</label>
-      <div className={clsx("col-start-2", !stacked && "lg:col-start-3 lg:row-start-1")}>{children}</div>
-    </div>
-  );
-}
-
-function Toggle({ checked, onChange, label, icon: Icon }: { checked: boolean; onChange: (v: boolean) => void; label: string; icon: React.ComponentType<{ className?: string }> }) {
-  return (
-    <div className="flex items-center gap-3">
-      <Icon className="h-5 w-5 shrink-0 text-orbit-blue/80" />
-      <span className="flex-1 text-sm text-white/80">{label}</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
-        onClick={() => onChange(!checked)}
-        className={clsx(
-          "relative h-6 w-11 shrink-0 rounded-full transition",
-          checked ? "bg-orbit-gradient" : "bg-white/15"
-        )}
-      >
-        <span className={clsx("absolute top-0.5 h-5 w-5 rounded-full bg-snow transition-all", checked ? "left-[22px]" : "left-0.5")} />
-      </button>
-    </div>
-  );
-}
-
-function SelectWrap({ children, compact = false }: { children: React.ReactNode; compact?: boolean }) {
-  return (
-    <div className="relative">
-      {children}
-      <svg
-        viewBox="0 0 20 20"
-        className={clsx("pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 text-white/50", compact ? "right-2" : "right-3.5")} fill="currentColor" aria-hidden>
-        <path d="M5.3 7.3a1 1 0 0 1 1.4 0L10 10.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.4Z" />
-      </svg>
-    </div>
-  );
-}
 
 export function AccountSettingsForm({ userId, initial }: { userId: string; initial: EditProfileInitial }) {
   const supabase = useMemo(() => createClient(), []);
@@ -198,6 +97,10 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
   const [gender, setGender] = useState(initial.gender ?? "");
   const [relationship, setRelationship] = useState(initial.relationshipStatus ?? "");
   const [familyVisibility, setFamilyVisibility] = useState(initial.familyVisibility ?? "all");
+  const [partner, setPartner] = useState<PartnerChoice | null>(initial.partner);
+  const [about, setAboutState] = useState<ProfileAbout>(initial.about);
+  const setAbout = (patch: Partial<ProfileAbout>) => setAboutState((a) => ({ ...a, ...patch }));
+  const wantsPartner = PARTNER_STATUSES.includes(relationship);
 
   const [showAge, setShowAge] = useState(initial.showAge);
   const [showSign, setShowSign] = useState(initial.showSign);
@@ -327,7 +230,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
       website: website.trim() || null,
       interests: interests.length ? interests.join(", ") : null,
       gender: gender || null,
-      relationshipStatus: relationship || null,
+      relationship: relationship || null,
       ...(birthDate ? { birthDate } : {}),
       showAge,
       showSign,
@@ -342,10 +245,37 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
       ? await supabase.from("Profile").update(profileFields).eq("userId", userId)
       : await supabase.from("Profile").insert({ id: crypto.randomUUID(), userId, ...profileFields });
 
-    setSaving(false);
     if (profileError) {
+      setSaving(false);
       return setError(profileError.code === "23514" ? profileError.message : "Não foi possível salvar. Tente novamente.");
     }
+
+    const { error: aboutError } = await supabase.rpc("save_profile_about", { p: about as never });
+    if (aboutError) {
+      setSaving(false);
+      return setError("Não foi possível salvar as informações adicionais. Tente novamente.");
+    }
+
+    // Parceiro: troca, remove ou pede confirmação (o vínculo só aparece depois que a pessoa aceita).
+    const desired = wantsPartner ? partner : null;
+    const before = initial.partner;
+    if (before && before.id !== desired?.id) await supabase.rpc("family_remove", { p_relative_id: before.id });
+    if (desired) {
+      const relation = partnerRelation(relationship);
+      if (!before || before.id !== desired.id) {
+        const { error: partnerError } = await supabase.rpc("family_add", { p_relative_id: desired.id, p_relation: relation });
+        if (partnerError) {
+          setSaving(false);
+          return setError(
+            /blocked/.test(partnerError.message) ? "Não foi possível indicar essa pessoa como parceiro(a)." : "Perfil salvo, mas o pedido ao parceiro(a) não foi enviado. Tente de novo."
+          );
+        }
+      } else if (before.relation !== relation) {
+        if (before.status === "accepted") await supabase.rpc("family_update_relation", { p_relative_id: desired.id, p_relation: relation });
+        else await supabase.rpc("family_add", { p_relative_id: desired.id, p_relation: relation });
+      }
+    }
+    setSaving(false);
 
     if (usernameChanged) {
       window.location.href = `/perfil/${normalized}`;
@@ -605,6 +535,11 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
             </select>
           </SelectWrap>
         </Field>
+        {wantsPartner && (
+          <Field label="Parceiro" icon={Heart}>
+            <PartnerPicker userId={userId} value={partner} onChange={setPartner} />
+          </Field>
+        )}
       </Section>
 
       <Section title="Parentes" subtitle="Pais, irmãos, filhos e outros — vínculos reais entre perfis." icon={Users}>
@@ -622,6 +557,11 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
           <ChevronRight className="h-5 w-5 text-white/40" />
         </Link>
       </Section>
+
+      <OriginSection about={about} set={setAbout} />
+      <EducationSection about={about} set={setAbout} />
+      <CareerSection about={about} set={setAbout} />
+      <LifeSection about={about} set={setAbout} />
 
       <Section title="Privacidade" subtitle="Escolha o que será exibido no seu perfil." icon={Shield}>
         <div className="space-y-4">

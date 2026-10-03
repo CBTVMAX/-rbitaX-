@@ -25,7 +25,7 @@ import { ProfileMoments } from "@/components/personal-stories";
 import { AvatarMenu } from "@/components/avatar-menu-button";
 import { NavBack } from "@/components/nav-back";
 import { PublishButton } from "@/components/publish/publish-provider";
-import { relationshipLabel } from "@/lib/profile-options";
+import { relationshipLabel, type ProfileAbout } from "@/lib/profile-options";
 import { MyRpgsCard } from "@/components/my-rpgs-card";
 import { ProfileMusic, type ProfileMusicData } from "@/components/profile-music";
 import { AchievementsGrid } from "@/components/achievements";
@@ -55,6 +55,8 @@ import {
   Plus,
   Shield,
   Sparkles,
+  Briefcase,
+  GraduationCap,
   User as UserIcon,
   UserPlus,
 } from "lucide-react";
@@ -73,6 +75,8 @@ export type ProfileInfo = {
   showInterests?: boolean;
   showRelationship?: boolean;
   relationshipStatus?: string | null;
+  /** Mais informações (cidade natal, idiomas, formação, carreira, lema de vida). */
+  extra?: ProfileAbout;
 };
 
 export function parseInterests(raw: string | null | undefined) {
@@ -547,6 +551,12 @@ export function ProfileView({
     { icon: Gem, text: interests.length ? interests.join(", ") : null, prompt: "Seus interesses" },
     { icon: Link2, text: website, prompt: "Site ou link" },
   ];
+  // Como no VK: trabalho atual e onde estudou aparecem no resumo quando preenchidos.
+  const extra = info?.extra ?? {};
+  const job = extra.career?.find((c) => !c.to) ?? extra.career?.[0];
+  const school = extra.education?.[0];
+  if (job) aboutRows.splice(1, 0, { icon: Briefcase, text: `${job.to ? "Trabalhou" : "Trabalha"} em ${job.company}${job.role ? ` · ${job.role}` : ""}`, prompt: "" });
+  if (school) aboutRows.splice(job ? 2 : 1, 0, { icon: GraduationCap, text: `Estudou em ${school.school}${school.course ? ` · ${school.course}` : ""}`, prompt: "" });
   const visibleAbout = aboutRows.filter((r) => r.text || isMe);
 
   const onboardingSteps = [
@@ -617,6 +627,7 @@ export function ProfileView({
     friends: stats.friends,
     mutual: mutual.count,
     family,
+    about: extra,
     communities: sortedCommunities.filter((c) => isMe || !hiddenSet.has(c.id)),
     isMe,
   };
