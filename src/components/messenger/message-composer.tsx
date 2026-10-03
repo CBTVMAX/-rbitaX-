@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { Ban, Dices, Image as ImageIcon, Lock, Mic, Paperclip, Send, Smile, Trash2, UserMinus, Users, X } from "lucide-react";
+import { Ban, CircleAlert, Dices, Image as ImageIcon, Lock, Mic, Paperclip, Send, Smile, Trash2, UserMinus, Users, X } from "lucide-react";
 import { formatDuration, messagePreview } from "@/lib/messenger/format";
 import type { Attachment, ChatMessage, Member, SendStatus, StickerInfo } from "@/lib/messenger/types";
 import { AttachmentMenu, type AttachmentChoice } from "./attachment-menu";
@@ -75,7 +75,9 @@ function pickRecorderMime() {
 /** Shown instead of the input when this person can't write here, with the reason. */
 export function ComposerLocked({ status, username, name }: { status: SendStatus; username?: string; name?: string }) {
   const content =
-    status === "blocked"
+    status === "removed"
+      ? { icon: CircleAlert, text: "Usuário bloqueado ou excluído." }
+      : status === "blocked"
       ? { icon: Ban, text: "Não é possível enviar mensagens nesta conversa porque há um bloqueio entre vocês." }
       : status === "not_member"
         ? { icon: UserMinus, text: "Você não faz mais parte desta conversa." }
@@ -84,6 +86,14 @@ export function ComposerLocked({ status, username, name }: { status: SendStatus;
             text: `Você e ${name?.split(" ")[0] ?? "esta pessoa"} não são amigos no momento. O chat do ÓrbitaX é só entre amigos: envie um pedido de amizade para voltar a conversar.`,
           };
   const Icon = content.icon;
+  if (status === "removed") {
+    // Como no VK: uma faixa simples no lugar da caixa de texto.
+    return (
+      <div className="flex items-center justify-center gap-2.5 border-t border-white/10 bg-space-surface/80 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-sm text-white/55 backdrop-blur">
+        <CircleAlert className="h-5 w-5 shrink-0 text-red-400" /> {content.text}
+      </div>
+    );
+  }
   return (
     <div className="border-t border-white/10 bg-space-surface/80 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur">
       <div className="mx-auto flex max-w-2xl items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3.5">

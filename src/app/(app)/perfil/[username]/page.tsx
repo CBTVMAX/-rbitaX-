@@ -13,6 +13,7 @@ import {
   type ProfileFriend,
   type ProfileInfo,
 } from "@/components/profile-view";
+import { DeletedProfile } from "@/components/deleted-profile";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,12 @@ export default async function ProfilePage(props: {
       .maybeSingle();
     if (community) redirect(`/comunidades/${community.slug}`);
     notFound();
+  }
+
+  // Página desativada (exclusão pedida): quem visita vê só o aviso.
+  if (current?.authId !== user.id) {
+    const { data: deactivated } = await supabase.rpc("is_user_deactivated", { p_user: user.id });
+    if (deactivated) return <DeletedProfile name={user.name} />;
   }
 
   const [

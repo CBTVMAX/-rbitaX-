@@ -242,6 +242,8 @@ export function ChatHeader({
               <span className="flex items-center gap-1.5 text-xs text-white/50">
                 {typing ? (
                   <TypingText label={typing} className={!compact ? "text-[13px]" : undefined} />
+                ) : !c.isGroup && c.sendStatus === "removed" ? (
+                  <span className={clsx("truncate", !compact && "text-[13px] lg:text-[12px]")}>O perfil foi removido</span>
                 ) : c.isGroup ? (
                   <span className="truncate">
                     {c.memberCount} membros{onlineInGroup > 0 && <span className="text-emerald-400"> · {onlineInGroup} online</span>}
@@ -266,7 +268,7 @@ export function ChatHeader({
                 <UserPlus className="h-5 w-5" />
               </IconButton>
             )}
-            {!c.isGroup && (
+            {!c.isGroup && c.sendStatus !== "removed" && (
               <>
                 <IconButton label="Chamada de voz" onClick={call("voice")}>
                   <Phone className="h-[19px] w-[19px]" />

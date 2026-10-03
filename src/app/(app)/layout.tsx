@@ -11,6 +11,7 @@ import { AppSidebar, AppTopBar, MobileHeader, MobileTabBar } from "@/components/
 import { AccountSync } from "@/components/account-sync";
 import { ChatDock } from "@/components/chat-dock";
 import { PublishProvider } from "@/components/publish/publish-provider";
+import { RestoreAccountScreen } from "@/components/account-deactivated";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +20,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!current) redirect("/entrar");
 
   const { profile } = current;
+  const supabase = await createClient();
+  // Página desativada (exclusão pedida): só a tela de restaurar, como no VK.
+  const [{ data: deleteAfter }, { data: badgeRows }] = await Promise.all([supabase.rpc("my_deactivation"), supabase.rpc("my_badge_counts")]);
+  if (typeof deleteAfter === "string") return <RestoreAccountScreen until={deleteAfter} name={profile.name} />;
+
   const theme = parseAppTheme((await cookies()).get(APP_THEME_COOKIE)?.value);
   const visual = parseAppVisual((await cookies()).get(APP_VISUAL_COOKIE)?.value);
-  const { data: badgeRows } = await (await createClient()).rpc("my_badge_counts");
   const initialCounts = Array.isArray(badgeRows) && badgeRows[0] ? badgeRows[0] : undefined;
   // The color chosen in Personalizar perfil tints the whole app for this member.
   const accent = appAccentVars(profile.profileColor);

@@ -41,7 +41,6 @@ const DELETE_ERROR: Record<string, string> = {
   confirm_required: "Digite EXCLUIR para confirmar.",
   staff_account: "Contas da equipe do Órbita X não podem ser excluídas por aqui.",
   not_authenticated: "Sua sessão expirou. Entre de novo e tente outra vez.",
-  unavailable: "A exclusão está temporariamente indisponível. Fale com o suporte do Órbita X.",
 };
 
 export function AccountDataSettings({ username }: { username: string }) {
@@ -56,6 +55,11 @@ export function AccountDataSettings({ username }: { username: string }) {
   const [password, setPassword] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<React.ReactNode>(null);
+
+  const deadline = useMemo(
+    () => new Date(Date.now() + 30 * 86400000).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" }),
+    []
+  );
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setHasPassword(!!data.user?.identities?.some((i) => i.provider === "email")));
@@ -85,7 +89,7 @@ export function AccountDataSettings({ username }: { username: string }) {
     if (hasPassword && !password) return setDeleteError(DELETE_ERROR.password_required);
     setDeleting(true);
     setDeleteError(null);
-    let body: { ok?: boolean; error?: string; count?: number } = {};
+    let body: { ok?: boolean; error?: string; count?: number; until?: string } = {};
     try {
       const res = await fetch("/api/conta/excluir", {
         method: "POST",
@@ -109,13 +113,13 @@ export function AccountDataSettings({ username }: { username: string }) {
       }
       return setDeleteError(DELETE_ERROR[body.error ?? ""] ?? "Não foi possível excluir a conta agora. Tente de novo em instantes.");
     }
-    // A conta já não existe: limpa este aparelho e sai.
+    // Página desativada e sessões encerradas: limpa este aparelho e mostra a data limite.
     await disablePush(supabase).catch(() => undefined);
     await endPresenceForSignOut().catch(() => undefined);
     const active = getAccounts().activeId;
     if (active) removeAccount(active);
     await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
-    window.location.href = "/?conta=excluida";
+    window.location.href = `/conta-desativada${body.until ? `?ate=${encodeURIComponent(body.until)}` : ""}`;
   }
 
   return (
@@ -141,7 +145,7 @@ export function AccountDataSettings({ username }: { username: string }) {
         </p>
       </Card>
 
-      <Card icon={UserX} title="Excluir conta" desc="Apaga para sempre seu perfil, publicações, comentários, mensagens, fotos e Diamantes. Não dá para desfazer." danger>
+      <Card icon={UserX} title="Excluir conta" desc="Sua página fica desativada por 30 dias e some para todo mundo. Nesse prazo, é só entrar de novo para restaurar. Depois, tudo é apagado de vez." danger>
         {step === "idle" ? (
           <button type="button" onClick={() => setStep("confirm")} className={secondary.replace("text-white/85", "text-red-400")}>
             <Trash2 className="h-4 w-4" /> Quero excluir minha conta
@@ -153,10 +157,11 @@ export function AccountDataSettings({ username }: { username: string }) {
               <div className="space-y-1">
                 <p>Antes de continuar:</p>
                 <ul className="list-disc space-y-0.5 pl-4 text-red-200/85">
-                  <li>Baixe seus dados acima se quiser guardar uma cópia.</li>
+                  <li>Você sai de todos os aparelhos e sua página some da busca, do feed e das conversas.</li>
+                  <li>Você terá até {deadline} para restaurar, entrando com seu e-mail e senha.</li>
+                  <li>Depois dessa data, perfil, publicações, mensagens, fotos e Diamantes são apagados para sempre.</li>
                   <li>Comunidades que você criou precisam ser transferidas antes.</li>
-                  <li>Nos grupos de conversa, a posse passa para outro membro.</li>
-                  <li>Diamantes e itens comprados são perdidos.</li>
+                  <li>Baixe seus dados acima se quiser guardar uma cópia.</li>
                 </ul>
               </div>
             </div>
@@ -179,7 +184,7 @@ export function AccountDataSettings({ username }: { username: string }) {
             {deleteError && <p className="text-sm text-red-300">{deleteError}</p>}
             <div className="flex flex-wrap gap-2">
               <button type="submit" disabled={deleting || confirm.trim().toUpperCase() !== "EXCLUIR"} className={danger}>
-                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Excluir minha conta para sempre
+                {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Excluir minha página
               </button>
               <button
                 type="button"
