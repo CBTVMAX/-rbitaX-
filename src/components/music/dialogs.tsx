@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { clsx } from "clsx";
-import { Check, Disc3, ExternalLink, ImagePlus, Link2, ListPlus, Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { Check, Clapperboard, Disc3, ExternalLink, ImagePlus, Link2, ListPlus, Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { Sheet } from "@/components/community/ui";
 import { formatDuration, parseYouTubeId, youtubeThumb, type MusicAlbum, type MusicTrack } from "@/lib/music";
 import { TrackCover } from "./track-row";
@@ -47,6 +48,11 @@ export function TrackActionsSheet({
         <button type="button" className={row} onClick={() => onAddToAlbum(track)}>
           <ListPlus className="h-[18px] w-[18px] text-orbit-cyan" /> Adicionar a um álbum
         </button>
+        {track.youtubeId && (
+          <Link href={`/videos?v=${track.youtubeId}`} className={row}>
+            <Clapperboard className="h-[18px] w-[18px] text-white/60" /> Ver clipe em Vídeos
+          </Link>
+        )}
         {onRemoveFromAlbum && (
           <button type="button" className={row} onClick={() => onRemoveFromAlbum(track)}>
             <Trash2 className="h-[18px] w-[18px] text-white/60" /> Tirar deste álbum
