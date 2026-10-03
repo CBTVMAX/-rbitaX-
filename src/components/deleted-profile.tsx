@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-/** Perfil de quem pediu a exclusão (período de 30 dias): só o nome, como no VK. */
+/** Perfil de quem pediu a exclusão (período de 6 meses): só o nome, como no VK. */
 export function DeletedProfile({ name }: { name: string }) {
   return (
     <div className="mx-auto max-w-2xl px-3 py-6 md:px-4 md:py-10">

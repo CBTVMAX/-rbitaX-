@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 /**
- * Exclusão definitiva das contas cujo prazo de 30 dias acabou (roda todo dia às 03:17 UTC).
+ * Exclusão definitiva das contas cujo prazo de 6 meses acabou (roda todo dia às 03:17 UTC).
  * Para cada conta vencida: o banco passa a posse dos grupos adiante e lista os arquivos,
  * que são apagados; por fim o login é removido e o gatilho on_auth_user_deleted apaga o perfil.
  */
