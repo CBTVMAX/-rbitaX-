@@ -2,14 +2,14 @@
 
 import { useRef, useState } from "react";
 import { clsx } from "clsx";
-import { Bookmark, Copy, Download, Forward, MoreHorizontal, Pin, PinOff, Reply, SmilePlus, Star, Trash2 } from "lucide-react";
+import { Bookmark, Copy, Download, Flag, Forward, MoreHorizontal, Pin, PinOff, Reply, SmilePlus, Star, Trash2 } from "lucide-react";
 import { useChatRules } from "@/lib/messenger/group-rules";
 import { QUICK_REACTIONS } from "@/lib/messenger/emoji";
 import { formatTime, toDate } from "@/lib/messenger/format";
 import type { ChatMessage } from "@/lib/messenger/types";
 import { GhostButton, MenuItem, Modal, Popover } from "./ui";
 
-export type MessageAction = "reply" | "copy" | "forward" | "favorite" | "delete" | "save" | "download" | "pin";
+export type MessageAction = "reply" | "copy" | "forward" | "favorite" | "delete" | "save" | "download" | "pin" | "report";
 
 export type DeliveryState = "sending" | "sent" | "delivered" | "seen" | "failed";
 
@@ -95,6 +95,9 @@ function MenuEntries({
         <MenuItem icon={Star} label={favorite ? "Remover dos favoritos" : "Favoritar"} onClick={() => onAction("favorite")} />
       )}
       {!locked && canDownload(m) && <MenuItem icon={Download} label={m.attachments.length > 1 ? "Baixar arquivos" : "Baixar"} onClick={() => onAction("download")} />}
+      {!mine && !inSaved && live && m.type !== "system" && (
+        <MenuItem icon={Flag} label="Denunciar" danger onClick={() => onAction("report")} />
+      )}
       {!m.status && <MenuItem icon={Trash2} label="Apagar" danger onClick={() => onAction("delete")} />}
       {m.status === "failed" && mine && <MenuItem icon={Trash2} label="Descartar" danger onClick={() => onAction("delete")} />}
     </>

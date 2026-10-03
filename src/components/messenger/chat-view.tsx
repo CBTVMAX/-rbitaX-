@@ -49,6 +49,7 @@ import { ConversationInfo } from "./conversation-info";
 import { ContactDialog, ForwardDialog, LocationDialog, PollDialog } from "./dialogs";
 import { GiftDialog, LinkDialog, SaveToSavedDialog } from "./extra-dialogs";
 import { MediaViewer } from "./media-viewer";
+import { ReportDialog } from "@/components/report-dialog";
 import { useMediaGuard } from "@/lib/use-media-guard";
 import { ProfileCard } from "./profile-card";
 import { PinnedBanner } from "./pinned-banner";
@@ -126,6 +127,7 @@ export function ChatView({
   const [profileOpen, setProfileOpen] = useState(false);
   const [sheetFor, setSheetFor] = useState<ChatMessage | null>(null);
   const [deleteFor, setDeleteFor] = useState<ChatMessage | null>(null);
+  const [reportFor, setReportFor] = useState<ChatMessage | null>(null);
   const [forwardFor, setForwardFor] = useState<ChatMessage | null>(null);
   const [dialog, setDialog] = useState<null | "poll" | "location" | "contact" | "link" | "gift" | "save">(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
@@ -715,6 +717,7 @@ export function ChatView({
         }
       }
       if (a === "forward") setForwardFor(m);
+      if (a === "report") setReportFor(m);
       if (a === "pin") {
         const unpin = pinnedId === m.id;
         const { error } = await supabase.rpc("pin_conversation_message", { p_conversation_id: c.id, p_message_id: unpin ? null : m.id });
@@ -1054,6 +1057,7 @@ export function ChatView({
         onReact={(e) => sheetFor && react(sheetFor, e)}
         onAction={(a) => sheetFor && action(sheetFor, a)}
       />
+      <ReportDialog target={reportFor ? { type: "message", id: reportFor.id, label: "mensagem" } : null} onClose={() => setReportFor(null)} />
       <DeleteDialog m={deleteFor} mine={deleteFor?.senderId === me.id} inSaved={c.isSaved} onClose={() => setDeleteFor(null)} onDelete={doDelete} />
       <LinkDialog
         open={dialog === "link"}

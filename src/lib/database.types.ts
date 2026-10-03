@@ -656,6 +656,9 @@ export type Database = {
         Returns: { id: string; targetType: string; targetId: string; reason: string; details: string | null; status: string; createdAt: string; reporterName: string | null; reporterUsername: string | null; targetLabel: string | null; total: number }[];
       };
       admin_resolve_report: { Args: { p_report: string; p_status: string }; Returns: undefined };
+      export_my_data: { Args: Record<string, never>; Returns: Json };
+      my_storage_files: { Args: Record<string, never>; Returns: { bucket: string; name: string }[] };
+      account_deletion_check: { Args: { p_confirm: string }; Returns: Json };
       admin_grant_pack: { Args: { p_user: string; p_pack: string }; Returns: undefined };
       admin_revoke_pack: { Args: { p_user: string; p_pack: string }; Returns: undefined };
       admin_packs_for: {

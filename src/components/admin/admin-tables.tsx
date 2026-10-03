@@ -415,6 +415,10 @@ export function AdminCommunities() {
 }
 
 // ============================================================ Denúncias
+const REPORT_TYPE: Record<string, string> = {
+  post: "post", user: "perfil", message: "mensagem", community: "comunidade", community_post: "post de comunidade",
+  community_comment: "comentário", community_discussion: "tópico", community_reply: "resposta", sticker_pack: "pacote de adesivos",
+};
 export function AdminReports() {
   const supabase = useMemo(() => createClient(), []);
   const [status, setStatus] = useState("pending");
@@ -458,7 +462,7 @@ export function AdminReports() {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-white">
                       <span className="font-semibold">{r.reason}</span>
-                      <span className="ml-2 rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-white/50">{r.targetType}</span>
+                      <span className="ml-2 rounded-full border border-white/10 px-2 py-0.5 text-[10px] text-white/50">{REPORT_TYPE[r.targetType] ?? r.targetType}</span>
                       {r.status !== "pending" && <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/60">{r.status}</span>}
                     </p>
                     <p className="mt-0.5 truncate text-xs text-white/55">Alvo: {r.targetLabel ?? r.targetId}</p>
