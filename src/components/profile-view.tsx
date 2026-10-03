@@ -1197,7 +1197,7 @@ export function ProfileView({
                   >
                     <PenLine className="h-5 w-5" />
                   </Link>
-                  <ShareProfileButton username={user.username} compact square />
+                  <ShareProfileButton userId={user.id} compact square />
                 </>
               ) : (
                 visitorActions(true)

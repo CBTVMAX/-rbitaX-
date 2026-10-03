@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
+import { ShareProfileSheet } from "@/components/share-profile-sheet";
 import { createClient } from "@/lib/supabase/client";
 import { presenceOf } from "@/lib/presence";
 import { PresenceDot } from "@/components/presence-picker";
@@ -35,8 +36,7 @@ import {
   ImagePlus,
   Move,
   Trash2,
-  Check,
-  Link2,
+  Share2,
   Loader2,
   Lock,
   LogOut,
@@ -55,40 +55,25 @@ import {
   UsersRound,
 } from "lucide-react";
 
-async function copyProfileLink(username: string) {
-  const url = `${window.location.origin}/perfil/${username}`;
-  try {
-    await navigator.clipboard.writeText(url);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export function ShareProfileButton({ username, compact = false, square = false }: { username: string; compact?: boolean; square?: boolean }) {
-  const [copied, setCopied] = useState(false);
-
-  // Sem compartilhar para fora (WhatsApp, Instagram…): só o link, que abre apenas para quem tem conta.
-  async function share() {
-    if (await copyProfileLink(username)) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  }
-
+/** Compartilhar o perfil com amigos no Messenger (nunca para fora do Órbita X). */
+export function ShareProfileButton({ userId, compact = false, square = false }: { userId: string; compact?: boolean; square?: boolean }) {
+  const [open, setOpen] = useState(false);
   return (
-    <button
-      type="button"
-      onClick={share}
-      aria-label="Copiar link do perfil"
-      className={clsx(
-        "flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/15 bg-space-bg/40 text-sm font-medium text-white transition hover:bg-white/5",
-        square ? "h-12 w-12" : compact ? "h-[42px] w-11" : "px-4 py-2.5"
-      )}
-    >
-      {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Link2 className="h-4 w-4" />}
-      {!compact && (copied ? "Link copiado" : "Copiar link")}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Compartilhar perfil com amigos"
+        className={clsx(
+          "flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/15 bg-space-bg/40 text-sm font-medium text-white transition hover:bg-white/5",
+          square ? "h-12 w-12" : compact ? "h-[42px] w-11" : "px-4 py-2.5"
+        )}
+      >
+        <Share2 className="h-4 w-4" />
+        {!compact && "Compartilhar"}
+      </button>
+      <ShareProfileSheet open={open} onClose={() => setOpen(false)} profileId={userId} />
+    </>
   );
 }
 
@@ -117,7 +102,7 @@ export function ProfileMoreMenu({
   variant?: "default" | "glass" | "label";
 }) {
   const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [friendBusy, setFriendBusy] = useState(false);
   const router = useRouter();
   const { ask, dialog } = useRelationshipActions({ userId, name: name || username });
@@ -206,17 +191,8 @@ export function ProfileMoreMenu({
               </ProfileImageUpload>
             </>
           )}
-          <button
-            type="button"
-            onClick={async () => {
-              if (await copyProfileLink(username)) {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              }
-            }}
-            className={item}
-          >
-            <Link2 className="h-4 w-4" /> {copied ? "Link copiado" : "Copiar link"}
+          <button type="button" onClick={() => (setOpen(false), setSharing(true))} className={item}>
+            <Share2 className="h-4 w-4" /> Compartilhar perfil
           </button>
           {!isMe && (
             <span title="Em breve" className={soon}>
@@ -296,6 +272,7 @@ export function ProfileMoreMenu({
           )}
         </div>
       )}
+      <ShareProfileSheet open={sharing} onClose={() => setSharing(false)} profileId={userId} />
       {!isMe && dialog}
       {!isMe && (
         <ReportDialog target={reporting ? { type: "user", id: userId, label: "perfil" } : null} onClose={() => setReporting(false)} />
