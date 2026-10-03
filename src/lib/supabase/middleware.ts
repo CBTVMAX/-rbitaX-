@@ -41,19 +41,20 @@ function buildCsp(nonce: string, isDev: boolean, strict: boolean): string {
     ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
     : strict
       ? `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`
-      : "script-src 'self' 'unsafe-inline'";
+      : "script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com";
   return [
     "default-src 'self'",
     scriptSrc,
     "style-src 'self' 'unsafe-inline'",
     // archive.org: capas e áudio do catálogo de música (Creative Commons / domínio público).
-    "img-src 'self' data: blob: https://*.supabase.co https://tile.openstreetmap.org https://lh3.googleusercontent.com https://archive.org https://*.archive.org",
+    "img-src 'self' data: blob: https://*.supabase.co https://tile.openstreetmap.org https://lh3.googleusercontent.com https://archive.org https://*.archive.org https://i.ytimg.com",
     "media-src 'self' data: blob: https://*.supabase.co https://archive.org https://*.archive.org",
     "font-src 'self' data:",
     `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org${isDev ? " ws: http://localhost:*" : ""}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
-    "frame-src 'none'",
+    // Player oficial do YouTube (música completa, licenciada pelo próprio YouTube).
+    "frame-src https://www.youtube-nocookie.com https://www.youtube.com",
     "frame-ancestors 'none'",
     "object-src 'none'",
     "base-uri 'self'",

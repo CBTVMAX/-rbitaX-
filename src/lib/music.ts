@@ -14,6 +14,8 @@ export type MusicTrack = {
   license: string | null;
   licenseUrl: string | null;
   sourceUrl: string | null;
+  /** Faixa do YouTube (vídeo oficial ou link do usuário): toca completa no player incorporado. */
+  youtubeId: string | null;
 };
 
 export type MusicAlbum = {
@@ -27,11 +29,17 @@ export type MusicAlbum = {
 };
 
 export const TRACK_COLUMNS =
-  "id, title, artist, album, audioUrl, coverUrl, duration, genre, isOfficial, userId, license, licenseUrl, sourceUrl" as const;
+  "id, title, artist, album, audioUrl, coverUrl, duration, genre, isOfficial, userId, license, licenseUrl, sourceUrl, youtubeId" as const;
 
 /** Gêneros do catálogo, na ordem em que aparecem. */
 export const GENRES: { id: string; label: string }[] = [
-  { id: "rock", label: "Rock" },
+  { id: "hits", label: "Hits" },
+  { id: "rock-classico", label: "Rock clássico" },
+  { id: "rock-anos-90", label: "Rock anos 90" },
+  { id: "rock-anos-2000", label: "Rock anos 2000" },
+  { id: "hits-anos-80", label: "Anos 80" },
+  { id: "pop-rock", label: "Pop rock" },
+  { id: "rock", label: "Rock indie" },
   { id: "pop", label: "Pop" },
   { id: "eletronica", label: "Eletrônica" },
   { id: "hiphop", label: "Hip-hop" },
@@ -76,8 +84,11 @@ export async function loadMusic(supabase: SupabaseClient, userId: string) {
       .limit(200),
   ]);
   type AlbumRow = Omit<MusicAlbum, "trackIds"> & { items: { trackId: string; position: number }[] | null };
+  // Ordem da vitrine: hits e rock primeiro, depois os gêneros do catálogo livre.
+  const order = new Map(GENRES.map((g, i) => [g.id, i]));
+  const sorted = ((catalog.data as MusicTrack[] | null) ?? []).slice().sort((a, b) => (order.get(a.genre ?? "") ?? 99) - (order.get(b.genre ?? "") ?? 99));
   return {
-    catalog: (catalog.data as MusicTrack[] | null) ?? [],
+    catalog: sorted,
     mine: (mine.data as MusicTrack[] | null) ?? [],
     albums: ((albums.data as AlbumRow[] | null) ?? []).map(({ items, ...a }) => ({
       ...a,
@@ -90,3 +101,23 @@ export async function loadMusic(supabase: SupabaseClient, userId: string) {
 export function albumTracks(album: MusicAlbum, byId: Map<string, MusicTrack>) {
   return album.trackIds.map((id) => byId.get(id)).filter((t): t is MusicTrack => !!t);
 }
+
+/** Aceita link do YouTube (watch, youtu.be, shorts, embed, music) ou o próprio ID. */
+export function parseYouTubeId(input: string): string | null {
+  const raw = input.trim();
+  if (/^[A-Za-z0-9_-]{11}$/.test(raw)) return raw;
+  try {
+    const u = new URL(raw);
+    const host = u.hostname.replace(/^(www|m|music)\./, "");
+    if (host === "youtu.be") return /^[A-Za-z0-9_-]{11}$/.test(u.pathname.slice(1, 12)) ? u.pathname.slice(1, 12) : null;
+    if (host !== "youtube.com" && host !== "youtube-nocookie.com") return null;
+    const v = u.searchParams.get("v");
+    if (v && /^[A-Za-z0-9_-]{11}$/.test(v)) return v;
+    const m = u.pathname.match(/^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{11})/);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+export const youtubeThumb = (id: string) => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
