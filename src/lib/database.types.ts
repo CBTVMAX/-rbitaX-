@@ -659,6 +659,12 @@ export type Database = {
       export_my_data: { Args: Record<string, never>; Returns: Json };
       my_storage_files: { Args: Record<string, never>; Returns: { bucket: string; name: string }[] };
       account_deletion_check: { Args: { p_confirm: string }; Returns: Json };
+      deactivate_my_account: { Args: { p_confirm: string }; Returns: string };
+      my_deactivation: { Args: Record<string, never>; Returns: string | null };
+      restore_my_account: { Args: Record<string, never>; Returns: undefined };
+      is_user_deactivated: { Args: { p_user: string }; Returns: boolean };
+      accounts_due_for_deletion: { Args: Record<string, never>; Returns: string[] };
+      finalize_account_deletion: { Args: { p_user: string }; Returns: { bucket: string; name: string }[] };
       admin_grant_pack: { Args: { p_user: string; p_pack: string }; Returns: undefined };
       admin_revoke_pack: { Args: { p_user: string; p_pack: string }; Returns: undefined };
       admin_packs_for: {

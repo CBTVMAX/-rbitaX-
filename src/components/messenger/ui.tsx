@@ -94,6 +94,13 @@ export function SavedAvatar({ size = 48 }: { size?: number }) {
 
 export function ConversationAvatar({ c, size = 48, ringClass }: { c: Conversation; size?: number; ringClass?: string }) {
   if (c.isSaved) return <SavedAvatar size={size} />;
+  // Perfil excluído (como no VK): avatar padrão, sem foto nem status.
+  if (!c.isGroup && c.sendStatus === "removed") {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src="/perfil-removido.webp" alt="Perfil removido" width={size} height={size} className="shrink-0 rounded-full" style={{ width: size, height: size }} />
+    );
+  }
   return c.isGroup ? (
     <ChatAvatar name={c.name ?? "Grupo"} url={c.avatarUrl} size={size} group />
   ) : (
