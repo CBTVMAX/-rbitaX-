@@ -152,8 +152,12 @@ type ShareRow = { createdAt: string; id: string; postId: string; userId: string 
 type ShareInsert = { createdAt?: string; id: string; postId: string; userId: string };
 type ShareUpdate = Partial<ShareInsert>;
 
-type TrackRow = { artist: string; audioUrl: string; coverUrl: string | null; createdAt: string; duration: number | null; id: string; title: string; userId: string };
-type TrackInsert = { artist: string; audioUrl: string; coverUrl?: string | null; createdAt?: string; duration?: number | null; id: string; title: string; userId: string };
+type TrackRow = { artist: string; audioUrl: string; coverUrl: string | null; createdAt: string; duration: number | null; id: string; title: string; userId: string | null; isOfficial: boolean; isHidden: boolean; genre: string | null; album: string | null; license: string | null; licenseUrl: string | null; sourceUrl: string | null; sourceId: string | null; updatedAt: string };
+type TrackInsert = { artist: string; audioUrl: string; coverUrl?: string | null; createdAt?: string; duration?: number | null; id: string; title: string; userId: string; album?: string | null; genre?: string | null };
+type PlaylistRow = { id: string; userId: string; title: string; description: string | null; coverUrl: string | null; isPublic: boolean; createdAt: string; updatedAt: string };
+type PlaylistInsert = { id?: string; userId: string; title: string; description?: string | null; coverUrl?: string | null; isPublic?: boolean; updatedAt?: string };
+type PlaylistTrackRow = { id: string; playlistId: string; trackId: string; position: number; addedAt: string };
+type PlaylistTrackInsert = { id?: string; playlistId: string; trackId: string; position?: number };
 type TrackUpdate = Partial<TrackInsert>;
 
 type UserRow = { accountStatus: string; avatarUrl: string | null; bio: string | null; coverUrl: string | null; createdAt: string; discoverable: boolean; email: string | null; emailVerifiedAt: string | null; googleId: string | null; id: string; isPrivate: boolean; isVerified: boolean; lastSeenAt: string | null; name: string; orbitId: string | null; pinnedPostId: string | null; presence: string; showPresence: boolean; profileColor: string; avatarFrame: string | null; isPremium: boolean; premiumSince: string | null; profileMusic: Json; passwordHash: string | null; phone: string | null; phoneVerifiedAt: string | null; privacyAcceptedAt: string | null; privacyAcceptedVersion: string | null; role: string; termsAcceptedAt: string | null; termsAcceptedVersion: string | null; updatedAt: string; username: string; whoCanComment: string; whoCanMention: string; whoCanMessage: string; whoCanSeeMoments: string; hiddenProfileCommunities: string[] };
@@ -341,6 +345,11 @@ export type Database = {
       Share: { Row: ShareRow; Insert: ShareInsert; Update: ShareUpdate; Relationships: [
         { foreignKeyName: "Share_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] },
         { foreignKeyName: "Share_postId_fkey"; columns: ["postId"]; isOneToOne: false; referencedRelation: "Post"; referencedColumns: ["id"] }
+      ] };
+      Playlist: { Row: PlaylistRow; Insert: PlaylistInsert; Update: Partial<PlaylistInsert>; Relationships: [] };
+      PlaylistTrack: { Row: PlaylistTrackRow; Insert: PlaylistTrackInsert; Update: Partial<PlaylistTrackInsert>; Relationships: [
+        { foreignKeyName: "PlaylistTrack_playlistId_fkey"; columns: ["playlistId"]; isOneToOne: false; referencedRelation: "Playlist"; referencedColumns: ["id"] },
+        { foreignKeyName: "PlaylistTrack_trackId_fkey"; columns: ["trackId"]; isOneToOne: false; referencedRelation: "Track"; referencedColumns: ["id"] }
       ] };
       Track: { Row: TrackRow; Insert: TrackInsert; Update: TrackUpdate; Relationships: [
         { foreignKeyName: "Track_userId_fkey"; columns: ["userId"]; isOneToOne: false; referencedRelation: "User"; referencedColumns: ["id"] }
@@ -657,6 +666,8 @@ export type Database = {
       };
       admin_resolve_report: { Args: { p_report: string; p_status: string }; Returns: undefined };
       export_my_data: { Args: Record<string, never>; Returns: Json };
+      reorder_playlist: { Args: { p_playlist: string; p_tracks: string[] }; Returns: undefined };
+      admin_set_track_hidden: { Args: { p_track: string; p_hidden: boolean }; Returns: undefined };
       my_storage_files: { Args: Record<string, never>; Returns: { bucket: string; name: string }[] };
       account_deletion_check: { Args: { p_confirm: string }; Returns: Json };
       deactivate_my_account: { Args: { p_confirm: string }; Returns: string };

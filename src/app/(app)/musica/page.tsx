@@ -1,20 +1,18 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
-import { MusicApp, type TrackRow } from "@/components/music-app";
+import { loadMusic } from "@/lib/music";
+import { MusicApp } from "@/components/music/music-app";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = { title: "Música · Órbita X" };
 
 export default async function MusicaPage() {
   const current = await getCurrentUser();
-  if (!current) redirect("/entrar");
+  if (!current) redirect("/entrar?redirect=/musica");
 
   const supabase = await createClient();
-  const { data: tracks } = await supabase
-    .from("Track")
-    .select("id, title, artist, audioUrl, coverUrl, userId, owner:User(name, username, avatarUrl)")
-    .order("createdAt", { ascending: false })
-    .limit(50);
-
-  return <MusicApp userId={current.authId} initialTracks={(tracks as unknown as TrackRow[]) ?? []} />;
+  const initial = await loadMusic(supabase, current.authId);
+  return <MusicApp me={current.authId} initial={initial} />;
 }

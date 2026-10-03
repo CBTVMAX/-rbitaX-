@@ -46,8 +46,9 @@ function buildCsp(nonce: string, isDev: boolean, strict: boolean): string {
     "default-src 'self'",
     scriptSrc,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://*.supabase.co https://tile.openstreetmap.org https://lh3.googleusercontent.com",
-    "media-src 'self' data: blob: https://*.supabase.co",
+    // archive.org: capas e áudio do catálogo de música (Creative Commons / domínio público).
+    "img-src 'self' data: blob: https://*.supabase.co https://tile.openstreetmap.org https://lh3.googleusercontent.com https://archive.org https://*.archive.org",
+    "media-src 'self' data: blob: https://*.supabase.co https://archive.org https://*.archive.org",
     "font-src 'self' data:",
     `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://nominatim.openstreetmap.org${isDev ? " ws: http://localhost:*" : ""}`,
     "worker-src 'self' blob:",
