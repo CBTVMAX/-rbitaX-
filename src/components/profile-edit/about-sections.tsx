@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Briefcase, GraduationCap, Home, Languages, Plus, Quote, Sparkles, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Briefcase, Check, GraduationCap, Home, Languages, Loader2, Plus, Quote, Sparkles, Trash2, UsersRound, X } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { Sheet } from "@/components/community/ui";
 import { Field, inputClass, Section, selectClass, SelectWrap } from "@/components/profile-edit/form-ui";
 import {
   EDUCATION_LEVELS,
@@ -181,15 +183,75 @@ export function EducationSection({ about, set }: { about: ProfileAbout; set: Set
   );
 }
 
-/** Carreira: onde trabalha ou trabalhou. */
-export function CareerSection({ about, set }: { about: ProfileAbout; set: Set }) {
+type MyCommunity = { id: string; name: string; slug: string; avatarUrl: string | null };
+
+function CommunityFace({ url, size = 28 }: { url?: string | null; size?: number }) {
+  return url ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={url} alt="" className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />
+  ) : (
+    <span className="flex shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-white/60" style={{ width: size, height: size }}>
+      <UsersRound className="h-4 w-4" />
+    </span>
+  );
+}
+
+/** Carreira: onde trabalha ou trabalhou — pode ser uma comunidade do Órbita X (como no VK). */
+export function CareerSection({ about, set, userId }: { about: ProfileAbout; set: Set; userId: string }) {
+  const supabase = useMemo(() => createClient(), []);
   const items = about.career ?? [];
   const update = (i: number, patch: Partial<ProfileCareer>) => set({ career: items.map((c, j) => (j === i ? { ...c, ...patch } : c)) });
+  const [picking, setPicking] = useState<number | null>(null);
+  const [mine, setMine] = useState<MyCommunity[] | null>(null);
+
+  useEffect(() => {
+    if (picking === null || mine) return;
+    (async () => {
+      const { data } = await supabase
+        .from("CommunityMember")
+        .select("community:Community(id, name, slug, avatarUrl)")
+        .eq("userId", userId)
+        .order("createdAt", { ascending: false })
+        .limit(200);
+      const list = ((data ?? []) as unknown as { community: MyCommunity | null }[]).map((r) => r.community).filter(Boolean) as MyCommunity[];
+      setMine(list);
+    })();
+  }, [picking, mine, supabase, userId]);
+
+  function choose(c: MyCommunity) {
+    if (picking === null) return;
+    update(picking, { company: c.name, community: c.id, communityName: c.name, communitySlug: c.slug, communityAvatar: c.avatarUrl ?? undefined });
+    setPicking(null);
+  }
+
   return (
-    <Section title="Carreira" subtitle="Empresas, cargos e período." icon={Briefcase}>
+    <Section title="Carreira" subtitle="Empresas, cargos e período — ou uma comunidade sua do Órbita X." icon={Briefcase}>
       {items.map((c, i) => (
         <ItemCard key={i} label="Remover emprego" onRemove={() => set({ career: items.filter((_, j) => j !== i) })}>
-          <input value={c.company} onChange={(ev) => update(i, { company: ev.target.value })} maxLength={100} placeholder="Empresa ou local de trabalho" className={smallInput} />
+          {c.community ? (
+            <div className="flex items-center gap-2.5 rounded-xl border border-orbit-purple/40 bg-orbit-purple/10 px-3 py-2">
+              <CommunityFace url={c.communityAvatar} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium text-white">{c.communityName ?? c.company}</span>
+                <span className="block text-[11px] text-white/50">Comunidade do Órbita X</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => update(i, { community: undefined, communityName: undefined, communitySlug: undefined, communityAvatar: undefined })}
+                aria-label="Desmarcar comunidade"
+                className="rounded-full p-1 text-white/60 hover:bg-white/10 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <>
+              <input value={c.company} onChange={(ev) => update(i, { company: ev.target.value })} maxLength={100} placeholder="Empresa ou local de trabalho" className={smallInput} />
+              <button type="button" onClick={() => setPicking(i)} className="flex items-center gap-1.5 px-1 text-xs font-medium text-orbit-cyan hover:underline">
+                <UsersRound className="h-3.5 w-3.5" /> Marcar uma comunidade minha do Órbita X
+              </button>
+            </>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <input value={c.role ?? ""} onChange={(ev) => update(i, { role: ev.target.value })} maxLength={100} placeholder="Cargo" className={smallInput} />
             <input value={c.city ?? ""} onChange={(ev) => update(i, { city: ev.target.value })} maxLength={80} placeholder="Cidade" className={smallInput} />
@@ -201,6 +263,26 @@ export function CareerSection({ about, set }: { about: ProfileAbout; set: Set })
         </ItemCard>
       ))}
       {items.length < MAX_ITEMS && <AddButton onClick={() => set({ career: [...items, { company: "" }] })}>Adicionar emprego</AddButton>}
+
+      <Sheet open={picking !== null} onClose={() => setPicking(null)} title="Marcar comunidade">
+        <div className="max-h-[60vh] space-y-1 overflow-y-auto pb-2">
+          {mine === null ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-white/40" />
+            </div>
+          ) : mine.length === 0 ? (
+            <p className="px-2 py-6 text-center text-sm text-white/45">Você ainda não participa de nenhuma comunidade.</p>
+          ) : (
+            mine.map((c) => (
+              <button key={c.id} type="button" onClick={() => choose(c)} className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-white/[0.04]">
+                <CommunityFace url={c.avatarUrl} size={40} />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-white">{c.name}</span>
+                {picking !== null && items[picking]?.community === c.id && <Check className="h-4 w-4 text-orbit-cyan" />}
+              </button>
+            ))
+          )}
+        </div>
+      </Sheet>
     </Section>
   );
 }

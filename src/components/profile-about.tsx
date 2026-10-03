@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { AlignLeft, AtSign, Briefcase, Cake, Check, Copy, Gem, GraduationCap, Heart, Home, Languages, Link2, MapPin, Quote, Rss, Sparkles, UserRound, Users, UsersRound, X } from "lucide-react";
+import { AlignLeft, AtSign, Briefcase, Cake, Check, Copy, Gem, GraduationCap, Heart, Home, Languages, MapPin, Quote, Rss, Sparkles, UserRound, Users, UsersRound, X } from "lucide-react";
 import type { ProfileAbout } from "@/lib/profile-options";
 import { Avatar } from "@/components/post-card";
 
@@ -73,7 +73,6 @@ export function ProfileAboutContent({ d, onNavigate }: { d: AboutData; onNavigat
   const relatives = d.family.filter((m) => !PARTNER.includes(m.relation));
   const groups = FAMILY_GROUPS.map(([title, rels]) => [title, relatives.filter((m) => rels.includes(m.relation))] as const).filter(([, list]) => list.length);
   const ageLine = [d.age !== null ? `${d.age} anos` : null, d.sign].filter(Boolean).join(" · ");
-  const websiteHref = d.website && (/^https?:\/\//i.test(d.website) ? d.website : `https://${d.website}`);
   const personLink = (m: { username: string; name: string }) => (
     <Link href={`/perfil/${m.username}`} onClick={onNavigate} className="text-orbit-blue hover:underline">
       {m.name}
@@ -81,7 +80,7 @@ export function ProfileAboutContent({ d, onNavigate }: { d: AboutData; onNavigat
   );
   const ab = d.about ?? {};
   const hasAbout = Boolean(ab.hometown || ab.languages?.length || ab.education?.length || ab.career?.length || ab.motto || ab.priority || ab.peopleValue || ab.inspiredBy || ab.smoking || ab.alcohol);
-  const nothing = !d.bio && !d.location && !ageLine && !d.relationship && !partner && !d.website && !d.interests.length && !hasAbout;
+  const nothing = !d.bio && !d.location && !ageLine && !d.relationship && !partner && !d.interests.length && !hasAbout;
   const life: [string, string | undefined][] = [
     ["Prioridade na vida", ab.priority],
     ["O mais importante nas pessoas", ab.peopleValue],
@@ -129,13 +128,6 @@ export function ProfileAboutContent({ d, onNavigate }: { d: AboutData; onNavigat
             </Row>
           )}
           {d.interests.length > 0 && <Row icon={Sparkles}>Interesses: {d.interests.join(", ")}</Row>}
-          {websiteHref && (
-            <Row icon={Link2}>
-              <a href={websiteHref} target="_blank" rel="noopener noreferrer nofollow" className="text-orbit-blue hover:underline">
-                {d.website}
-              </a>
-            </Row>
-          )}
           <Row icon={Rss}>
             {compact.format(d.followers)} {d.followers === 1 ? "seguidor" : "seguidores"}
           </Row>
@@ -179,7 +171,17 @@ export function ProfileAboutContent({ d, onNavigate }: { d: AboutData; onNavigat
         <Section title="Carreira">
           {ab.career.map((c, i) => (
             <Row key={i} icon={Briefcase}>
-              <span className="text-white/90">{c.company}</span>
+              {c.communitySlug ? (
+                <Link href={`/comunidades/${c.communitySlug}`} onClick={onNavigate} className="inline-flex items-center gap-2 text-orbit-blue hover:underline">
+                  {c.communityAvatar && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={c.communityAvatar} alt="" className="h-5 w-5 rounded-full object-cover" />
+                  )}
+                  {c.communityName ?? c.company}
+                </Link>
+              ) : (
+                <span className="text-white/90">{c.company}</span>
+              )}
               {c.role && <span className="text-white/60"> · {c.role}</span>}
               {(c.city || c.from) && (
                 <span className="block text-[13px] text-white/45">
