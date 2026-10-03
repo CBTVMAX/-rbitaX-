@@ -8,7 +8,6 @@ import {
   Eye,
   EyeOff,
   ImagePlus,
-  Link2,
   Loader2,
   Music2,
   Pencil,
@@ -19,14 +18,12 @@ import {
   Upload,
   X,
   XCircle,
-  Youtube,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { verifyUpload } from "@/lib/upload-guard";
 import { compressImage } from "@/lib/messenger/media";
-import { formatDuration, genreLabel, GENRES, normalize, parseYouTubeId, youtubeThumb } from "@/lib/music";
+import { formatDuration, genreLabel, GENRES, normalize } from "@/lib/music";
 import { categoryFor, fromFileName, identifyOnline, readTags } from "@/lib/music-recognize";
-import { splitVideoTitle } from "@/components/music/dialogs";
 
 // ---------------------------------------------------------------- utilidades
 const card = "rounded-2xl border border-white/10 bg-space-card/70";
@@ -95,7 +92,7 @@ function CategorySelect({ value, onChange }: { value: string; onChange: (v: stri
   );
 }
 
-type Tab = "arquivos" | "youtube" | "catalogo";
+type Tab = "arquivos" | "catalogo";
 
 export function AdminMusicView() {
   const supabase = useMemo(() => createClient(), []);
@@ -108,7 +105,6 @@ export function AdminMusicView() {
 
   const tabs: { id: Tab; label: string; short: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: "arquivos", label: "Enviar arquivos", short: "Arquivos", icon: Upload },
-    { id: "youtube", label: "Do YouTube", short: "YouTube", icon: Youtube },
     { id: "catalogo", label: "Catálogo", short: "Catálogo", icon: Music2 },
   ];
 
@@ -133,7 +129,6 @@ export function AdminMusicView() {
       </div>
       <Flash flash={flash} />
       {tab === "arquivos" && <UploadFiles supabase={supabase} say={say} />}
-      {tab === "youtube" && <AddYouTube supabase={supabase} say={say} />}
       {tab === "catalogo" && <Catalog supabase={supabase} say={say} />}
     </div>
   );
@@ -530,93 +525,6 @@ function UploadFiles({ supabase, say }: { supabase: Supa; say: Say }) {
   );
 }
 
-// ---------------------------------------------------------------- do YouTube
-function AddYouTube({ supabase, say }: { supabase: Supa; say: Say }) {
-  const [link, setLink] = useState("");
-  const [found, setFound] = useState<{ id: string; channel: string } | null>(null);
-  const [title, setTitle] = useState("");
-  const [artist, setArtist] = useState("");
-  const [genre, setGenre] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function lookup(e: React.FormEvent) {
-    e.preventDefault();
-    if (!parseYouTubeId(link)) return say("Cole um link do YouTube.", true);
-    setBusy(true);
-    const res = await fetch(`/api/music/youtube?url=${encodeURIComponent(link.trim())}`).catch(() => null);
-    const body = (await res?.json().catch(() => null)) as { id?: string; title?: string; channel?: string; error?: string } | null;
-    setBusy(false);
-    if (!res?.ok || !body?.id) {
-      return say(body?.error === "embed_blocked" ? "Este vídeo não permite tocar fora do YouTube." : "Vídeo não encontrado.", true);
-    }
-    const split = splitVideoTitle(body.title ?? "", body.channel ?? "");
-    setFound({ id: body.id, channel: body.channel ?? "" });
-    setTitle(split.title);
-    setArtist(split.artist);
-  }
-
-  async function save() {
-    if (!found) return;
-    if (!genre) return say("Escolha a categoria.", true);
-    setBusy(true);
-    const { error } = await supabase.rpc("admin_save_track", {
-      p_id: null,
-      p_title: title,
-      p_artist: artist,
-      p_album: null,
-      p_genre: genre,
-      p_audio_url: null,
-      p_cover_url: null,
-      p_youtube_id: found.id,
-      p_duration: null,
-      p_license: `YouTube · ${found.channel}`,
-    });
-    setBusy(false);
-    if (error) return say(adminError(error.message), true);
-    say(`“${title}” entrou no catálogo.`);
-    setFound(null);
-    setLink("");
-  }
-
-  return (
-    <section className={clsx(card, "max-w-xl space-y-3 p-4")}>
-      <p className="text-xs leading-relaxed text-white/55">
-        Cole o link do clipe ou do áudio oficial no YouTube. A música toca completa no Órbita X pelo player do YouTube e aparece também em Vídeos.
-      </p>
-      {!found ? (
-        <form onSubmit={lookup} className="flex gap-2">
-          <label className="relative flex-1">
-            <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
-            <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://youtube.com/watch?v=…" className={clsx(input, "pl-9")} inputMode="url" />
-          </label>
-          <button type="submit" disabled={busy || !link.trim()} className={primary}>
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Buscar
-          </button>
-        </form>
-      ) : (
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 rounded-xl bg-white/[0.04] p-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={youtubeThumb(found.id)} alt="" className="h-14 w-24 shrink-0 rounded-lg object-cover" />
-            <p className="min-w-0 text-xs text-white/55">
-              Canal <span className="text-white/80">{found.channel || "YouTube"}</span>
-              <button type="button" onClick={() => setFound(null)} className="mt-0.5 block font-semibold text-orbit-cyan hover:underline">
-                Trocar link
-              </button>
-            </p>
-          </div>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="Título" className={input} />
-          <input value={artist} onChange={(e) => setArtist(e.target.value)} maxLength={120} placeholder="Artista" className={input} />
-          <CategorySelect value={genre} onChange={setGenre} />
-          <button type="button" onClick={save} disabled={busy} className={clsx(primary, "w-full")}>
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Adicionar ao catálogo
-          </button>
-        </div>
-      )}
-    </section>
-  );
-}
-
 // ---------------------------------------------------------------- catálogo
 type Row = {
   id: string;
@@ -637,7 +545,7 @@ const PAGE = 50;
 function Catalog({ supabase, say }: { supabase: Supa; say: Say }) {
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
-  const [filter, setFilter] = useState<"todas" | "enviadas" | "youtube" | "ocultas">("todas");
+  const [filter, setFilter] = useState<"todas" | "enviadas" | "ocultas">("todas");
   const [genre, setGenre] = useState("");
   const [rows, setRows] = useState<Row[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -655,9 +563,9 @@ function Catalog({ supabase, say }: { supabase: Supa; say: Say }) {
       let q = supabase
         .from("Track")
         .select("id, title, artist, album, genre, coverUrl, audioUrl, youtubeId, duration, isHidden, sourceId, license", { count: "exact" })
-        .eq("isOfficial", true);
+        .eq("isOfficial", true)
+        .is("youtubeId", null);
       if (filter === "enviadas") q = q.like("sourceId", "upload:%");
-      if (filter === "youtube") q = q.not("youtubeId", "is", null);
       if (filter === "ocultas") q = q.eq("isHidden", true);
       else q = q.eq("isHidden", false);
       if (genre) q = q.eq("genre", genre);
@@ -725,7 +633,6 @@ function Catalog({ supabase, say }: { supabase: Supa; say: Say }) {
           [
             { id: "todas", label: "Todas" },
             { id: "enviadas", label: "Enviadas pela equipe" },
-            { id: "youtube", label: "YouTube" },
             { id: "ocultas", label: "Ocultas" },
           ] as const
         ).map((o) => (
