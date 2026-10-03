@@ -42,17 +42,21 @@ export default async function MusicCreditsPage() {
       </div>
       <div className="space-y-3 rounded-2xl border border-white/10 bg-space-surface/80 p-4 text-sm leading-relaxed text-white/65">
         <p>
-          As músicas do catálogo tocam completas pelo <span className="text-white">player oficial do YouTube</span>, a partir dos canais
-          oficiais dos artistas, gravadoras e VEVO. O YouTube licencia essas músicas e repassa os direitos aos artistas — o Órbita X não
-          guarda cópia dos arquivos.
+          As músicas do catálogo tocam completas e são enviadas pela <span className="text-white">equipe do Órbita X</span>, sempre
+          com autorização de uso: obras próprias, licenciadas, autorizadas pelos artistas ou de uso livre.
         </p>
         <p>
-          Em “Minhas músicas”, cada pessoa pode adicionar outras músicas por link do YouTube ou enviar arquivos que tenha direito de
-          compartilhar. Se você é dono dos direitos de alguma obra e quer que ela seja retirada, fale com a equipe pelo{" "}
+          Os clipes oficiais ficam em{" "}
+          <Link href="/videos" className="text-orbit-cyan hover:underline">Vídeos</Link>, no player do YouTube, a partir dos canais
+          oficiais dos artistas.
+        </p>
+        <p>
+          Em “Minhas músicas”, cada pessoa pode enviar arquivos que tenha direito de compartilhar. Se você é dono dos direitos de
+          alguma obra e quer que ela seja retirada, fale com a equipe pelo{" "}
           <Link href="/contato" className="text-orbit-cyan hover:underline">contato</Link>.
         </p>
       </div>
-      {albums.size > 0 && <h2 className="px-1 text-sm font-semibold text-white">Artistas independentes (licenças livres)</h2>}
+      {albums.size > 0 && <h2 className="px-1 text-sm font-semibold text-white">Créditos e licenças</h2>}
       {albums.size > 0 && <div className="overflow-hidden rounded-2xl border border-white/10 bg-space-surface/80">
         {[...albums.values()].map((a, i) => (
           <div key={i} className="flex items-start gap-3 border-t border-white/10 px-4 py-3 first:border-t-0">

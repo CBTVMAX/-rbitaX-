@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
 import {
@@ -21,7 +21,6 @@ import {
   Trash2,
   Upload,
   X,
-  Youtube,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { verifyUpload } from "@/lib/upload-guard";
@@ -35,9 +34,8 @@ import {
   TRACK_COLUMNS,
   type MusicAlbum,
   type MusicTrack,
-  youtubeThumb,
 } from "@/lib/music";
-import { loadYouTubeApi, PlayerBar, usePlayer } from "./player";
+import { PlayerBar, usePlayer } from "./player";
 import { TrackCover, TrackRow } from "./track-row";
 import {
   AddToAlbumSheet,
@@ -45,10 +43,8 @@ import {
   AlbumThumb,
   TrackActionsSheet,
   TrackEditorSheet,
-  YouTubeAddSheet,
   type AlbumDraft,
   type TrackDraft,
-  type YouTubeDraft,
 } from "./dialogs";
 
 type Tab = "catalogo" | "minhas" | "albuns";
@@ -110,7 +106,6 @@ export function MusicApp({
   const [addFor, setAddFor] = useState<MusicTrack | null>(null);
   const [albumEditor, setAlbumEditor] = useState<{ album: MusicAlbum | null; thenAdd?: MusicTrack } | null>(null);
   const [trackEditor, setTrackEditor] = useState<{ track: MusicTrack | null } | null>(null);
-  const [ytOpen, setYtOpen] = useState(false);
   const [confirm, setConfirm] = useState<{ kind: "track"; track: MusicTrack } | { kind: "album"; album: MusicAlbum } | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ text: string; error?: boolean } | null>(null);
@@ -118,11 +113,6 @@ export function MusicApp({
   const say = useCallback((text: string, error = false) => {
     setToast({ text, error });
     window.setTimeout(() => setToast(null), 3200);
-  }, []);
-
-  // Deixa o player do YouTube pronto antes do primeiro play (o celular só toca sozinho logo após o toque).
-  useEffect(() => {
-    loadYouTubeApi().catch(() => undefined);
   }, []);
 
   const byId = useMemo(() => new Map([...catalog, ...mine].map((t) => [t.id, t])), [catalog, mine]);
@@ -311,27 +301,6 @@ export function MusicApp({
     return null;
   }
 
-  async function saveYouTube(draft: YouTubeDraft): Promise<string | null> {
-    const { data, error } = await supabase
-      .from("Track")
-      .insert({
-        id: crypto.randomUUID(),
-        userId: me,
-        title: draft.title,
-        artist: draft.artist,
-        audioUrl: `https://www.youtube.com/watch?v=${draft.id}`,
-        coverUrl: youtubeThumb(draft.id),
-        youtubeId: draft.id,
-      })
-      .select(TRACK_COLUMNS)
-      .single();
-    if (error || !data) return error?.message.includes("rate") ? "Muitas músicas em pouco tempo. Tente de novo mais tarde." : "Não foi possível adicionar a música.";
-    setMine((prev) => [data as MusicTrack, ...prev]);
-    setYtOpen(false);
-    say("Música adicionada. Toca completa pelo YouTube.");
-    return null;
-  }
-
   async function deleteTrack(track: MusicTrack) {
     setBusy(true);
     const { error } = await supabase.from("Track").delete().eq("id", track.id);
@@ -438,7 +407,19 @@ export function MusicApp({
                 ))}
               </div>
 
-              {selectedCatalogAlbum ? (
+              {!catalog.length ? (
+                <section className="rounded-2xl border border-white/10 bg-space-surface/80 px-4 py-12 text-center">
+                  <Music2 className="mx-auto mb-2 h-9 w-9 text-white/25" />
+                  <p className="text-sm font-medium text-white/80">O catálogo está sendo montado</p>
+                  <p className="mx-auto mt-1 max-w-sm text-xs leading-relaxed text-white/45">
+                    Em breve as músicas do Órbita X aparecem aqui. Enquanto isso, envie as suas em Minhas músicas ou assista aos clipes em{" "}
+                    <Link href="/videos" className="text-orbit-cyan hover:underline">
+                      Vídeos
+                    </Link>
+                    .
+                  </p>
+                </section>
+              ) : selectedCatalogAlbum ? (
                 <section className="rounded-2xl border border-white/10 bg-space-surface/80 p-3 md:p-4">
                   <button type="button" onClick={() => setCatalogAlbum(null)} className="mb-3 flex items-center gap-1.5 text-sm text-white/60 hover:text-white">
                     <ArrowLeft className="h-4 w-4" /> {genre === "all" ? "Catálogo" : genreLabel(genre)}
@@ -454,11 +435,7 @@ export function MusicApp({
                       <p className="mt-0.5 text-xs text-white/40">
                         {selectedCatalogAlbum.tracks.length} {selectedCatalogAlbum.tracks.length === 1 ? "música" : "músicas"}
                         {selectedCatalogAlbum.tracks.some((t) => t.duration) ? ` · ${totalTime(selectedCatalogAlbum.tracks)}` : ""}
-                        {selectedCatalogAlbum.tracks[0]?.youtubeId
-                          ? " · Vídeos oficiais no YouTube"
-                          : selectedCatalogAlbum.tracks[0]?.license
-                            ? ` · ${selectedCatalogAlbum.tracks[0].license}`
-                            : ""}
+                        {selectedCatalogAlbum.tracks[0]?.license ? ` · ${selectedCatalogAlbum.tracks[0].license}` : ""}
                       </p>
                       <button
                         type="button"
@@ -533,13 +510,6 @@ export function MusicApp({
                 <div className="flex shrink-0 gap-2">
                   <button
                     type="button"
-                    onClick={() => setYtOpen(true)}
-                    className="flex items-center gap-1.5 rounded-full border border-white/15 px-3.5 py-2 text-xs font-semibold text-white/85 hover:bg-white/5"
-                  >
-                    <Youtube className="h-3.5 w-3.5 text-red-400" /> Do YouTube
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => setTrackEditor({ track: null })}
                     className="flex items-center gap-1.5 rounded-full bg-orbit-gradient px-3.5 py-2 text-xs font-semibold text-snow shadow-glow"
                   >
@@ -552,7 +522,7 @@ export function MusicApp({
                 <div className="px-4 py-10 text-center">
                   <Music2 className="mx-auto mb-2 h-8 w-8 text-white/25" />
                   <p className="text-sm text-white/70">Você ainda não enviou nenhuma música.</p>
-                  <p className="mx-auto mt-1 max-w-sm text-xs text-white/45">Cole o link de qualquer música do YouTube (toca completa aqui) ou envie um arquivo seu. Você pode editar ou excluir quando quiser.</p>
+                  <p className="mx-auto mt-1 max-w-sm text-xs text-white/45">Envie seus arquivos de música (MP3, OGG, WAV ou FLAC). Você pode editar ou excluir quando quiser.</p>
                 </div>
               )}
             </section>
@@ -610,7 +580,7 @@ export function MusicApp({
       )}
 
       <p className="mt-6 text-center text-[11px] text-white/35">
-        As músicas do catálogo tocam completas pelo player oficial do YouTube, a partir dos canais oficiais dos artistas.{" "}
+        As músicas do catálogo tocam completas e são enviadas pela equipe do Órbita X com autorização de uso.{" "}
         <Link href="/musica/creditos" className="text-white/55 underline-offset-2 hover:text-white hover:underline">
           Saiba mais
         </Link>
@@ -640,7 +610,6 @@ export function MusicApp({
         onCreate={() => setAlbumEditor({ album: null, thenAdd: addFor ?? undefined })}
       />
       <AlbumEditorSheet open={!!albumEditor} album={albumEditor?.album ?? null} onClose={() => setAlbumEditor(null)} onSave={saveAlbum} />
-      <YouTubeAddSheet open={ytOpen} onClose={() => setYtOpen(false)} onSave={saveYouTube} />
       <TrackEditorSheet open={!!trackEditor} track={trackEditor?.track ?? null} onClose={() => setTrackEditor(null)} onSave={saveTrack} />
       <Confirm
         open={!!confirm}

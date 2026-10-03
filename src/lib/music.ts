@@ -82,11 +82,15 @@ export function normalize(s: string) {
   return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
-/** Catálogo oficial completo. Passa de mil músicas: busca em páginas (a API devolve no máximo mil por vez). */
-export async function loadCatalog(supabase: SupabaseClient, columns: string = TRACK_COLUMNS) {
+/**
+ * Catálogo oficial completo. Passa de mil músicas: busca em páginas (a API devolve no máximo mil por vez).
+ * "audio": músicas de verdade (página Música). "video": clipes do YouTube (página Vídeos).
+ */
+export async function loadCatalog(supabase: SupabaseClient, kind: "audio" | "video", columns: string = TRACK_COLUMNS) {
   const all: MusicTrack[] = [];
   for (let from = 0; from < 10000; from += 1000) {
-    const { data } = await supabase.from("Track").select(columns).eq("isOfficial", true).order("id").range(from, from + 999);
+    const base = supabase.from("Track").select(columns).eq("isOfficial", true);
+    const { data } = await (kind === "video" ? base.not("youtubeId", "is", null) : base.is("youtubeId", null)).order("id").range(from, from + 999);
     all.push(...((data as unknown as MusicTrack[] | null) ?? []));
     if (!data || data.length < 1000) break;
   }
@@ -104,8 +108,8 @@ export function sortByGenre<T extends { genre: string | null; artist: string; ti
 /** Catálogo oficial + músicas da pessoa + álbuns dela, numa leva só. */
 export async function loadMusic(supabase: SupabaseClient, userId: string) {
   const [catalog, mine, albums] = await Promise.all([
-    loadCatalog(supabase).then((data) => ({ data })),
-    supabase.from("Track").select(TRACK_COLUMNS).eq("userId", userId).eq("isOfficial", false).order("createdAt", { ascending: false }).limit(500),
+    loadCatalog(supabase, "audio").then((data) => ({ data })),
+    supabase.from("Track").select(TRACK_COLUMNS).eq("userId", userId).eq("isOfficial", false).is("youtubeId", null).order("createdAt", { ascending: false }).limit(500),
     supabase
       .from("Playlist")
       .select("id, title, description, coverUrl, isPublic, updatedAt, items:PlaylistTrack(trackId, position)")
