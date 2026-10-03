@@ -259,12 +259,12 @@ export function PlayerBar({ player }: { player: Player }) {
   const pct = duration ? Math.min(100, (time / duration) * 100) : 0;
   return (
     <>
-      {/* Vídeo oficial do YouTube: visível enquanto toca (exigência do YouTube), acima da barra. */}
+      {/* Player oficial do YouTube: o YouTube exige que fique visível enquanto toca, com no mínimo
+          200×200. Fica no tamanho mínimo, como um quadradinho discreto no canto, acima da barra. */}
       <div
         className={clsx(
-          "fixed z-30 overflow-hidden border-white/10 bg-black shadow-2xl",
-          "inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom)+60px)] aspect-video border-t",
-          "md:inset-x-auto md:bottom-[76px] md:right-5 md:w-[356px] md:rounded-2xl md:border",
+          "fixed right-3 z-30 h-[200px] w-[200px] overflow-hidden rounded-2xl border border-white/10 bg-black shadow-[0_12px_40px_rgba(0,0,0,0.55)]",
+          "bottom-[calc(4.25rem+env(safe-area-inset-bottom)+68px)] md:bottom-[80px] md:right-5",
           current && isYouTube ? "block" : "hidden"
         )}
       >
