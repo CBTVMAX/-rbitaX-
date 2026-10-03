@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { genreLabel } from "@/lib/music";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Créditos das músicas · Órbita X" };
+export const metadata: Metadata = { title: "Sobre as músicas · Órbita X" };
 
 type Row = { album: string | null; artist: string; genre: string | null; license: string | null; licenseUrl: string | null; sourceUrl: string | null };
 
@@ -36,18 +36,24 @@ export default async function MusicCreditsPage() {
           <ArrowLeft className="h-6 w-6" />
         </Link>
         <div>
-          <h1 className="font-display text-xl font-bold text-white md:text-2xl">Créditos e licenças</h1>
-          <p className="text-sm text-white/60">Músicas do catálogo Órbita X e quem as criou.</p>
+          <h1 className="font-display text-xl font-bold text-white md:text-2xl">Sobre as músicas</h1>
+          <p className="text-sm text-white/60">De onde vêm as músicas do Órbita X.</p>
         </div>
       </div>
-      <p className="rounded-2xl border border-white/10 bg-space-surface/80 p-4 text-sm leading-relaxed text-white/65">
-        Os hits e clássicos tocam completos pelo player oficial do YouTube, a partir dos canais oficiais dos artistas e gravadoras — o
-        YouTube licencia essas músicas e repassa os direitos. As demais músicas do catálogo são de artistas independentes e foram publicadas por eles com licenças Creative Commons que permitem
-        compartilhar a obra (CC BY, CC BY-SA e CC0) ou estão em domínio público. Os arquivos são servidos pelo Internet Archive. Se você é autor
-        de alguma obra e quer que ela seja retirada, fale com a equipe pelo{" "}
-        <Link href="/contato" className="text-orbit-cyan hover:underline">contato</Link>.
-      </p>
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-space-surface/80">
+      <div className="space-y-3 rounded-2xl border border-white/10 bg-space-surface/80 p-4 text-sm leading-relaxed text-white/65">
+        <p>
+          As músicas do catálogo tocam completas pelo <span className="text-white">player oficial do YouTube</span>, a partir dos canais
+          oficiais dos artistas, gravadoras e VEVO. O YouTube licencia essas músicas e repassa os direitos aos artistas — o Órbita X não
+          guarda cópia dos arquivos.
+        </p>
+        <p>
+          Em “Minhas músicas”, cada pessoa pode adicionar outras músicas por link do YouTube ou enviar arquivos que tenha direito de
+          compartilhar. Se você é dono dos direitos de alguma obra e quer que ela seja retirada, fale com a equipe pelo{" "}
+          <Link href="/contato" className="text-orbit-cyan hover:underline">contato</Link>.
+        </p>
+      </div>
+      {albums.size > 0 && <h2 className="px-1 text-sm font-semibold text-white">Artistas independentes (licenças livres)</h2>}
+      {albums.size > 0 && <div className="overflow-hidden rounded-2xl border border-white/10 bg-space-surface/80">
         {[...albums.values()].map((a, i) => (
           <div key={i} className="flex items-start gap-3 border-t border-white/10 px-4 py-3 first:border-t-0">
             <div className="min-w-0 flex-1">
@@ -68,7 +74,7 @@ export default async function MusicCreditsPage() {
             </div>
           </div>
         ))}
-      </div>
+      </div>}
     </div>
   );
 }

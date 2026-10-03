@@ -104,7 +104,7 @@ export function MusicApp({
   const [query, setQuery] = useState("");
   const [openAlbumId, setOpenAlbumId] = useState<string | null>(null);
   const [organizing, setOrganizing] = useState(false);
-  const [showAll, setShowAll] = useState(false);
+  const [limit, setLimit] = useState(60);
 
   const [actions, setActions] = useState<ActionContext | null>(null);
   const [addFor, setAddFor] = useState<MusicTrack | null>(null);
@@ -143,7 +143,11 @@ export function MusicApp({
     return [...map.entries()].map(([key, v]) => ({ key, ...v }));
   }, [catalog]);
   const genresWithMusic = useMemo(() => GENRES.filter((g) => catalog.some((t) => t.genre === g.id)), [catalog]);
-  const visibleAlbums = genre === "all" ? catalogAlbums : catalogAlbums.filter((a) => a.genre === genre);
+  // Vitrine: artistas com mais músicas primeiro (no "Todos", os 40 maiores de cada gênero somados).
+  const visibleAlbums = (genre === "all" ? catalogAlbums : catalogAlbums.filter((a) => a.genre === genre))
+    .slice()
+    .sort((a, b) => b.tracks.length - a.tracks.length)
+    .slice(0, genre === "all" ? 40 : 80);
   const selectedCatalogAlbum = catalogAlbum ? catalogAlbums.find((a) => a.key === catalogAlbum) ?? null : null;
   const catalogTracks = selectedCatalogAlbum
     ? selectedCatalogAlbum.tracks
@@ -423,7 +427,7 @@ export function MusicApp({
                   <button
                     key={g.id}
                     type="button"
-                    onClick={() => (setGenre(g.id), setCatalogAlbum(null), setShowAll(false))}
+                    onClick={() => (setGenre(g.id), setCatalogAlbum(null), setLimit(60))}
                     className={clsx(
                       "shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-medium transition",
                       genre === g.id ? "border-transparent bg-orbit-gradient text-snow" : "border-white/10 text-white/70 hover:bg-white/5 hover:text-white"
@@ -491,7 +495,10 @@ export function MusicApp({
                   </section>
                   <section className="rounded-2xl border border-white/10 bg-space-surface/80 p-2 md:p-3">
                     <div className="flex items-center justify-between gap-2 px-2 pb-2 pt-1">
-                      <h2 className="text-sm font-semibold text-white">{genre === "all" ? "Todas as músicas" : `Músicas de ${genreLabel(genre)}`}</h2>
+                      <h2 className="text-sm font-semibold text-white">
+                        {genre === "all" ? "Todas as músicas" : genreLabel(genre)}
+                        <span className="ml-1.5 font-normal text-white/40">{catalogTracks.length}</span>
+                      </h2>
                       <button
                         type="button"
                         onClick={() => {
@@ -503,12 +510,12 @@ export function MusicApp({
                         <Shuffle className="h-3.5 w-3.5" /> Aleatório
                       </button>
                     </div>
-                    {list(showAll ? catalogTracks : catalogTracks.slice(0, 40), {
+                    {list(catalogTracks.slice(0, limit), {
                       subtitle: (t) => `${t.artist}${genre === "all" ? ` · ${genreLabel(t.genre)}` : t.album ? ` · ${t.album}` : ""}`,
                     })}
-                    {!showAll && catalogTracks.length > 40 && (
-                      <button type="button" onClick={() => setShowAll(true)} className="mt-1 w-full rounded-xl py-2.5 text-sm font-semibold text-orbit-cyan hover:bg-white/[0.04]">
-                        Mostrar todas as {catalogTracks.length} músicas
+                    {catalogTracks.length > limit && (
+                      <button type="button" onClick={() => setLimit((n) => n + 120)} className="mt-1 w-full rounded-xl py-2.5 text-sm font-semibold text-orbit-cyan hover:bg-white/[0.04]">
+                        Mostrar mais ({catalogTracks.length - limit} restantes)
                       </button>
                     )}
                   </section>
@@ -603,9 +610,9 @@ export function MusicApp({
       )}
 
       <p className="mt-6 text-center text-[11px] text-white/35">
-        Os hits tocam completos pelo player oficial do YouTube; as demais músicas do catálogo são de artistas independentes, com licenças livres.{" "}
+        As músicas do catálogo tocam completas pelo player oficial do YouTube, a partir dos canais oficiais dos artistas.{" "}
         <Link href="/musica/creditos" className="text-white/55 underline-offset-2 hover:text-white hover:underline">
-          Créditos e licenças
+          Saiba mais
         </Link>
       </p>
 
