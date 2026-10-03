@@ -1,5 +1,5 @@
 -- Exclusão de conta com prazo para voltar atrás (como no VK, Facebook e Instagram).
--- Ao pedir a exclusão, a página fica desativada por 30 dias: some da busca, do feed,
+-- Ao pedir a exclusão, a página fica desativada por 6 meses: some da busca, do feed,
 -- dos comentários e dos stories, e o perfil mostra "Página excluída". Se a pessoa entrar
 -- nesse período, pode restaurar tudo com um toque. Depois da data, uma tarefa agendada
 -- do site apaga a conta de vez.
@@ -70,7 +70,7 @@ as $function$
 declare
   v_uid text := auth.uid()::text;
   v_owned int;
-  v_until timestamptz := now() + interval '30 days';
+  v_until timestamptz := now() + interval '6 months';
 begin
   if v_uid is null then raise exception 'not_authenticated' using errcode = 'insufficient_privilege'; end if;
   if coalesce(upper(trim(p_confirm)), '') <> 'EXCLUIR' then raise exception 'confirmacao_invalida' using errcode = 'check_violation'; end if;
@@ -173,7 +173,7 @@ grant execute on function public.is_user_deactivated(text) to authenticated;
 grant execute on function public.accounts_due_for_deletion() to service_role;
 grant execute on function public.finalize_account_deletion(text) to service_role;
 
--- A exclusão imediata deixa de existir: agora sempre passa pelo prazo de 30 dias.
+-- A exclusão imediata deixa de existir: agora sempre passa pelo prazo de 6 meses.
 revoke all on function public.account_deletion_check(text) from authenticated;
 
 -- Chat: conversa individual com quem está desativado fica travada ("O perfil foi removido").

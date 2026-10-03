@@ -11,7 +11,7 @@ const json = (body: unknown, status = 200) => NextResponse.json(body, { status, 
  * 1. A pessoa vem do login validado pelo cookie, nunca do corpo da requisição.
  * 2. Contas com senha confirmam a senha atual (verificada num cliente à parte, sem mexer na sessão do navegador).
  * 3. O banco confere as regras (EXCLUIR, sem comunidades próprias, não ser conta da equipe) e desativa
- *    a página por 30 dias. Todas as sessões são encerradas.
+ *    a página por 6 meses. Todas as sessões são encerradas.
  * 4. Entrando de novo dentro do prazo, a pessoa vê "Restaurar página". Depois da data, a tarefa agendada
  *    (netlify/functions/purge-accounts) apaga a conta de vez.
  */

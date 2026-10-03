@@ -56,10 +56,12 @@ export function AccountDataSettings({ username }: { username: string }) {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<React.ReactNode>(null);
 
-  const deadline = useMemo(
-    () => new Date(Date.now() + 30 * 86400000).toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" }),
-    []
-  );
+  // Mesmo prazo do banco (6 meses), para mostrar a data exata antes de confirmar.
+  const deadline = useMemo(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 6);
+    return d.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setHasPassword(!!data.user?.identities?.some((i) => i.provider === "email")));
@@ -145,7 +147,7 @@ export function AccountDataSettings({ username }: { username: string }) {
         </p>
       </Card>
 
-      <Card icon={UserX} title="Excluir conta" desc="Sua página fica desativada por 30 dias e some para todo mundo. Nesse prazo, é só entrar de novo para restaurar. Depois, tudo é apagado de vez." danger>
+      <Card icon={UserX} title="Excluir conta" desc="Sua página fica desativada por 6 meses e some para todo mundo. Nesse prazo, é só entrar de novo para restaurar. Depois, tudo é apagado de vez." danger>
         {step === "idle" ? (
           <button type="button" onClick={() => setStep("confirm")} className={secondary.replace("text-white/85", "text-red-400")}>
             <Trash2 className="h-4 w-4" /> Quero excluir minha conta
