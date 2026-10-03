@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { AlignLeft, AtSign, Cake, Check, Copy, Gem, Heart, Home, Link2, Rss, Sparkles, UserRound, Users, UsersRound, X } from "lucide-react";
+import { AlignLeft, AtSign, Briefcase, Cake, Check, Copy, Gem, GraduationCap, Heart, Home, Languages, Link2, MapPin, Quote, Rss, Sparkles, UserRound, Users, UsersRound, X } from "lucide-react";
+import type { ProfileAbout } from "@/lib/profile-options";
 import { Avatar } from "@/components/post-card";
 
 export type AboutFamilyMember = { relativeId: string; relation: string; username: string; name: string; avatarUrl: string | null };
@@ -25,6 +26,7 @@ export type AboutData = {
   friends: number;
   mutual: number;
   family: AboutFamilyMember[];
+  about?: ProfileAbout;
   communities: AboutCommunity[];
   isMe: boolean;
 };
@@ -77,7 +79,16 @@ export function ProfileAboutContent({ d, onNavigate }: { d: AboutData; onNavigat
       {m.name}
     </Link>
   );
-  const nothing = !d.bio && !d.location && !ageLine && !d.relationship && !partner && !d.website && !d.interests.length;
+  const ab = d.about ?? {};
+  const hasAbout = Boolean(ab.hometown || ab.languages?.length || ab.education?.length || ab.career?.length || ab.motto || ab.priority || ab.peopleValue || ab.inspiredBy || ab.smoking || ab.alcohol);
+  const nothing = !d.bio && !d.location && !ageLine && !d.relationship && !partner && !d.website && !d.interests.length && !hasAbout;
+  const life: [string, string | undefined][] = [
+    ["Prioridade na vida", ab.priority],
+    ["O mais importante nas pessoas", ab.peopleValue],
+    ["Visão sobre fumo", ab.smoking],
+    ["Visão sobre álcool", ab.alcohol],
+    ["Inspirações", ab.inspiredBy],
+  ];
 
   async function copyUsername() {
     try {
@@ -109,6 +120,8 @@ export function ProfileAboutContent({ d, onNavigate }: { d: AboutData; onNavigat
         <div className="border-t border-white/[0.08] pt-2">
           {ageLine && <Row icon={Cake}>{ageLine}</Row>}
           {d.location && <Row icon={Home}>Cidade: {d.location}</Row>}
+          {ab.hometown && <Row icon={MapPin}>Cidade natal: {ab.hometown}</Row>}
+          {ab.languages?.length ? <Row icon={Languages}>Idiomas: {ab.languages.join(", ")}</Row> : null}
           {(d.relationship || partner) && (
             <Row icon={Heart}>
               {d.relationship ?? "Em um relacionamento"}
@@ -131,7 +144,7 @@ export function ProfileAboutContent({ d, onNavigate }: { d: AboutData; onNavigat
 
       {nothing && d.isMe && (
         <Link href="/configuracoes/conta" onClick={onNavigate} className="flex items-center justify-center rounded-xl border border-dashed border-white/15 py-3 text-sm text-white/55 hover:text-white">
-          Adicione cidade, aniversário, relacionamento e interesses
+          Adicione cidade, aniversário, relacionamento, formação e carreira
         </Link>
       )}
 
@@ -160,6 +173,52 @@ export function ProfileAboutContent({ d, onNavigate }: { d: AboutData; onNavigat
           {groups.length || partner ? "Gerenciar família e pedidos" : "Adicionar familiares (pais, irmãos, cônjuge…)"}
           <span className="text-orbit-blue">›</span>
         </a>
+      )}
+
+      {ab.career?.length ? (
+        <Section title="Carreira">
+          {ab.career.map((c, i) => (
+            <Row key={i} icon={Briefcase}>
+              <span className="text-white/90">{c.company}</span>
+              {c.role && <span className="text-white/60"> · {c.role}</span>}
+              {(c.city || c.from) && (
+                <span className="block text-[13px] text-white/45">
+                  {[c.city, c.from ? `${c.from}–${c.to ?? "atual"}` : c.to ? `até ${c.to}` : null].filter(Boolean).join(" · ")}
+                </span>
+              )}
+            </Row>
+          ))}
+        </Section>
+      ) : null}
+
+      {ab.education?.length ? (
+        <Section title="Formação">
+          {ab.education.map((e, i) => (
+            <Row key={i} icon={GraduationCap}>
+              <span className="text-white/90">{e.school}</span>
+              {(e.course || e.level || e.year) && (
+                <span className="block text-[13px] text-white/45">{[e.course, e.level, e.year ? `${e.year}` : null].filter(Boolean).join(" · ")}</span>
+              )}
+            </Row>
+          ))}
+        </Section>
+      ) : null}
+
+      {(ab.motto || life.some(([, v]) => v)) && (
+        <Section title="Lema de vida">
+          {ab.motto && (
+            <Row icon={Quote}>
+              <span className="italic text-white/85">“{ab.motto}”</span>
+            </Row>
+          )}
+          {life
+            .filter(([, v]) => v)
+            .map(([label, v]) => (
+              <Row key={label} icon={Sparkles}>
+                <span className="text-white/45">{label}:</span> {v}
+              </Row>
+            ))}
+        </Section>
       )}
 
       {groups.length > 0 && (

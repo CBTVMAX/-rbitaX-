@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/current-user";
 import { AccountSettingsForm } from "@/components/account-settings-form";
 import { parseInterests } from "@/components/profile-view";
+import { parseAbout } from "@/lib/profile-options";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,28 @@ export default async function AccountSettingsPage() {
   const profile = account?.hasProfileRow ? account : null;
 
   const user = current.profile;
+
+  // Parceiro (confirmado ou aguardando) e Mais informações.
+  type Kin = { relativeId: string; relation: string; username: string; name: string; avatarUrl: string | null };
+  const [{ data: familyRows }, { data: sentRows }, { data: aboutRaw }] = await Promise.all([
+    supabase.rpc("family_of", { p_user_id: current.authId }),
+    supabase.rpc("family_sent"),
+    supabase.rpc("profile_about", { p_user: current.authId }),
+  ]);
+  const isPartner = (r: Kin) => r.relation === "Cônjuge" || r.relation === "Companheiro(a)";
+  const accepted = ((familyRows ?? []) as Kin[]).find(isPartner);
+  const pending = ((sentRows ?? []) as Kin[]).find(isPartner);
+  const partnerRow = accepted ?? pending;
+  const partner = partnerRow
+    ? {
+        id: partnerRow.relativeId,
+        name: partnerRow.name,
+        username: partnerRow.username,
+        avatarUrl: partnerRow.avatarUrl,
+        relation: partnerRow.relation,
+        status: (accepted ? "accepted" : "pending") as "accepted" | "pending",
+      }
+    : null;
 
   return (
     <div className="mx-auto max-w-2xl px-3 py-4 md:px-4 md:py-6 lg:max-w-6xl lg:px-6">
@@ -75,6 +98,8 @@ export default async function AccountSettingsPage() {
           showRelationship: profile?.showRelationship ?? true,
           familyVisibility: profile?.familyVisibility ?? "all",
           hasProfileRow: !!profile,
+          partner,
+          about: parseAbout(aboutRaw),
         }}
       />
     </div>
