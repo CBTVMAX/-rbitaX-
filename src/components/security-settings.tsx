@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { clsx } from "clsx";
 import {
   CheckCircle2,
+  Copy,
+  ExternalLink,
   History,
   KeyRound,
   Laptop,
@@ -14,6 +16,7 @@ import {
   ShieldCheck,
   Smartphone,
 } from "lucide-react";
+import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/client";
 import { disablePush } from "@/lib/push-client";
 import { endPresenceForSignOut } from "@/components/presence-heartbeat";
@@ -23,7 +26,7 @@ import { authErrorMessage } from "@/lib/mfa";
 
 type Device = { id: string; device: string; ip: string | null; createdAt: string; lastActiveAt: string; current: boolean; mfaVerified: boolean };
 type SecurityEvent = { id: number; kind: string; severity: "info" | "warning" | "critical"; ip: string | null; details: Record<string, unknown>; createdAt: string };
-type Enrollment = { factorId: string; qr: string; secret: string };
+type Enrollment = { factorId: string; qr: string; secret: string; uri: string };
 
 const EVENT_LABEL: Record<string, string> = {
   login: "Entrada na conta",
@@ -155,11 +158,30 @@ export function SecuritySettings() {
     // A half-finished setup from before is discarded first.
     const { data: existing } = await supabase.auth.mfa.listFactors();
     for (const f of existing?.all ?? []) if (f.status === "unverified") await supabase.auth.mfa.unenroll({ factorId: f.id });
-    const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: `Órbita X ${new Date().toISOString().slice(0, 16)}` });
+    const { data, error } = await supabase.auth.mfa.enroll({
+      factorType: "totp",
+      issuer: "Órbita X",
+      friendlyName: `Órbita X ${new Date().toISOString().slice(0, 16)}`,
+    });
+    if (error || !data) {
+      setMfaBusy(false);
+      return say(authErrorMessage(error, "Não foi possível iniciar a configuração agora.") ?? "", true);
+    }
+    // QR gerado aqui (PNG) — o SVG que o servidor devolve não aparece em alguns navegadores.
+    const qr = await QRCode.toDataURL(data.totp.uri, { width: 360, margin: 1, errorCorrectionLevel: "M" }).catch(() => data.totp.qr_code);
     setMfaBusy(false);
-    if (error || !data) return say(authErrorMessage(error, "Não foi possível iniciar a configuração agora.") ?? "", true);
-    setEnroll({ factorId: data.id, qr: data.totp.qr_code, secret: data.totp.secret });
+    setEnroll({ factorId: data.id, qr, secret: data.totp.secret, uri: data.totp.uri });
     setCode("");
+  }
+
+  async function copySecret() {
+    if (!enroll) return;
+    try {
+      await navigator.clipboard.writeText(enroll.secret);
+      say("Chave copiada. Cole no app autenticador.");
+    } catch {
+      say("Não foi possível copiar. Toque e segure a chave para copiar.", true);
+    }
   }
 
   async function finishEnroll(e: React.FormEvent) {
@@ -264,11 +286,35 @@ export function SecuritySettings() {
           </div>
         ) : enroll ? (
           <form onSubmit={finishEnroll} className="space-y-3">
-            <p className="text-sm text-white/70">1. No app autenticador, leia o QR code (ou digite a chave).</p>
-            <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-start">
+            <p className="text-sm text-white/70">
+              1. Instale um app autenticador (Google Authenticator ou Microsoft Authenticator) e adicione o Órbita X:
+            </p>
+            <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+              <p className="text-xs font-semibold text-white/80">Pelo celular</p>
+              <a href={enroll.uri} className={clsx(primary, "w-full justify-center sm:hidden")}>
+                <ExternalLink className="h-4 w-4" /> Abrir no app autenticador
+              </a>
+              <p className="text-[11px] leading-relaxed text-white/45">
+                Se o botão não abrir o app (ou se você está no computador), copie a chave abaixo. No app, toque em <span className="text-white/70">+</span> →{" "}
+                <span className="text-white/70">Inserir chave de configuração</span>, cole a chave, use “Órbita X” como nome e deixe o tipo
+                “Baseado em tempo”.
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="min-w-0 flex-1 break-all rounded-lg bg-space-card px-3 py-2 font-mono text-xs tracking-wider text-white/85 select-all">
+                  {enroll.secret.replace(/(.{4})/g, "$1 ").trim()}
+                </code>
+                <button type="button" onClick={copySecret} className={secondary} aria-label="Copiar chave">
+                  <Copy className="h-4 w-4" /> Copiar
+                </button>
+              </div>
+            </div>
+            <div className="hidden items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-3 sm:flex">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={enroll.qr} alt="QR code da verificação em duas etapas" width={176} height={176} className="rounded-xl bg-white p-2" />
-              <code className="break-all rounded-lg bg-space-card px-3 py-2 text-xs text-white/80 select-all">{enroll.secret}</code>
+              <img src={enroll.qr} alt="QR code da verificação em duas etapas" width={176} height={176} className="shrink-0 rounded-xl bg-white p-2" />
+              <p className="text-xs leading-relaxed text-white/55">
+                <span className="font-semibold text-white/80">Em outro aparelho:</span> abra o app autenticador no celular, toque em{" "}
+                <span className="text-white/70">+</span> → <span className="text-white/70">Ler QR code</span> e aponte a câmera para este código.
+              </p>
             </div>
             <p className="text-sm text-white/70">2. Digite o código de 6 dígitos que o app mostra.</p>
             <input inputMode="numeric" autoComplete="one-time-code" maxLength={7} placeholder="000000" value={code} onChange={(e) => setCode(e.target.value)} className={`${input} tracking-[0.3em]`} />
