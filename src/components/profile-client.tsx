@@ -14,11 +14,13 @@ import { COVER_RECOMMENDED, CoverCropDialog } from "@/components/cover-crop-dial
 import { AvatarFlow } from "@/components/avatar-flow";
 import { verifyUpload } from "@/lib/upload-guard";
 import { useRelationshipActions } from "@/components/block-user";
+import { ReportDialog } from "@/components/report-dialog";
 import { useCalls } from "@/components/calls/call-provider";
 import { runFriendAction } from "@/components/friend-button";
 import type { FriendState } from "@/lib/friends";
 import {
   Ban,
+  Flag,
   ChevronDown,
   Clock,
   Phone,
@@ -140,6 +142,7 @@ export function ProfileMoreMenu({
   const [friendBusy, setFriendBusy] = useState(false);
   const router = useRouter();
   const { ask, dialog } = useRelationshipActions({ userId, name: name || username });
+  const [reporting, setReporting] = useState(false);
 
   async function signOut() {
     const supabase = createClient();
@@ -276,6 +279,9 @@ export function ProfileMoreMenu({
                   <Ban className="h-4 w-4" /> Bloquear {name ? name.split(" ")[0] : ""}
                 </button>
               )}
+              <button type="button" onClick={() => (setOpen(false), setReporting(true))} className={item.replace("text-white/80", "text-red-400")}>
+                <Flag className="h-4 w-4" /> Denunciar perfil
+              </button>
             </>
           )}
           {isMe && (
@@ -300,9 +306,9 @@ export function ProfileMoreMenu({
               <Link href="/configuracoes/conta" className={item}>
                 <Lock className="h-4 w-4" /> Privacidade
               </Link>
-              <span title="Em breve" className={soon}>
+              <Link href="/configuracoes/seguranca" className={item}>
                 <ShieldCheck className="h-4 w-4" /> Segurança
-              </span>
+              </Link>
               {divider}
               <span title="Em breve" className={soon}>
                 <UserPlus className="h-4 w-4" /> Adicionar conta
@@ -315,6 +321,9 @@ export function ProfileMoreMenu({
         </div>
       )}
       {!isMe && dialog}
+      {!isMe && (
+        <ReportDialog target={reporting ? { type: "user", id: userId, label: "perfil" } : null} onClose={() => setReporting(false)} />
+      )}
     </div>
   );
 }

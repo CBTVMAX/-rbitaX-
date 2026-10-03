@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import {
   Bell,
   ChevronRight,
+  Database,
   Download,
   CircleHelp,
   FileText,
@@ -91,6 +92,7 @@ export default async function SettingsPage() {
           { href: "/configuracoes/comunidades", icon: UsersRound, label: "Comunidades no perfil", hint: "Escolha quais comunidades aparecem publicamente" },
           { href: "/configuracoes/seguranca", icon: ShieldCheck, label: "Segurança", hint: "Senha, verificação em duas etapas e aparelhos" },
           { href: "/configuracoes/notificacoes", icon: Bell, label: "Notificações", hint: "No celular e no computador, mesmo com o app fechado" },
+          { href: "/configuracoes/dados", icon: Database, label: "Seus dados", hint: "Baixar uma cópia ou excluir a conta" },
         ]}
       />
 

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo, initials } from "@/lib/format";
-import { MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Repeat2, Pencil, Trash2, Link2, Check, X, Loader2, Archive, ArchiveRestore, Globe2, Users, Lock, ChevronRight, MapPin, CalendarClock } from "lucide-react";
+import { MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Repeat2, Pencil, Trash2, Link2, Check, X, Loader2, Archive, ArchiveRestore, Globe2, Users, Lock, ChevronRight, MapPin, CalendarClock, Flag } from "lucide-react";
 import type { SharedEmbed } from "@/lib/shared-posts";
 import { clsx } from "clsx";
 import { VerifiedBadge } from "@/components/verified-badge";
@@ -14,6 +14,7 @@ import { RichText } from "@/lib/rich-text";
 import { reactionOf, type ReactionKey } from "@/lib/communities";
 import { ReactionButton, ReactorsSheet } from "@/components/reactions";
 import { CommentsSheet } from "@/components/comments/comments-sheet";
+import { ReportDialog } from "@/components/report-dialog";
 
 export type FeedPost = {
   id: string;
@@ -107,6 +108,7 @@ export function PostCard({
   const [visibility, setVisibility] = useState(post.visibility ?? "public");
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [archived, setArchived] = useState(!!post.isArchived);
+  const [reporting, setReporting] = useState(false);
 
   async function changeVisibility(next: string) {
     setPrivacyOpen(false);
@@ -392,6 +394,15 @@ export function PostCard({
                 >
                   {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Link2 className="h-4 w-4" />} {copied ? "Link copiado!" : "Copiar link"}
                 </button>
+                {!isAuthor && currentUserId && (
+                  <button
+                    type="button"
+                    onClick={() => { setReporting(true); setMenuOpen(false); }}
+                    className="flex w-full items-center gap-2.5 border-t border-white/10 px-4 py-2.5 text-left text-sm text-red-400 hover:bg-red-500/5"
+                  >
+                    <Flag className="h-4 w-4" /> Denunciar
+                  </button>
+                )}
                 {isAuthor && (
                   <button
                     type="button"
@@ -432,6 +443,7 @@ export function PostCard({
       )}
       </div>
 
+      <ReportDialog target={reporting ? { type: "post", id: post.id, label: "publicação" } : null} onClose={() => setReporting(false)} />
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
           <button type="button" aria-label="Fechar" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !deleting && setConfirmDelete(false)} />
