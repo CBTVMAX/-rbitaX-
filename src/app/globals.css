@@ -326,3 +326,26 @@ html[data-app-theme] body {
 :root { --ox-density: 1; }
 @media (max-width: 359px) { :root { --ox-density: 0.88; } }
 @media (min-width: 1536px) { :root { --ox-density: 1.08; } }
+
+/* Barra de progresso do player de música: trilho fino com o gradiente da marca até a posição atual. */
+.orbit-range { --pct: 0%; }
+.orbit-range::-webkit-slider-runnable-track {
+  height: 3px;
+  background: linear-gradient(90deg, rgb(var(--app-accent-a, 43 108 255)) 0%, rgb(var(--app-accent, 139 92 246)) var(--pct), rgba(255, 255, 255, 0.12) var(--pct));
+}
+.orbit-range::-moz-range-track { height: 3px; background: rgba(255, 255, 255, 0.12); }
+.orbit-range::-moz-range-progress { height: 3px; background: linear-gradient(90deg, rgb(var(--app-accent-a, 43 108 255)), rgb(var(--app-accent, 139 92 246))); }
+.orbit-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  margin-top: -5px;
+  height: 13px;
+  width: 13px;
+  border-radius: 9999px;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgb(var(--app-accent, 139 92 246) / 0.35);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.orbit-range:hover::-webkit-slider-thumb,
+.orbit-range:active::-webkit-slider-thumb { opacity: 1; }
+.orbit-range::-moz-range-thumb { height: 13px; width: 13px; border: 0; border-radius: 9999px; background: #fff; }
