@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
 import {
@@ -21,6 +21,7 @@ import {
   Trash2,
   Upload,
   X,
+  Youtube,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { verifyUpload } from "@/lib/upload-guard";
@@ -34,8 +35,9 @@ import {
   TRACK_COLUMNS,
   type MusicAlbum,
   type MusicTrack,
+  youtubeThumb,
 } from "@/lib/music";
-import { PlayerBar, usePlayer } from "./player";
+import { loadYouTubeApi, PlayerBar, usePlayer } from "./player";
 import { TrackCover, TrackRow } from "./track-row";
 import {
   AddToAlbumSheet,
@@ -43,8 +45,10 @@ import {
   AlbumThumb,
   TrackActionsSheet,
   TrackEditorSheet,
+  YouTubeAddSheet,
   type AlbumDraft,
   type TrackDraft,
+  type YouTubeDraft,
 } from "./dialogs";
 
 type Tab = "catalogo" | "minhas" | "albuns";
@@ -106,6 +110,7 @@ export function MusicApp({
   const [addFor, setAddFor] = useState<MusicTrack | null>(null);
   const [albumEditor, setAlbumEditor] = useState<{ album: MusicAlbum | null; thenAdd?: MusicTrack } | null>(null);
   const [trackEditor, setTrackEditor] = useState<{ track: MusicTrack | null } | null>(null);
+  const [ytOpen, setYtOpen] = useState(false);
   const [confirm, setConfirm] = useState<{ kind: "track"; track: MusicTrack } | { kind: "album"; album: MusicAlbum } | null>(null);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ text: string; error?: boolean } | null>(null);
@@ -115,17 +120,23 @@ export function MusicApp({
     window.setTimeout(() => setToast(null), 3200);
   }, []);
 
+  // Deixa o player do YouTube pronto antes do primeiro play (o celular só toca sozinho logo após o toque).
+  useEffect(() => {
+    loadYouTubeApi().catch(() => undefined);
+  }, []);
+
   const byId = useMemo(() => new Map([...catalog, ...mine].map((t) => [t.id, t])), [catalog, mine]);
   const openAlbum = albums.find((a) => a.id === openAlbumId) ?? null;
 
   // Catálogo: álbuns oficiais (para os cartões) e faixas filtradas.
+  // Álbuns do catálogo livre e, para os hits do YouTube (sem álbum), um cartão por artista.
   const catalogAlbums = useMemo(() => {
-    const map = new Map<string, { name: string; artist: string; cover: string | null; genre: string | null; tracks: MusicTrack[] }>();
+    const map = new Map<string, { name: string; artist: string; isArtist: boolean; cover: string | null; genre: string | null; tracks: MusicTrack[] }>();
     for (const t of catalog) {
-      if (!t.album) continue;
-      const key = `${t.genre}|${t.album}`;
-      const entry = map.get(key) ?? { name: t.album, artist: t.artist, cover: t.coverUrl, genre: t.genre, tracks: [] };
-      if (entry.artist !== t.artist) entry.artist = "Vários artistas";
+      const isArtist = !t.album;
+      const key = `${t.genre}|${isArtist ? "artista" : "album"}|${t.album ?? t.artist}`;
+      const entry = map.get(key) ?? { name: t.album ?? t.artist, artist: t.artist, isArtist, cover: t.coverUrl, genre: t.genre, tracks: [] };
+      if (!isArtist && entry.artist !== t.artist) entry.artist = "Vários artistas";
       entry.tracks.push(t);
       map.set(key, entry);
     }
@@ -296,6 +307,27 @@ export function MusicApp({
     return null;
   }
 
+  async function saveYouTube(draft: YouTubeDraft): Promise<string | null> {
+    const { data, error } = await supabase
+      .from("Track")
+      .insert({
+        id: crypto.randomUUID(),
+        userId: me,
+        title: draft.title,
+        artist: draft.artist,
+        audioUrl: `https://www.youtube.com/watch?v=${draft.id}`,
+        coverUrl: youtubeThumb(draft.id),
+        youtubeId: draft.id,
+      })
+      .select(TRACK_COLUMNS)
+      .single();
+    if (error || !data) return error?.message.includes("rate") ? "Muitas músicas em pouco tempo. Tente de novo mais tarde." : "Não foi possível adicionar a música.";
+    setMine((prev) => [data as MusicTrack, ...prev]);
+    setYtOpen(false);
+    say("Música adicionada. Toca completa pelo YouTube.");
+    return null;
+  }
+
   async function deleteTrack(track: MusicTrack) {
     setBusy(true);
     const { error } = await supabase.from("Track").delete().eq("id", track.id);
@@ -334,7 +366,7 @@ export function MusicApp({
   ];
 
   return (
-    <div className={clsx("mx-auto max-w-5xl px-3 py-4 md:px-6 md:py-6", player.current ? "pb-40 md:pb-28" : "pb-10")}>
+    <div className={clsx("mx-auto max-w-5xl px-3 py-4 md:px-6 md:py-6", player.current ? (player.isYouTube ? "pb-[27rem] md:pb-28" : "pb-40 md:pb-28") : "pb-10")}>
       <div className="mb-4 flex flex-col gap-3 md:mb-5 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-white">Música</h1>
@@ -410,12 +442,19 @@ export function MusicApp({
                   <div className="mb-4 flex items-center gap-4">
                     <TrackCover track={{ coverUrl: selectedCatalogAlbum.cover, title: selectedCatalogAlbum.name }} size={112} className="rounded-xl" />
                     <div className="min-w-0">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">Álbum · {genreLabel(selectedCatalogAlbum.genre)}</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-white/45">
+                        {selectedCatalogAlbum.isArtist ? "Artista" : "Álbum"} · {genreLabel(selectedCatalogAlbum.genre)}
+                      </p>
                       <h2 className="mt-0.5 line-clamp-2 font-display text-xl font-bold text-white">{selectedCatalogAlbum.name}</h2>
-                      <p className="truncate text-sm text-white/60">{selectedCatalogAlbum.artist}</p>
+                      {!selectedCatalogAlbum.isArtist && <p className="truncate text-sm text-white/60">{selectedCatalogAlbum.artist}</p>}
                       <p className="mt-0.5 text-xs text-white/40">
-                        {selectedCatalogAlbum.tracks.length} músicas · {totalTime(selectedCatalogAlbum.tracks)}
-                        {selectedCatalogAlbum.tracks[0]?.license ? ` · ${selectedCatalogAlbum.tracks[0].license}` : ""}
+                        {selectedCatalogAlbum.tracks.length} {selectedCatalogAlbum.tracks.length === 1 ? "música" : "músicas"}
+                        {selectedCatalogAlbum.tracks.some((t) => t.duration) ? ` · ${totalTime(selectedCatalogAlbum.tracks)}` : ""}
+                        {selectedCatalogAlbum.tracks[0]?.youtubeId
+                          ? " · Vídeos oficiais no YouTube"
+                          : selectedCatalogAlbum.tracks[0]?.license
+                            ? ` · ${selectedCatalogAlbum.tracks[0].license}`
+                            : ""}
                       </p>
                       <button
                         type="button"
@@ -431,7 +470,10 @@ export function MusicApp({
               ) : (
                 <>
                   <section className="mb-4">
-                    <h2 className="mb-2 px-1 text-sm font-semibold text-white">Álbuns{genre !== "all" ? ` de ${genreLabel(genre)}` : ""}</h2>
+                    <h2 className="mb-2 px-1 text-sm font-semibold text-white">
+                      {visibleAlbums.every((a) => a.isArtist) ? "Artistas" : "Álbuns e artistas"}
+                      {genre !== "all" ? ` · ${genreLabel(genre)}` : ""}
+                    </h2>
                     <div className="orbit-scrollbar -mx-3 flex gap-3 overflow-x-auto px-3 pb-2 md:mx-0 md:px-0">
                       {visibleAlbums.map((a) => (
                         <button key={a.key} type="button" onClick={() => setCatalogAlbum(a.key)} className="group w-[132px] shrink-0 text-left">
@@ -442,7 +484,7 @@ export function MusicApp({
                             </span>
                           </span>
                           <span className="mt-1.5 block truncate text-[13px] font-medium text-white">{a.name}</span>
-                          <span className="block truncate text-xs text-white/45">{a.artist}</span>
+                          <span className="block truncate text-xs text-white/45">{a.isArtist ? `${a.tracks.length} ${a.tracks.length === 1 ? "música" : "músicas"}` : a.artist}</span>
                         </button>
                       ))}
                     </div>
@@ -481,20 +523,29 @@ export function MusicApp({
                 <h2 className="text-sm font-semibold text-white">
                   {mine.length ? `${mine.length} ${mine.length === 1 ? "música enviada" : "músicas enviadas"}` : "Minhas músicas"}
                 </h2>
-                <button
-                  type="button"
-                  onClick={() => setTrackEditor({ track: null })}
-                  className="flex items-center gap-1.5 rounded-full bg-orbit-gradient px-3.5 py-2 text-xs font-semibold text-snow shadow-glow"
-                >
-                  <Upload className="h-3.5 w-3.5" /> Enviar música
-                </button>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setYtOpen(true)}
+                    className="flex items-center gap-1.5 rounded-full border border-white/15 px-3.5 py-2 text-xs font-semibold text-white/85 hover:bg-white/5"
+                  >
+                    <Youtube className="h-3.5 w-3.5 text-red-400" /> Do YouTube
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTrackEditor({ track: null })}
+                    className="flex items-center gap-1.5 rounded-full bg-orbit-gradient px-3.5 py-2 text-xs font-semibold text-snow shadow-glow"
+                  >
+                    <Upload className="h-3.5 w-3.5" /> Enviar arquivo
+                  </button>
+                </div>
               </div>
               {list(mine)}
               {!mine.length && (
                 <div className="px-4 py-10 text-center">
                   <Music2 className="mx-auto mb-2 h-8 w-8 text-white/25" />
                   <p className="text-sm text-white/70">Você ainda não enviou nenhuma música.</p>
-                  <p className="mx-auto mt-1 max-w-sm text-xs text-white/45">Envie músicas suas ou que você tem permissão para compartilhar. Você pode editar, trocar o arquivo ou excluir quando quiser.</p>
+                  <p className="mx-auto mt-1 max-w-sm text-xs text-white/45">Cole o link de qualquer música do YouTube (toca completa aqui) ou envie um arquivo seu. Você pode editar ou excluir quando quiser.</p>
                 </div>
               )}
             </section>
@@ -552,7 +603,7 @@ export function MusicApp({
       )}
 
       <p className="mt-6 text-center text-[11px] text-white/35">
-        As músicas do catálogo são de artistas independentes, com licenças Creative Commons ou em domínio público.{" "}
+        Os hits tocam completos pelo player oficial do YouTube; as demais músicas do catálogo são de artistas independentes, com licenças livres.{" "}
         <Link href="/musica/creditos" className="text-white/55 underline-offset-2 hover:text-white hover:underline">
           Créditos e licenças
         </Link>
@@ -582,6 +633,7 @@ export function MusicApp({
         onCreate={() => setAlbumEditor({ album: null, thenAdd: addFor ?? undefined })}
       />
       <AlbumEditorSheet open={!!albumEditor} album={albumEditor?.album ?? null} onClose={() => setAlbumEditor(null)} onSave={saveAlbum} />
+      <YouTubeAddSheet open={ytOpen} onClose={() => setYtOpen(false)} onSave={saveYouTube} />
       <TrackEditorSheet open={!!trackEditor} track={trackEditor?.track ?? null} onClose={() => setTrackEditor(null)} onSave={saveTrack} />
       <Confirm
         open={!!confirm}

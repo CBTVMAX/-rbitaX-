@@ -152,8 +152,8 @@ type ShareRow = { createdAt: string; id: string; postId: string; userId: string 
 type ShareInsert = { createdAt?: string; id: string; postId: string; userId: string };
 type ShareUpdate = Partial<ShareInsert>;
 
-type TrackRow = { artist: string; audioUrl: string; coverUrl: string | null; createdAt: string; duration: number | null; id: string; title: string; userId: string | null; isOfficial: boolean; isHidden: boolean; genre: string | null; album: string | null; license: string | null; licenseUrl: string | null; sourceUrl: string | null; sourceId: string | null; updatedAt: string };
-type TrackInsert = { artist: string; audioUrl: string; coverUrl?: string | null; createdAt?: string; duration?: number | null; id: string; title: string; userId: string; album?: string | null; genre?: string | null };
+type TrackRow = { artist: string; audioUrl: string; coverUrl: string | null; createdAt: string; duration: number | null; id: string; title: string; userId: string | null; isOfficial: boolean; isHidden: boolean; genre: string | null; album: string | null; license: string | null; licenseUrl: string | null; sourceUrl: string | null; sourceId: string | null; updatedAt: string; youtubeId: string | null };
+type TrackInsert = { artist: string; audioUrl: string; coverUrl?: string | null; createdAt?: string; duration?: number | null; id: string; title: string; userId: string; album?: string | null; genre?: string | null; youtubeId?: string | null };
 type PlaylistRow = { id: string; userId: string; title: string; description: string | null; coverUrl: string | null; isPublic: boolean; createdAt: string; updatedAt: string };
 type PlaylistInsert = { id?: string; userId: string; title: string; description?: string | null; coverUrl?: string | null; isPublic?: boolean; updatedAt?: string };
 type PlaylistTrackRow = { id: string; playlistId: string; trackId: string; position: number; addedAt: string };

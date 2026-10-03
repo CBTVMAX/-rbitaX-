@@ -16,6 +16,7 @@ export default async function MusicCreditsPage() {
     .from("Track")
     .select("album, artist, genre, license, licenseUrl, sourceUrl")
     .eq("isOfficial", true)
+    .is("youtubeId", null)
     .order("genre")
     .order("album")
     .limit(2000);
@@ -40,7 +41,8 @@ export default async function MusicCreditsPage() {
         </div>
       </div>
       <p className="rounded-2xl border border-white/10 bg-space-surface/80 p-4 text-sm leading-relaxed text-white/65">
-        Todas as músicas do catálogo são de artistas independentes e foram publicadas por eles com licenças Creative Commons que permitem
+        Os hits e clássicos tocam completos pelo player oficial do YouTube, a partir dos canais oficiais dos artistas e gravadoras — o
+        YouTube licencia essas músicas e repassa os direitos. As demais músicas do catálogo são de artistas independentes e foram publicadas por eles com licenças Creative Commons que permitem
         compartilhar a obra (CC BY, CC BY-SA e CC0) ou estão em domínio público. Os arquivos são servidos pelo Internet Archive. Se você é autor
         de alguma obra e quer que ela seja retirada, fale com a equipe pelo{" "}
         <Link href="/contato" className="text-orbit-cyan hover:underline">contato</Link>.

@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { Check, Disc3, ExternalLink, ImagePlus, ListPlus, Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { Check, Disc3, ExternalLink, ImagePlus, Link2, ListPlus, Loader2, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { Sheet } from "@/components/community/ui";
-import { formatDuration, type MusicAlbum, type MusicTrack } from "@/lib/music";
+import { formatDuration, parseYouTubeId, youtubeThumb, type MusicAlbum, type MusicTrack } from "@/lib/music";
 import { TrackCover } from "./track-row";
 
 const input =
@@ -54,7 +54,7 @@ export function TrackActionsSheet({
         )}
         {onEdit && (
           <button type="button" className={row} onClick={() => onEdit(track)}>
-            <Pencil className="h-[18px] w-[18px] text-white/60" /> Editar ou trocar o arquivo
+            <Pencil className="h-[18px] w-[18px] text-white/60" /> {track.youtubeId ? "Editar nome e artista" : "Editar ou trocar o arquivo"}
           </button>
         )}
         {onDelete && (
@@ -63,7 +63,16 @@ export function TrackActionsSheet({
           </button>
         )}
       </div>
-      {track.isOfficial && track.license && (
+      {track.youtubeId && (
+        <p className="mt-3 rounded-xl bg-white/[0.04] px-3 py-2.5 text-[11px] leading-relaxed text-white/50">
+          Toca completa pelo player oficial do YouTube
+          {track.isOfficial && track.license ? <> · <span className="text-white/75">{track.license.replace(/^YouTube · /, "canal ")}</span></> : null}.{" "}
+          <a href={`https://www.youtube.com/watch?v=${track.youtubeId}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-orbit-cyan hover:underline">
+            Abrir no YouTube <ExternalLink className="h-3 w-3" />
+          </a>
+        </p>
+      )}
+      {track.isOfficial && !track.youtubeId && track.license && (
         <p className="mt-3 rounded-xl bg-white/[0.04] px-3 py-2.5 text-[11px] leading-relaxed text-white/50">
           Música do catálogo Órbita X, por <span className="text-white/75">{track.artist}</span>, sob licença{" "}
           {track.licenseUrl ? (
@@ -321,6 +330,7 @@ export function TrackEditorSheet({
       <form onSubmit={submit} className="space-y-3 pt-1">
         <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="Nome da música" className={input} />
         <input value={artist} onChange={(e) => setArtist(e.target.value)} maxLength={120} placeholder="Artista" className={input} />
+        {!track?.youtubeId && (
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
@@ -332,6 +342,7 @@ export function TrackEditorSheet({
             <span className="block text-xs text-white/40">MP3, OGG, WAV ou FLAC · até 25 MB</span>
           </span>
         </button>
+        )}
         <input
           ref={fileRef}
           type="file"
@@ -353,6 +364,118 @@ export function TrackEditorSheet({
           {busy && <Loader2 className="h-4 w-4 animate-spin" />} {track ? "Salvar" : "Enviar música"}
         </button>
       </form>
+    </Sheet>
+  );
+}
+
+/** "Nirvana - Smells Like Teen Spirit (Official Music Video)" → artista e título limpos. */
+function splitVideoTitle(raw: string, channel: string) {
+  const clean = raw
+    .replace(/\s*[([](?:[^)\]]*(?:official|oficial|video|vídeo|clipe|lyric|letra|audio|áudio|hd|4k|remaster)[^)\]]*)[)\]]/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const parts = clean.split(/\s[-–—|]\s/);
+  if (parts.length >= 2) return { artist: parts[0].trim(), title: parts.slice(1).join(" - ").trim() };
+  return { artist: channel.replace(/(VEVO| - Topic|Official)$/i, "").trim(), title: clean };
+}
+
+export type YouTubeDraft = { id: string; title: string; artist: string };
+
+export function YouTubeAddSheet({
+  open,
+  onClose,
+  onSave,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSave: (draft: YouTubeDraft) => Promise<string | null>;
+}) {
+  const [link, setLink] = useState("");
+  const [found, setFound] = useState<{ id: string; channel: string } | null>(null);
+  const [title, setTitle] = useState("");
+  const [artist, setArtist] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setLink("");
+    setFound(null);
+    setTitle("");
+    setArtist("");
+    setError(null);
+  }, [open]);
+
+  async function lookup(e: React.FormEvent) {
+    e.preventDefault();
+    if (!parseYouTubeId(link)) return setError("Cole um link do YouTube (youtube.com ou youtu.be).");
+    setBusy(true);
+    setError(null);
+    const res = await fetch(`/api/music/youtube?url=${encodeURIComponent(link.trim())}`).catch(() => null);
+    const body = (await res?.json().catch(() => null)) as { id?: string; title?: string; channel?: string; error?: string } | null;
+    setBusy(false);
+    if (!res?.ok || !body?.id) {
+      return setError(
+        body?.error === "embed_blocked"
+          ? "O dono deste vídeo não permite tocar fora do YouTube. Tente o vídeo oficial do artista."
+          : body?.error === "not_found"
+            ? "Vídeo não encontrado. Confira o link."
+            : "Não foi possível verificar o link agora."
+      );
+    }
+    const split = splitVideoTitle(body.title ?? "", body.channel ?? "");
+    setFound({ id: body.id, channel: body.channel ?? "" });
+    setTitle(split.title);
+    setArtist(split.artist);
+  }
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    if (!found) return;
+    if (!title.trim() || !artist.trim()) return setError("Preencha o nome da música e do artista.");
+    setBusy(true);
+    const err = await onSave({ id: found.id, title: title.trim(), artist: artist.trim() });
+    setBusy(false);
+    if (err) setError(err);
+  }
+
+  return (
+    <Sheet open={open} onClose={onClose} title="Adicionar do YouTube">
+      {!found ? (
+        <form onSubmit={lookup} className="space-y-3 pt-1">
+          <p className="text-xs leading-relaxed text-white/55">
+            Cole o link de qualquer música no YouTube. Ela toca completa aqui no Órbita X, pelo player oficial do YouTube. Prefira o vídeo
+            oficial do artista.
+          </p>
+          <div className="relative">
+            <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+            <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://youtube.com/watch?v=…" className={clsx(input, "pl-9")} autoFocus inputMode="url" />
+          </div>
+          {error && <p className="text-sm text-red-300">{error}</p>}
+          <button type="submit" disabled={busy || !link.trim()} className={primary}>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Buscar vídeo
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={save} className="space-y-3 pt-1">
+          <div className="flex items-center gap-3 rounded-xl bg-white/[0.04] p-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={youtubeThumb(found.id)} alt="" className="h-14 w-24 shrink-0 rounded-lg object-cover" />
+            <p className="min-w-0 text-xs text-white/55">
+              Canal <span className="text-white/80">{found.channel || "YouTube"}</span>
+              <button type="button" onClick={() => setFound(null)} className="mt-0.5 block font-semibold text-orbit-cyan hover:underline">
+                Trocar link
+              </button>
+            </p>
+          </div>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="Nome da música" className={input} />
+          <input value={artist} onChange={(e) => setArtist(e.target.value)} maxLength={120} placeholder="Artista" className={input} />
+          {error && <p className="text-sm text-red-300">{error}</p>}
+          <button type="submit" disabled={busy} className={primary}>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Adicionar às minhas músicas
+          </button>
+        </form>
+      )}
     </Sheet>
   );
 }
