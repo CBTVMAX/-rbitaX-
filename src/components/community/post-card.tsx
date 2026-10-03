@@ -254,14 +254,13 @@ export function CommunityPostCard({
     else toast(next ? "Salvo nos seus itens salvos." : "Removido dos salvos.");
   }
 
-  async function nativeShare() {
+  /** Só dentro do Órbita X (sem enviar para outros apps); conta como compartilhamento. */
+  async function copyShareLink() {
     setShareOpen(false);
     try {
-      if (navigator.share) await navigator.share({ title: community.name, text: post.content.slice(0, 120), url });
-      else {
-        await navigator.clipboard.writeText(url);
-        toast("Link da publicação copiado.");
-      }
+      // Só dentro do Órbita X: o link abre apenas para quem tem conta.
+      await navigator.clipboard.writeText(url);
+      toast("Link da publicação copiado. Só abre para quem tem conta no Órbita X.");
     } catch {
       return;
     }
@@ -765,11 +764,7 @@ export function CommunityPostCard({
               </button>
             </div>
           )}
-          {menuItem(<Share2 className="h-5 w-5" />, "Enviar para outro app", nativeShare)}
-          {menuItem(<Link2 className="h-5 w-5" />, "Copiar link", () => {
-            navigator.clipboard.writeText(url).then(() => toast("Link copiado."));
-            setShareOpen(false);
-          })}
+          {menuItem(<Link2 className="h-5 w-5" />, "Copiar link", copyShareLink)}
         </div>
       </Sheet>
 

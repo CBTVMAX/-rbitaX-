@@ -14,6 +14,10 @@ const PROTECTED_PREFIXES = [
   "/loja",
   "/admin",
   "/convite",
+  // Tudo do Órbita X exige conta: nada de perfil, comunidade ou conteúdo para quem está de fora.
+  "/explorar",
+  "/comunidades",
+  "/diag-avatar",
 ];
 
 // Pages a signed-in person may open before confirming the two-step verification code.

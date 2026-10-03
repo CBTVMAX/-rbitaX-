@@ -172,11 +172,8 @@ export function EventDetailView({
 
   async function share() {
     try {
-      if (navigator.share) await navigator.share({ title: e.title, text: eventWhen(e, tz), url });
-      else {
-        await navigator.clipboard.writeText(url);
-        toast("Link do evento copiado.");
-      }
+      await navigator.clipboard.writeText(url);
+      toast("Link do evento copiado. Só abre para quem tem conta no Órbita X.");
     } catch {
       /* closed */
     }

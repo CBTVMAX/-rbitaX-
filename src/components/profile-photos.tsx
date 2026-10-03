@@ -742,14 +742,7 @@ function PhotoViewer({
 
   async function share() {
     setMenu(false);
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `Foto de ${owner.name} no ÓrbitaX`, url: link() });
-        return;
-      } catch {
-        // cancelado: copia o link
-      }
-    }
+    // Sem compartilhar para fora do Órbita X: só o link, que abre apenas para quem tem conta.
     copy();
   }
 
