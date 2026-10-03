@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { clsx } from "clsx";
 import {
-  CheckCircle2,
   Copy,
   ExternalLink,
   History,
@@ -23,6 +22,7 @@ import { endPresenceForSignOut } from "@/components/presence-heartbeat";
 import { Confirm } from "@/components/community/ui";
 import { passwordProblem } from "@/lib/password-policy";
 import { authErrorMessage } from "@/lib/mfa";
+import { TwoFactorOptions } from "@/components/two-factor-options";
 
 type Device = { id: string; device: string; ip: string | null; createdAt: string; lastActiveAt: string; current: boolean; mfaVerified: boolean };
 type SecurityEvent = { id: number; kind: string; severity: "info" | "warning" | "critical"; ip: string | null; details: Record<string, unknown>; createdAt: string };
@@ -92,6 +92,8 @@ export function SecuritySettings() {
   const [code, setCode] = useState("");
   const [mfaBusy, setMfaBusy] = useState(false);
   const [confirmDisable, setConfirmDisable] = useState(false);
+  const [codeOn, setCodeOn] = useState(false);
+  const twoStepOn = Boolean(factorId) || codeOn;
 
   // --- devices & activity
   const [devices, setDevices] = useState<Device[] | null>(null);
@@ -269,69 +271,59 @@ export function SecuritySettings() {
       </Card>
 
       <Card
-        icon={factorId ? ShieldCheck : ShieldAlert}
+        icon={twoStepOn ? ShieldCheck : ShieldAlert}
         title="Verificação em duas etapas"
-        desc="Além da senha, cada novo acesso pede um código de 6 dígitos de um app autenticador (Google Authenticator, Microsoft Authenticator, 1Password…)."
+        desc="Ao entrar em um aparelho novo, além da senha, pedimos um código. Escolha onde receber: no celular, no e-mail ou num app de códigos."
       >
-        {factorId === undefined ? (
-          <Loader2 className="h-5 w-5 animate-spin text-white/40" />
-        ) : factorId ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-400">
-              <CheckCircle2 className="h-4 w-4" /> Ativada
-            </span>
-            <button type="button" onClick={() => setConfirmDisable(true)} className={secondary}>
-              Desativar
-            </button>
-          </div>
-        ) : enroll ? (
-          <form onSubmit={finishEnroll} className="space-y-3">
-            <p className="text-sm text-white/70">
-              1. Instale um app autenticador (Google Authenticator ou Microsoft Authenticator) e adicione o Órbita X:
-            </p>
-            <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-              <p className="text-xs font-semibold text-white/80">Pelo celular</p>
-              <a href={enroll.uri} className={clsx(primary, "w-full justify-center sm:hidden")}>
-                <ExternalLink className="h-4 w-4" /> Abrir no app autenticador
-              </a>
-              <p className="text-[11px] leading-relaxed text-white/45">
-                Se o botão não abrir o app (ou se você está no computador), copie a chave abaixo. No app, toque em <span className="text-white/70">+</span> →{" "}
-                <span className="text-white/70">Inserir chave de configuração</span>, cole a chave, use “Órbita X” como nome e deixe o tipo
-                “Baseado em tempo”.
-              </p>
-              <div className="flex items-center gap-2">
-                <code className="min-w-0 flex-1 break-all rounded-lg bg-space-card px-3 py-2 font-mono text-xs tracking-wider text-white/85 select-all">
-                  {enroll.secret.replace(/(.{4})/g, "$1 ").trim()}
-                </code>
-                <button type="button" onClick={copySecret} className={secondary} aria-label="Copiar chave">
-                  <Copy className="h-4 w-4" /> Copiar
-                </button>
-              </div>
-            </div>
-            <div className="hidden items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-3 sm:flex">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={enroll.qr} alt="QR code da verificação em duas etapas" width={176} height={176} className="shrink-0 rounded-xl bg-white p-2" />
-              <p className="text-xs leading-relaxed text-white/55">
-                <span className="font-semibold text-white/80">Em outro aparelho:</span> abra o app autenticador no celular, toque em{" "}
-                <span className="text-white/70">+</span> → <span className="text-white/70">Ler QR code</span> e aponte a câmera para este código.
-              </p>
-            </div>
-            <p className="text-sm text-white/70">2. Digite o código de 6 dígitos que o app mostra.</p>
-            <input inputMode="numeric" autoComplete="one-time-code" maxLength={7} placeholder="000000" value={code} onChange={(e) => setCode(e.target.value)} className={`${input} tracking-[0.3em]`} />
-            <div className="flex flex-wrap gap-2">
-              <button type="submit" disabled={mfaBusy} className={primary}>
-                {mfaBusy && <Loader2 className="h-4 w-4 animate-spin" />} Ativar
-              </button>
-              <button type="button" onClick={() => setEnroll(null)} className={secondary}>
-                Cancelar
-              </button>
-            </div>
-          </form>
-        ) : (
-          <button type="button" onClick={startEnroll} disabled={mfaBusy} className={primary}>
-            {mfaBusy && <Loader2 className="h-4 w-4 animate-spin" />} Configurar
-          </button>
-        )}
+        <TwoFactorOptions
+          say={say}
+          onChange={setCodeOn}
+          totp={{ on: Boolean(factorId), loading: factorId === undefined, busy: mfaBusy, onConnect: startEnroll, onDisconnect: () => setConfirmDisable(true) }}
+          totpPanel={
+            enroll ? (
+              <form onSubmit={finishEnroll} className="space-y-3">
+                <p className="text-sm text-white/70">1. No app autenticador, adicione o Órbita X:</p>
+                <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                  <p className="text-xs font-semibold text-white/80">Pelo celular</p>
+                  <a href={enroll.uri} className={clsx(primary, "w-full justify-center sm:hidden")}>
+                    <ExternalLink className="h-4 w-4" /> Abrir no app autenticador
+                  </a>
+                  <p className="text-[11px] leading-relaxed text-white/45">
+                    Se o botão não abrir o app (ou se você está no computador), copie a chave abaixo. No app, toque em <span className="text-white/70">+</span> →{" "}
+                    <span className="text-white/70">Inserir chave de configuração</span>, cole a chave, use “Órbita X” como nome e deixe o tipo
+                    “Baseado em tempo”.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="min-w-0 flex-1 break-all rounded-lg bg-space-card px-3 py-2 font-mono text-xs tracking-wider text-white/85 select-all">
+                      {enroll.secret.replace(/(.{4})/g, "$1 ").trim()}
+                    </code>
+                    <button type="button" onClick={copySecret} className={secondary} aria-label="Copiar chave">
+                      <Copy className="h-4 w-4" /> Copiar
+                    </button>
+                  </div>
+                </div>
+                <div className="hidden items-center gap-4 rounded-xl border border-white/10 bg-white/[0.03] p-3 sm:flex">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={enroll.qr} alt="QR code da verificação em duas etapas" width={176} height={176} className="shrink-0 rounded-xl bg-white p-2" />
+                  <p className="text-xs leading-relaxed text-white/55">
+                    <span className="font-semibold text-white/80">Em outro aparelho:</span> abra o app autenticador no celular, toque em{" "}
+                    <span className="text-white/70">+</span> → <span className="text-white/70">Ler QR code</span> e aponte a câmera para este código.
+                  </p>
+                </div>
+                <p className="text-sm text-white/70">2. Digite o código de 6 dígitos que o app mostra.</p>
+                <input inputMode="numeric" autoComplete="one-time-code" maxLength={7} placeholder="000000" value={code} onChange={(e) => setCode(e.target.value)} className={`${input} tracking-[0.3em]`} />
+                <div className="flex flex-wrap gap-2">
+                  <button type="submit" disabled={mfaBusy} className={primary}>
+                    {mfaBusy && <Loader2 className="h-4 w-4 animate-spin" />} Ativar
+                  </button>
+                  <button type="button" onClick={() => setEnroll(null)} className={secondary}>
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            ) : undefined
+          }
+        />
       </Card>
 
       <Card icon={MonitorSmartphone} title="Aparelhos conectados" desc="Onde sua conta está aberta agora. Desconecte o que você não reconhecer.">

@@ -192,8 +192,8 @@ export function AdminStickersView({ packs: initialPacks, stats, categories }: { 
     const pack = packs.find((p) => p.id === selected);
     if (!pack) return;
     // Storage refuses admin uploads from a login without two-step verification; say why up front.
-    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (aal?.currentLevel !== "aal2") return toast(adminError({ message: "admin_mfa_required" }, ""), true);
+    const check = await fetch("/api/seguranca/2fa", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    if (!check?.sessionOk) return toast(adminError({ message: "admin_mfa_required" }, ""), true);
     const list = [...files].slice(0, 60);
     setUploads(list.map((f) => ({ name: f.name, state: "wait" })));
     const taken = new Set((stickers ?? []).map((s) => s.slug));

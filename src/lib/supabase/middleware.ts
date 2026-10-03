@@ -17,7 +17,7 @@ const PROTECTED_PREFIXES = [
 ];
 
 // Pages a signed-in person may open before confirming the two-step verification code.
-const MFA_FREE = ["/entrar", "/auth", "/api", "/redefinir-senha", "/termos", "/privacidade", "/sobre"];
+const MFA_FREE = ["/entrar", "/auth", "/api", "/redefinir-senha", "/termos", "/privacidade", "/sobre", "/verificacao"];
 
 // Áreas dinâmicas do app (renderizadas por requisição): aqui o Next injeta o nonce nos
 // scripts, então usamos a CSP forte com nonce + strict-dynamic. É onde vive o conteúdo
@@ -119,6 +119,20 @@ export async function updateSession(request: NextRequest) {
       url.pathname = "/entrar";
       url.search = "";
       url.searchParams.set("mfa", "1");
+      url.searchParams.set("redirect", path);
+      const redirectRes = NextResponse.redirect(url);
+      redirectRes.headers.set("content-security-policy", csp);
+      return redirectRes;
+    }
+  }
+
+  // Código por e-mail/SMS (verificação em duas etapas sem app): a sessão só segue depois de confirmar.
+  if (user && user.app_metadata?.two_factor && !MFA_FREE.some((p) => path.startsWith(p))) {
+    const { data: gate, error: gateError } = await supabase.rpc("two_factor_gate", { p_device: request.cookies.get("ox_td")?.value ?? null });
+    if (gateError || gate !== "ok") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/verificacao";
+      url.search = "";
       url.searchParams.set("redirect", path);
       const redirectRes = NextResponse.redirect(url);
       redirectRes.headers.set("content-security-policy", csp);
