@@ -130,8 +130,7 @@ export function DiscussionView(props: { community: Community; viewer: Viewer; ro
 
   function share() {
     const url = window.location.href.split("?")[0];
-    if (navigator.share) navigator.share({ title: d.title, url }).catch(() => {});
-    else navigator.clipboard.writeText(url).then(() => toast("Link da discussão copiado."));
+    navigator.clipboard.writeText(url).then(() => toast("Link da discussão copiado. Só abre para quem tem conta no Órbita X."));
   }
 
   const menuItems: { label: string; icon: React.ComponentType<{ className?: string }>; run: () => void; danger?: boolean; show: boolean }[] = [

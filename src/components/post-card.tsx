@@ -215,14 +215,6 @@ export function PostCard({
 
   async function share() {
     const url = `${window.location.origin}/perfil/${post.author.username}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: `${post.author.name} no ÓrbitaX`, text: content.slice(0, 120), url });
-        return;
-      } catch {
-        // cancelado: copia o link
-      }
-    }
     try {
       await navigator.clipboard.writeText(url);
       setShareNote("Link copiado!");

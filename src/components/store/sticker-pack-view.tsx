@@ -108,11 +108,8 @@ export function StickerPackView({
   async function share() {
     const url = `${window.location.origin}/loja/adesivos/${pack.id}`;
     try {
-      if (navigator.share) await navigator.share({ title: `${pack.name} · Adesivos Órbita X`, url });
-      else {
-        await navigator.clipboard.writeText(url);
-        toast("Link do pack copiado.");
-      }
+      await navigator.clipboard.writeText(url);
+      toast("Link do pack copiado. Só abre para quem tem conta no Órbita X.");
     } catch {
       /* share sheet closed */
     }

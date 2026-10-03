@@ -68,11 +68,9 @@ export function useShareCommunity() {
   return async () => {
     const url = communityUrl(community.slug);
     try {
-      if (navigator.share) await navigator.share({ title: community.name, text: community.description?.slice(0, 120) ?? undefined, url });
-      else {
-        await navigator.clipboard.writeText(url);
-        toast("Link da comunidade copiado.");
-      }
+      // Só dentro do Órbita X: o link abre apenas para quem tem conta.
+      await navigator.clipboard.writeText(url);
+      toast("Link da comunidade copiado. Só abre para quem tem conta no Órbita X.");
     } catch {
       /* share sheet closed */
     }

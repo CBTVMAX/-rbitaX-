@@ -287,13 +287,8 @@ export function ChatLinkDialog({ open, onClose, c }: { open: boolean; onClose: (
   }
 
   async function share() {
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: c.name ?? "Chat no ÓrbitaX", text: `Entre no chat “${c.name ?? "Grupo"}” no ÓrbitaX`, url });
-      } catch {
-        /* cancelado */
-      }
-    } else copy();
+    // Convite só dentro do Órbita X: o link exige conta para entrar.
+    copy();
   }
 
   async function reset() {

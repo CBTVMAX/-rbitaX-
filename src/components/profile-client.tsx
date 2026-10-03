@@ -35,6 +35,7 @@ import {
   ImagePlus,
   Move,
   Trash2,
+  Check,
   Link2,
   Loader2,
   Lock,
@@ -48,7 +49,6 @@ import {
   Pencil,
   Search,
   Settings,
-  Share2,
   ShieldCheck,
   Star,
   UserPlus,
@@ -68,16 +68,8 @@ async function copyProfileLink(username: string) {
 export function ShareProfileButton({ username, compact = false, square = false }: { username: string; compact?: boolean; square?: boolean }) {
   const [copied, setCopied] = useState(false);
 
+  // Sem compartilhar para fora (WhatsApp, Instagram…): só o link, que abre apenas para quem tem conta.
   async function share() {
-    const url = `${window.location.origin}/perfil/${username}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "Meu perfil no Órbita X", url });
-        return;
-      } catch {
-        // user cancelled or share unavailable: fall back to copying
-      }
-    }
     if (await copyProfileLink(username)) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -88,29 +80,16 @@ export function ShareProfileButton({ username, compact = false, square = false }
     <button
       type="button"
       onClick={share}
-      aria-label="Compartilhar perfil"
+      aria-label="Copiar link do perfil"
       className={clsx(
         "flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/15 bg-space-bg/40 text-sm font-medium text-white transition hover:bg-white/5",
         square ? "h-12 w-12" : compact ? "h-[42px] w-11" : "px-4 py-2.5"
       )}
     >
-      <Share2 className="h-4 w-4" />
-      {!compact && (copied ? "Link copiado" : "Compartilhar")}
+      {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Link2 className="h-4 w-4" />}
+      {!compact && (copied ? "Link copiado" : "Copiar link")}
     </button>
   );
-}
-
-async function shareProfile(username: string) {
-  const url = `${window.location.origin}/perfil/${username}`;
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: "Perfil no Órbita X", url });
-      return;
-    } catch {
-      // cancelled: fall back to copying
-    }
-  }
-  await copyProfileLink(username);
 }
 
 export function ProfileMoreMenu({
@@ -227,9 +206,6 @@ export function ProfileMoreMenu({
               </ProfileImageUpload>
             </>
           )}
-          <button type="button" onClick={() => shareProfile(username)} className={item}>
-            <Share2 className="h-4 w-4" /> Compartilhar perfil
-          </button>
           <button
             type="button"
             onClick={async () => {
