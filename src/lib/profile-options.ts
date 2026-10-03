@@ -35,7 +35,18 @@ export function relationshipLabel(value: string | null | undefined) {
 
 // ---------------------------------------------------------------- mais informações (Profile.about)
 export type ProfileEducation = { school: string; course?: string; level?: string; year?: number };
-export type ProfileCareer = { company: string; role?: string; city?: string; from?: number; to?: number };
+export type ProfileCareer = {
+  company: string;
+  /** Comunidade do Órbita X marcada como local de trabalho (id); nome, link e foto vêm na leitura. */
+  community?: string;
+  communityName?: string;
+  communitySlug?: string;
+  communityAvatar?: string;
+  role?: string;
+  city?: string;
+  from?: number;
+  to?: number;
+};
 export type ProfileAbout = {
   hometown?: string;
   languages?: string[];

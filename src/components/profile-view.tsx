@@ -47,7 +47,6 @@ import {
   Gem,
   Heart,
   ImagePlus,
-  Link2,
   Lock,
   MapPin,
   MessageCircle,
@@ -317,8 +316,8 @@ export function ProfileView({
   const interests = isMe || info?.showInterests !== false ? parseInterests(info?.interests) : [];
   const relationship =
     isMe || info?.showRelationship !== false ? relationshipLabel(info?.relationshipStatus) : null;
-  const website = info?.website?.trim() || null;
-  const websiteHref = website && (/^https?:\/\//i.test(website) ? website : `https://${website}`);
+  // O campo Link saiu do perfil (não aparece mais, mesmo para quem tinha preenchido).
+  const website: string | null = null;
 
   const identity = (center = false) => (
     <>
@@ -362,11 +361,6 @@ export function ProfileView({
           <Sparkles className="h-4 w-4 text-white/45" /> {sign}
         </span>
       )}
-      {website && websiteHref && (
-        <a href={websiteHref} target="_blank" rel="noopener noreferrer nofollow" className="flex max-w-[16rem] items-center gap-1.5 truncate text-orbit-blue hover:underline">
-          <Link2 className="h-4 w-4 shrink-0" /> <span className="truncate">{website.replace(/^https?:\/\//i, "")}</span>
-        </a>
-      )}
     </>
   );
 
@@ -382,7 +376,7 @@ export function ProfileView({
           </Link>
         )
       )}
-      {!compact && (age !== null || sign || location || website) && (
+      {!compact && (age !== null || sign || location) && (
         <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 text-sm text-white/65">{metaItems}</div>
       )}
       {!compact && (interests.length > 0 || isMe) && (
@@ -549,7 +543,6 @@ export function ProfileView({
     { icon: Sparkles, text: sign, prompt: "Seu signo" },
     { icon: Heart, text: relationshipNode, prompt: "Relacionamento" },
     { icon: Gem, text: interests.length ? interests.join(", ") : null, prompt: "Seus interesses" },
-    { icon: Link2, text: website, prompt: "Site ou link" },
   ];
   // Como no VK: trabalho atual e onde estudou aparecem no resumo quando preenchidos.
   const extra = info?.extra ?? {};

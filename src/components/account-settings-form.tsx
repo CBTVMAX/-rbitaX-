@@ -24,7 +24,6 @@ import {
   Heart,
   ChevronRight,
   ImagePlus,
-  Link2,
   Loader2,
   Lock,
   MapPin,
@@ -85,7 +84,6 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
   const [usernameState, setUsernameState] = useState<UsernameState>("unchanged");
   const [bio, setBio] = useState(initial.bio ?? "");
   const [location, setLocation] = useState(initial.location ?? "");
-  const [website, setWebsite] = useState(initial.website ?? "");
   const [interests, setInterests] = useState<string[]>(initial.interests);
   const [interestDraft, setInterestDraft] = useState("");
   const [addingInterest, setAddingInterest] = useState(false);
@@ -227,7 +225,8 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
 
     const profileFields = {
       location: location.trim() || null,
-      website: website.trim() || null,
+      // O campo Link saiu do perfil: o link antigo é apagado ao salvar.
+      website: null,
       interests: interests.length ? interests.join(", ") : null,
       gender: gender || null,
       relationship: relationship || null,
@@ -405,25 +404,9 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
             </p>
           </Field>
 
-          <div className="space-y-5 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
+          <div className="space-y-5">
           <Field label="Cidade" icon={MapPin} stacked>
             <input value={location} onChange={(e) => setLocation(e.target.value)} maxLength={80} placeholder="Ex.: Aracaju, Sergipe, Brasil" className={inputClass} />
-          </Field>
-
-          <Field label="Link" icon={Link2} stacked>
-            <div className="relative">
-              <input value={website} onChange={(e) => setWebsite(e.target.value)} maxLength={200} placeholder="Ex.: linktr.ee/seunome" className={clsx(inputClass, "pr-[40px]")} />
-              {website && (
-                <button
-                  type="button"
-                  onClick={() => setWebsite("")}
-                  aria-label="Limpar link"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/15 p-0.5 text-white/70 hover:text-white"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
-            </div>
           </Field>
 
           </div>
@@ -560,7 +543,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
 
       <OriginSection about={about} set={setAbout} />
       <EducationSection about={about} set={setAbout} />
-      <CareerSection about={about} set={setAbout} />
+      <CareerSection about={about} set={setAbout} userId={userId} />
       <LifeSection about={about} set={setAbout} />
 
       <Section title="Privacidade" subtitle="Escolha o que será exibido no seu perfil." icon={Shield}>
