@@ -34,13 +34,24 @@ export const TRACK_COLUMNS =
 /** Gêneros do catálogo, na ordem em que aparecem. */
 export const GENRES: { id: string; label: string }[] = [
   { id: "hits", label: "Hits" },
+  { id: "anos-2000", label: "Anos 2000" },
+  { id: "anos-90", label: "Anos 90" },
+  { id: "hits-anos-80", label: "Anos 80" },
+  { id: "anos-70", label: "Anos 70" },
+  { id: "anos-60", label: "Anos 50 e 60" },
   { id: "rock-classico", label: "Rock clássico" },
   { id: "rock-anos-90", label: "Rock anos 90" },
   { id: "rock-anos-2000", label: "Rock anos 2000" },
-  { id: "hits-anos-80", label: "Anos 80" },
   { id: "pop-rock", label: "Pop rock" },
+  { id: "mpb", label: "MPB" },
+  { id: "rock-nacional", label: "Rock nacional" },
+  { id: "sertanejo", label: "Sertanejo" },
+  { id: "samba-pagode", label: "Samba e pagode" },
+  { id: "funk-br", label: "Funk" },
+  { id: "brasil", label: "Brasil" },
+  // Catálogo livre (artistas independentes) — oculto da vitrine, mantido para quem já usa.
   { id: "rock", label: "Rock indie" },
-  { id: "pop", label: "Pop" },
+  { id: "pop", label: "Pop indie" },
   { id: "eletronica", label: "Eletrônica" },
   { id: "hiphop", label: "Hip-hop" },
   { id: "jazz", label: "Jazz" },
@@ -73,8 +84,18 @@ export function normalize(s: string) {
 
 /** Catálogo oficial + músicas da pessoa + álbuns dela, numa leva só. */
 export async function loadMusic(supabase: SupabaseClient, userId: string) {
+  // O catálogo passa de mil músicas: busca em páginas (a API devolve no máximo mil por vez).
+  const loadCatalog = async () => {
+    const all: MusicTrack[] = [];
+    for (let from = 0; from < 10000; from += 1000) {
+      const { data } = await supabase.from("Track").select(TRACK_COLUMNS).eq("isOfficial", true).order("id").range(from, from + 999);
+      all.push(...((data as MusicTrack[] | null) ?? []));
+      if (!data || data.length < 1000) break;
+    }
+    return { data: all };
+  };
   const [catalog, mine, albums] = await Promise.all([
-    supabase.from("Track").select(TRACK_COLUMNS).eq("isOfficial", true).order("genre").order("album").order("createdAt").limit(1000),
+    loadCatalog(),
     supabase.from("Track").select(TRACK_COLUMNS).eq("userId", userId).eq("isOfficial", false).order("createdAt", { ascending: false }).limit(500),
     supabase
       .from("Playlist")
@@ -86,7 +107,9 @@ export async function loadMusic(supabase: SupabaseClient, userId: string) {
   type AlbumRow = Omit<MusicAlbum, "trackIds"> & { items: { trackId: string; position: number }[] | null };
   // Ordem da vitrine: hits e rock primeiro, depois os gêneros do catálogo livre.
   const order = new Map(GENRES.map((g, i) => [g.id, i]));
-  const sorted = ((catalog.data as MusicTrack[] | null) ?? []).slice().sort((a, b) => (order.get(a.genre ?? "") ?? 99) - (order.get(b.genre ?? "") ?? 99));
+  const sorted = catalog.data.slice().sort(
+    (a, b) => (order.get(a.genre ?? "") ?? 99) - (order.get(b.genre ?? "") ?? 99) || a.artist.localeCompare(b.artist) || a.title.localeCompare(b.title)
+  );
   return {
     catalog: sorted,
     mine: (mine.data as MusicTrack[] | null) ?? [],
