@@ -41,7 +41,7 @@ export default async function VideosPage(props: { searchParams: Promise<{ aba?: 
 
   if (tab === "clipes") {
     // Clipes oficiais do catálogo de música (tocam no player oficial do YouTube).
-    const tracks = await loadCatalog(supabase, "id, title, artist, genre, youtubeId");
+    const tracks = await loadCatalog(supabase, "video", "id, title, artist, genre, youtubeId");
     const clips = sortByGenre(tracks.filter((t) => t.youtubeId)) as unknown as MusicClip[];
     return (
       <div className="mx-auto max-w-4xl px-4 py-6">
