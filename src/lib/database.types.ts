@@ -668,6 +668,21 @@ export type Database = {
       export_my_data: { Args: Record<string, never>; Returns: Json };
       reorder_playlist: { Args: { p_playlist: string; p_tracks: string[] }; Returns: undefined };
       admin_set_track_hidden: { Args: { p_track: string; p_hidden: boolean }; Returns: undefined };
+      admin_save_track: {
+        Args: {
+          p_id: string | null;
+          p_title: string;
+          p_artist: string;
+          p_album: string | null;
+          p_genre: string;
+          p_audio_url: string | null;
+          p_cover_url: string | null;
+          p_youtube_id: string | null;
+          p_duration: number | null;
+          p_license: string | null;
+        };
+        Returns: string;
+      };
       my_storage_files: { Args: Record<string, never>; Returns: { bucket: string; name: string }[] };
       account_deletion_check: { Args: { p_confirm: string }; Returns: Json };
       deactivate_my_account: { Args: { p_confirm: string }; Returns: string };
