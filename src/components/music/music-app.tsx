@@ -370,7 +370,7 @@ export function MusicApp({
   ];
 
   return (
-    <div className={clsx("mx-auto max-w-5xl px-3 py-4 md:px-6 md:py-6", player.current ? (player.isYouTube ? "pb-[27rem] md:pb-28" : "pb-40 md:pb-28") : "pb-10")}>
+    <div className={clsx("mx-auto max-w-5xl px-3 py-4 md:px-6 md:py-6", player.current ? (player.isYouTube ? "pb-[22rem] md:pb-[17rem]" : "pb-40 md:pb-28") : "pb-10")}>
       <div className="mb-4 flex flex-col gap-3 md:mb-5 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-white">Música</h1>
