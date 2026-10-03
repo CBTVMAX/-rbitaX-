@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { clsx } from "clsx";
 import {
   CheckCircle2,
+  Disc3,
   Eye,
   EyeOff,
   ImagePlus,
@@ -13,6 +14,7 @@ import {
   Pencil,
   RefreshCw,
   Search,
+  Sparkles,
   Trash2,
   Upload,
   X,
@@ -22,7 +24,8 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { verifyUpload } from "@/lib/upload-guard";
 import { compressImage } from "@/lib/messenger/media";
-import { formatDuration, genreLabel, GENRES, parseYouTubeId, youtubeThumb } from "@/lib/music";
+import { formatDuration, genreLabel, GENRES, normalize, parseYouTubeId, youtubeThumb } from "@/lib/music";
+import { categoryFor, fromFileName, identifyOnline, readTags } from "@/lib/music-recognize";
 import { splitVideoTitle } from "@/components/music/dialogs";
 
 // ---------------------------------------------------------------- utilidades
@@ -57,13 +60,6 @@ function storagePath(url: string | null | undefined) {
   const marker = "/storage/v1/object/public/media/";
   const at = url ? url.indexOf(marker) : -1;
   return at >= 0 ? decodeURIComponent(url!.slice(at + marker.length)) : null;
-}
-
-/** "Queen - Bohemian Rhapsody.mp3" → artista e título. */
-function fromFileName(name: string) {
-  const base = name.replace(/\.[a-z0-9]+$/i, "").replace(/[_]+/g, " ").replace(/^\d{1,3}[\s.-]+/, "").trim();
-  const parts = base.split(/\s[-–—]\s/);
-  return parts.length >= 2 ? { artist: parts[0].trim(), title: parts.slice(1).join(" - ").trim() } : { artist: "", title: base };
 }
 
 function readDuration(file: File): Promise<number | null> {
@@ -147,7 +143,44 @@ type Supa = ReturnType<typeof createClient>;
 type Say = (text: string, error?: boolean) => void;
 
 // ---------------------------------------------------------------- enviar arquivos
-type QueueItem = { key: string; file: File; title: string; artist: string; state: "pending" | "sending" | "done" | "error"; error?: string };
+type QueueItem = {
+  key: string;
+  file: File;
+  title: string;
+  artist: string;
+  album: string;
+  year: number | null;
+  genre: string;
+  duration: number | null;
+  /** Capa gravada no próprio arquivo. */
+  picture: Blob | null;
+  preview: string | null;
+  /** Capa oficial encontrada no MusicBrainz (Cover Art Archive). */
+  coverUrl: string | null;
+  recognition: "reading" | "searching" | "tags" | "online" | "none";
+  state: "pending" | "sending" | "done" | "error";
+  error?: string;
+};
+
+const MB_GAP = 1100; // MusicBrainz aceita 1 consulta por segundo.
+
+function RecognitionBadge({ q }: { q: QueueItem }) {
+  if (q.recognition === "reading" || q.recognition === "searching")
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] text-orbit-cyan">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        {q.recognition === "reading" ? "Lendo dados do arquivo…" : "Buscando álbum e capa…"}
+      </span>
+    );
+  if (q.recognition === "none") return <span className="text-[11px] text-amber-200/80">Não reconhecida · preencha os dados</span>;
+  return (
+    <span className="inline-flex items-center gap-1 text-[11px] text-emerald-300">
+      <Sparkles className="h-3 w-3" />
+      {q.recognition === "online" ? "Reconhecida no MusicBrainz" : "Reconhecida pelos dados do arquivo"}
+      {q.year ? ` · ${q.year}` : ""}
+    </span>
+  );
+}
 
 function UploadFiles({ supabase, say }: { supabase: Supa; say: Say }) {
   const [queue, setQueue] = useState<QueueItem[]>([]);
@@ -165,18 +198,122 @@ function UploadFiles({ supabase, say }: { supabase: Supa; say: Say }) {
     if (coverPreview) URL.revokeObjectURL(coverPreview);
   }, [coverPreview]);
 
+  // Consultas ao MusicBrainz em fila, uma por vez.
+  const lookup = useRef<Promise<void>>(Promise.resolve());
+  const previews = useRef(new Set<string>());
+  useEffect(() => {
+    const urls = previews.current;
+    return () => urls.forEach((u) => URL.revokeObjectURL(u));
+  }, []);
+
+  const patch = (key: string, p: Partial<QueueItem>) => setQueue((prev) => prev.map((q) => (q.key === key ? { ...q, ...p } : q)));
+  /** Preenche só o que ainda está vazio — nunca apaga o que a equipe digitou. */
+  const fill = (key: string, p: Partial<QueueItem>) =>
+    setQueue((prev) =>
+      prev.map((q) => {
+        if (q.key !== key) return q;
+        const next = { ...q };
+        for (const [k, v] of Object.entries(p) as [keyof QueueItem, never][]) {
+          const cur = q[k];
+          if (v != null && v !== "" && (cur == null || cur === "")) next[k] = v;
+        }
+        return next;
+      })
+    );
+
+  async function recognize(item: QueueItem) {
+    const tags = await readTags(item.file);
+    const preview = tags.picture ? URL.createObjectURL(tags.picture) : null;
+    if (preview) previews.current.add(preview);
+    const fromTags = Boolean(tags.album || tags.picture || tags.year);
+    // O nome do arquivo já preencheu título e artista; as tags do arquivo têm prioridade sobre ele.
+    setQueue((prev) =>
+      prev.map((q) =>
+        q.key !== item.key
+          ? q
+          : {
+              ...q,
+              title: q.title === item.title ? tags.title || q.title : q.title,
+              artist: q.artist === item.artist ? tags.artist || q.artist : q.artist,
+              album: q.album || tags.album,
+              year: q.year ?? tags.year,
+              genre: q.genre || categoryFor(tags.year, tags.genres),
+              duration: tags.duration,
+              picture: tags.picture,
+              preview,
+              recognition: tags.album && tags.picture ? "tags" : "searching",
+            }
+      )
+    );
+    if (tags.album && tags.picture) return;
+
+    const run = lookup.current.then(async () => {
+      const found = await identifyOnline(tags.artist, tags.title);
+      if (found) {
+        fill(item.key, {
+          album: found.album ?? "",
+          year: found.year,
+          coverUrl: found.coverUrl,
+          duration: found.duration,
+        });
+        setQueue((prev) =>
+          prev.map((q) =>
+            q.key !== item.key
+              ? q
+              : { ...q, genre: q.genre || categoryFor(q.year ?? found.year, [...tags.genres, ...found.tags]), recognition: "online" }
+          )
+        );
+      } else {
+        patch(item.key, { recognition: fromTags ? "tags" : "none" });
+      }
+      await new Promise((r) => setTimeout(r, MB_GAP));
+    });
+    lookup.current = run.catch(() => undefined);
+  }
+
   function addFiles(files: FileList | null) {
     if (!files) return;
-    const items = Array.from(files).map((file) => ({ key: crypto.randomUUID(), file, ...fromFileName(file.name), state: "pending" as const }));
-    setQueue((prev) => [...prev, ...items].slice(0, 100));
+    const room = Math.max(0, 100 - queue.length);
+    const items: QueueItem[] = Array.from(files)
+      .slice(0, room)
+      .map((file) => ({
+        key: crypto.randomUUID(),
+        file,
+        ...fromFileName(file.name),
+        album: "",
+        year: null,
+        genre: "",
+        duration: null,
+        picture: null,
+        preview: null,
+        coverUrl: null,
+        recognition: "reading",
+        state: "pending",
+      }));
+    setQueue((prev) => [...prev, ...items]);
+    items.forEach((item) => void recognize(item));
   }
-  const patch = (key: string, p: Partial<QueueItem>) => setQueue((prev) => prev.map((q) => (q.key === key ? { ...q, ...p } : q)));
+
+  function remove(q: QueueItem) {
+    if (q.preview) (URL.revokeObjectURL(q.preview), previews.current.delete(q.preview));
+    setQueue((prev) => prev.filter((x) => x.key !== q.key));
+  }
+
+  async function uploadImage(uid: string, file: File) {
+    const { blob, mime } = await compressImage(file);
+    const path = `${uid}/catalogo/capas/${crypto.randomUUID()}.${mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg"}`;
+    const { error } = await supabase.storage.from("media").upload(path, blob, { contentType: mime });
+    if (error) throw error;
+    return supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+  }
+
+  const recognizing = queue.some((q) => q.recognition === "reading" || q.recognition === "searching");
 
   async function send() {
     const pending = queue.filter((q) => q.state !== "done");
     if (!pending.length) return say("Escolha os arquivos de áudio.", true);
-    if (!genre) return say("Escolha a categoria das músicas.", true);
     if (pending.some((q) => !q.title.trim() || !q.artist.trim())) return say("Preencha título e artista de todas as músicas.", true);
+    if (pending.some((q) => !(q.genre || genre))) return say("Escolha a categoria das músicas que ficaram sem categoria.", true);
     if (!confirm) return say("Confirme que o Órbita X tem direito de disponibilizar estas músicas.", true);
     setBusy(true);
     const { data: auth } = await supabase.auth.getUser();
@@ -186,15 +323,11 @@ function UploadFiles({ supabase, say }: { supabase: Supa; say: Say }) {
       return say("Sessão expirada. Entre de novo.", true);
     }
 
-    // Capa (opcional): uma para todas as músicas desta leva.
-    let coverUrl: string | null = null;
+    // Capa da leva (opcional): usada nas músicas que não trouxeram capa própria.
+    let batchCover: string | null = null;
     if (cover) {
       try {
-        const { blob, mime } = await compressImage(cover);
-        const path = `${uid}/catalogo/capas/${crypto.randomUUID()}.${mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg"}`;
-        const { error } = await supabase.storage.from("media").upload(path, blob, { contentType: mime });
-        if (error) throw error;
-        coverUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+        batchCover = await uploadImage(uid, cover);
       } catch {
         setBusy(false);
         return say("Não foi possível enviar a capa. Tente outra imagem.", true);
@@ -202,6 +335,8 @@ function UploadFiles({ supabase, say }: { supabase: Supa; say: Say }) {
     }
 
     const license = [rights, note.trim()].filter(Boolean).join(" · ");
+    // Faixas do mesmo álbum dividem a mesma capa embutida (envia uma vez só).
+    const albumCovers = new Map<string, string>();
     let ok = 0;
     for (const q of pending) {
       patch(q.key, { state: "sending", error: undefined });
@@ -213,17 +348,30 @@ function UploadFiles({ supabase, say }: { supabase: Supa; say: Say }) {
         } catch {
           throw new Error("Formato não suportado (use MP3, OGG, WAV ou FLAC).");
         }
+        const albumName = q.album.trim() || album.trim();
+        const albumKey = albumName ? `${normalize(q.artist)}|${normalize(albumName)}` : "";
+        let coverUrl = (albumKey && albumCovers.get(albumKey)) || null;
+        if (!coverUrl && q.picture) {
+          try {
+            coverUrl = await uploadImage(uid, new File([q.picture], "capa", { type: q.picture.type || "image/jpeg" }));
+          } catch {
+            coverUrl = null;
+          }
+        }
+        coverUrl = coverUrl || q.coverUrl || batchCover;
+        if (albumKey && coverUrl) albumCovers.set(albumKey, coverUrl);
+
         const path = `${uid}/catalogo/${crypto.randomUUID()}.${AUDIO_EXT[contentType] ?? "mp3"}`;
         const { error: upErr } = await supabase.storage.from("media").upload(path, q.file, { contentType });
         if (upErr) throw new Error("Falha no envio do arquivo.");
         const audioUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
-        const duration = await readDuration(q.file);
+        const duration = q.duration ?? (await readDuration(q.file));
         const { error } = await supabase.rpc("admin_save_track", {
           p_id: null,
           p_title: q.title.trim(),
           p_artist: q.artist.trim(),
-          p_album: album.trim() || null,
-          p_genre: genre,
+          p_album: albumName || null,
+          p_genre: q.genre || genre,
           p_audio_url: audioUrl,
           p_cover_url: coverUrl,
           p_youtube_id: null,
@@ -244,6 +392,8 @@ function UploadFiles({ supabase, say }: { supabase: Supa; say: Say }) {
     say(ok ? `${ok} ${ok === 1 ? "música enviada" : "músicas enviadas"} para o catálogo.` : "Nenhuma música foi enviada.", !ok);
   }
 
+  const left = queue.filter((q) => q.state !== "done").length;
+
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <section className={clsx(card, "p-4")}>
@@ -256,42 +406,86 @@ function UploadFiles({ supabase, say }: { supabase: Supa; say: Say }) {
         >
           <Upload className="h-7 w-7 text-orbit-cyan" />
           <span className="text-sm font-medium text-white">Escolha ou arraste os arquivos de áudio</span>
-          <span className="text-xs text-white/45">MP3, OGG, WAV ou FLAC · até 50 MB cada · até 100 por vez. Nome “Artista - Título” já preenche os campos.</span>
+          <span className="max-w-md text-xs leading-relaxed text-white/45">
+            MP3, OGG, WAV ou FLAC · até 50 MB cada · até 100 por vez. O sistema reconhece título, artista, álbum, ano e capa de cada faixa — você só confere.
+          </span>
         </button>
         <input ref={fileRef} type="file" multiple hidden accept="audio/mpeg,audio/ogg,audio/wav,audio/x-wav,audio/flac,.mp3,.ogg,.wav,.flac" onChange={(e) => (addFiles(e.target.files), (e.target.value = ""))} />
 
         {queue.length > 0 && (
           <div className="mt-4 space-y-2">
-            {queue.map((q) => (
-              <div key={q.key} className="flex flex-col gap-2 rounded-xl border border-white/10 bg-space-bg/40 p-2.5 sm:flex-row sm:items-center">
-                <div className="flex min-w-0 items-center gap-2 sm:w-44">
-                  {q.state === "done" ? (
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
-                  ) : q.state === "error" ? (
-                    <XCircle className="h-4 w-4 shrink-0 text-red-400" />
-                  ) : q.state === "sending" ? (
-                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-orbit-cyan" />
-                  ) : (
-                    <Music2 className="h-4 w-4 shrink-0 text-white/40" />
-                  )}
-                  <span className="truncate text-xs text-white/55" title={q.file.name}>
-                    {q.file.name}
-                  </span>
+            {queue.map((q) => {
+              const locked = q.state === "done" || busy;
+              const art = q.preview ?? q.coverUrl;
+              return (
+                <div key={q.key} className="rounded-xl border border-white/10 bg-space-bg/40 p-2.5">
+                  <div className="flex items-start gap-3">
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-white/[0.06]">
+                      {art ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={art} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center text-white/30">
+                          <Disc3 className="h-6 w-6" />
+                        </span>
+                      )}
+                      <span className="absolute bottom-1 right-1 rounded-full bg-black/60 p-0.5">
+                        {q.state === "done" ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                        ) : q.state === "error" ? (
+                          <XCircle className="h-3.5 w-3.5 text-red-400" />
+                        ) : q.state === "sending" ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-orbit-cyan" />
+                        ) : (
+                          <Music2 className="h-3.5 w-3.5 text-white/60" />
+                        )}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="min-w-0 flex-1 truncate text-xs text-white/45" title={q.file.name}>
+                          {q.file.name}
+                        </span>
+                        <RecognitionBadge q={q} />
+                        <button type="button" onClick={() => remove(q)} disabled={busy} aria-label="Tirar da lista" className={clsx(ghost, "h-7 w-7")}>
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <input value={q.title} onChange={(e) => patch(q.key, { title: e.target.value })} placeholder="Título" disabled={locked} className={clsx(input, "py-2")} />
+                        <input value={q.artist} onChange={(e) => patch(q.key, { artist: e.target.value })} placeholder="Artista" disabled={locked} className={clsx(input, "py-2")} />
+                        <input
+                          value={q.album}
+                          onChange={(e) => patch(q.key, { album: e.target.value })}
+                          maxLength={120}
+                          placeholder={album ? `Álbum (${album})` : "Álbum"}
+                          disabled={locked}
+                          className={clsx(input, "py-2")}
+                        />
+                        <select value={q.genre} onChange={(e) => patch(q.key, { genre: e.target.value })} disabled={locked} className={clsx(input, "py-2")}>
+                          <option value="">{genre ? `Categoria (${genreLabel(genre)})` : "Categoria…"}</option>
+                          {CATEGORIES.map((g) => (
+                            <option key={g.id} value={g.id}>
+                              {g.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {q.error && <p className="text-xs text-red-300">{q.error}</p>}
+                    </div>
+                  </div>
                 </div>
-                <input value={q.title} onChange={(e) => patch(q.key, { title: e.target.value })} placeholder="Título" disabled={q.state === "done" || busy} className={clsx(input, "py-2")} />
-                <input value={q.artist} onChange={(e) => patch(q.key, { artist: e.target.value })} placeholder="Artista" disabled={q.state === "done" || busy} className={clsx(input, "py-2")} />
-                <button type="button" onClick={() => setQueue((prev) => prev.filter((x) => x.key !== q.key))} disabled={busy} aria-label="Tirar da lista" className={ghost}>
-                  <X className="h-4 w-4" />
-                </button>
-                {q.error && <p className="text-xs text-red-300 sm:basis-full">{q.error}</p>}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
 
       <section className={clsx(card, "space-y-3 p-4")}>
-        <p className="text-sm font-semibold text-white">Dados da leva</p>
+        <div>
+          <p className="text-sm font-semibold text-white">Dados da leva</p>
+          <p className="mt-0.5 text-xs text-white/45">Usados só nas faixas que ficaram sem álbum, categoria ou capa.</p>
+        </div>
         <div className="flex items-center gap-3">
           <button type="button" onClick={() => coverRef.current?.click()} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border border-dashed border-white/15 hover:border-orbit-purple/50" aria-label="Escolher capa">
             {coverPreview ? (
@@ -304,7 +498,7 @@ function UploadFiles({ supabase, say }: { supabase: Supa; say: Say }) {
             )}
           </button>
           <div className="text-xs text-white/45">
-            Capa (opcional), usada em todas as músicas desta leva.
+            Capa padrão (opcional).
             {cover && (
               <button type="button" onClick={() => setCover(null)} className="mt-1 block font-semibold text-white/70 hover:text-white">
                 Remover capa
@@ -313,7 +507,7 @@ function UploadFiles({ supabase, say }: { supabase: Supa; say: Say }) {
           </div>
           <input ref={coverRef} type="file" accept="image/*" hidden onChange={(e) => (setCover(e.target.files?.[0] ?? null), (e.target.value = ""))} />
         </div>
-        <input value={album} onChange={(e) => setAlbum(e.target.value)} maxLength={120} placeholder="Álbum (opcional)" className={input} />
+        <input value={album} onChange={(e) => setAlbum(e.target.value)} maxLength={120} placeholder="Álbum padrão (opcional)" className={input} />
         <CategorySelect value={genre} onChange={setGenre} />
         <select value={rights} onChange={(e) => setRights(e.target.value)} className={input}>
           {RIGHTS.map((r) => (
@@ -327,9 +521,9 @@ function UploadFiles({ supabase, say }: { supabase: Supa; say: Say }) {
           <input type="checkbox" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#8b5cf6]" />
           Confirmo que o Órbita X tem o direito de disponibilizar estas músicas (são próprias, autorizadas, licenciadas ou de uso livre).
         </label>
-        <button type="button" onClick={send} disabled={busy || !queue.some((q) => q.state !== "done")} className={clsx(primary, "w-full")}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-          {busy ? "Enviando…" : `Enviar ${queue.filter((q) => q.state !== "done").length || ""} ${queue.filter((q) => q.state !== "done").length === 1 ? "música" : "músicas"}`}
+        <button type="button" onClick={send} disabled={busy || recognizing || !left} className={clsx(primary, "w-full")}>
+          {busy || recognizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          {busy ? "Enviando…" : recognizing ? "Reconhecendo faixas…" : `Enviar ${left || ""} ${left === 1 ? "música" : "músicas"}`}
         </button>
       </section>
     </div>

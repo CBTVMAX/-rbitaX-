@@ -14,6 +14,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "lucide-react": "^0.446.0",
+    "music-metadata": "^11.16.1",
     "next": "^15.5.26",
     "qrcode-generator": "^1.4.4",
     "react": "^19.3.0",
