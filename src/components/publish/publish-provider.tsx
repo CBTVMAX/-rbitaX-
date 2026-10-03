@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { MentionHint, MentionPanel, useMentionPicker } from "@/components/mentions";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import {
@@ -211,6 +212,8 @@ function PostEditor({
   const [step, setStep] = useState<"write" | "publish">("write");
   const [content, setContent] = useState("");
   const [items, setItems] = useState<Item[]>([]);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const mention = useMentionPicker(textRef, content, setContent);
   const [location, setLocation] = useState("");
   const [visibility, setVisibility] = useState<PostVisibility>("public");
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -225,7 +228,6 @@ function PostEditor({
   const [error, setError] = useState<string | null>(null);
   const mediaInput = useRef<HTMLInputElement>(null);
   const audioInput = useRef<HTMLInputElement>(null);
-  const textRef = useRef<HTMLTextAreaElement>(null);
 
   // Abre já no seletor certo (Foto / Vídeos) ou no texto (Post).
   useEffect(() => {
@@ -393,12 +395,19 @@ function PostEditor({
               <textarea
                 ref={textRef}
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={(e) => {
+                  setContent(e.target.value);
+                  requestAnimationFrame(mention.scan);
+                }}
+                onKeyUp={mention.scan}
+                onClick={mention.scan}
                 maxLength={5000}
-                placeholder="Escreva alguma coisa..."
+                placeholder="Escreva alguma coisa... Use @ para marcar alguém"
                 className="min-h-[200px] w-full resize-none bg-transparent px-5 py-4 text-[17px] leading-relaxed text-white outline-none placeholder:text-white/35"
               />
+              <MentionHint value={content} className="mx-4 mb-3" />
             </div>
+            {mention.open && <MentionPanel items={mention.items} onPick={mention.pick} />}
 
             <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-white/10 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <button
