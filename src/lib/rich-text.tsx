@@ -2,7 +2,9 @@ import Link from "next/link";
 import { clsx } from "clsx";
 
 // @menções (perfis e comunidades) e #hashtags viram links clicáveis.
-const TOKEN = /(@[a-zA-Z0-9_.]{2,30}|#[\p{L}0-9_]{1,60})/gu;
+// "@usuario (texto)" (padrão do VK) mostra só o texto, com link para o perfil do @usuario.
+const TOKEN = /(@[a-zA-Z0-9_.]{2,30} \([^()\n]{1,60}\)|@[a-zA-Z0-9_.]{2,30}|#[\p{L}0-9_]{1,60})/gu;
+const LABELED = /^@([a-zA-Z0-9_.]{2,30}) \(([^()\n]{1,60})\)$/;
 
 /**
  * Renderiza o texto de um post/comentário transformando @menção e #hashtag em links,
@@ -19,7 +21,20 @@ export function RichText({ text, className }: { text: string; className?: string
     const start = m.index ?? 0;
     if (start > last) nodes.push(text.slice(last, start));
     const handle = token.slice(1);
-    if (token[0] === "@") {
+    const labeled = token.match(LABELED);
+    if (labeled) {
+      nodes.push(
+        <Link
+          key={key++}
+          href={`/perfil/${encodeURIComponent(labeled[1])}`}
+          title={`@${labeled[1]}`}
+          className="font-medium text-orbit-cyan hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {labeled[2].trim()}
+        </Link>
+      );
+    } else if (token[0] === "@") {
       nodes.push(
         <Link key={key++} href={`/perfil/${encodeURIComponent(handle)}`} className="font-medium text-orbit-cyan hover:underline" onClick={(e) => e.stopPropagation()}>
           {token}
