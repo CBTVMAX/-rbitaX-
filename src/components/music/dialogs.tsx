@@ -375,7 +375,7 @@ export function TrackEditorSheet({
 }
 
 /** "Nirvana - Smells Like Teen Spirit (Official Music Video)" → artista e título limpos. */
-function splitVideoTitle(raw: string, channel: string) {
+export function splitVideoTitle(raw: string, channel: string) {
   const clean = raw
     .replace(/\s*[([](?:[^)\]]*(?:official|oficial|video|vídeo|clipe|lyric|letra|audio|áudio|hd|4k|remaster)[^)\]]*)[)\]]/gi, "")
     .replace(/\s+/g, " ")

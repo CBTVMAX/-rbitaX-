@@ -8,6 +8,7 @@ import {
   BarChart3,
   Bell,
   Flag,
+  Music2,
   Gem,
   Gift,
   Home,
@@ -44,6 +45,7 @@ const NAV: NavItem[] = [
   { href: "/admin/presentes", label: "Presentes", icon: Gift },
   { href: "/admin/ia", label: "IA Assistente", icon: Sparkles },
   { href: "/admin/adesivos", label: "Adesivos", icon: Smile },
+  { href: "/admin/musicas", label: "Músicas", icon: Music2 },
   { href: "/admin/configuracoes", label: "Configurações", icon: Settings },
   { href: "/admin/seguranca", label: "Logs de Sistema", icon: ScrollText },
 ];
