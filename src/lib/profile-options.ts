@@ -58,7 +58,51 @@ export type ProfileAbout = {
   inspiredBy?: string;
   smoking?: string;
   alcohol?: string;
+  /** Texto longo de apresentação (até 2.000 caracteres). */
+  aboutMe?: string;
+  favorites?: { music?: string; movies?: string; books?: string; games?: string };
+  /** Para perfis de roleplay. */
+  character?: { universe?: string; faceclaim?: string; charAge?: string; affiliation?: string };
+  /** Só o dono recebe: quem vê cada campo (sem a chave = Público). */
+  visibility?: Partial<Record<AboutField, AboutVisibility>>;
 };
+
+export type AboutVisibility = "all" | "friends" | "only_me";
+export type AboutField =
+  | "aboutMe"
+  | "hometown"
+  | "languages"
+  | "education"
+  | "career"
+  | "life"
+  | "music"
+  | "movies"
+  | "books"
+  | "games"
+  | "universe"
+  | "faceclaim"
+  | "charAge"
+  | "affiliation";
+
+export const ABOUT_VISIBILITY_OPTIONS: { value: AboutVisibility; label: string }[] = [
+  { value: "all", label: "Público" },
+  { value: "friends", label: "Amigos" },
+  { value: "only_me", label: "Só eu" },
+];
+
+export const FAVORITE_FIELDS: { key: "music" | "movies" | "books" | "games"; label: string; placeholder: string }[] = [
+  { key: "music", label: "Músicas", placeholder: "Artistas, bandas, músicas que marcam você" },
+  { key: "movies", label: "Filmes e séries", placeholder: "O que você assiste e reassiste" },
+  { key: "books", label: "Livros", placeholder: "Leituras favoritas" },
+  { key: "games", label: "Jogos", placeholder: "Jogos que você joga ou jogou" },
+];
+
+export const CHARACTER_FIELDS: { key: "universe" | "faceclaim" | "charAge" | "affiliation"; label: string; placeholder: string; max: number }[] = [
+  { key: "universe", label: "Universo / Fandom", placeholder: "Ex.: Marvel, Harry Potter, original", max: 80 },
+  { key: "faceclaim", label: "Faceclaim", placeholder: "Quem empresta o rosto ao personagem", max: 80 },
+  { key: "charAge", label: "Idade do personagem", placeholder: "Ex.: 24 anos, imortal", max: 40 },
+  { key: "affiliation", label: "Afiliação / Grupo", placeholder: "Casa, clã, equipe, facção…", max: 80 },
+];
 
 export const LANGUAGE_OPTIONS = [
   "Português", "Inglês", "Espanhol", "Francês", "Italiano", "Alemão", "Japonês", "Coreano", "Chinês",

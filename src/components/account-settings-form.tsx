@@ -14,7 +14,7 @@ import { normalizeUsername, usernameError } from "@/lib/username";
 import { zodiacFor } from "@/lib/zodiac";
 import { GENDER_OPTIONS, PARTNER_STATUSES, partnerRelation, RELATIONSHIP_OPTIONS, type ProfileAbout } from "@/lib/profile-options";
 import { PartnerPicker, type PartnerChoice } from "@/components/profile-edit/partner-picker";
-import { CareerSection, EducationSection, LifeSection, OriginSection } from "@/components/profile-edit/about-sections";
+import { AboutMeSection, CareerSection, CharacterSection, EducationSection, FavoritesSection, LifeSection, OriginSection } from "@/components/profile-edit/about-sections";
 import { dateSelectClass, Field, inputClass, Section, SectionHeader, selectClass, SelectWrap, Toggle } from "@/components/profile-edit/form-ui";
 import {
   AtSign,
@@ -541,10 +541,15 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
         </Link>
       </Section>
 
+      <div id="informacoes" className="scroll-mt-24">
+        <AboutMeSection about={about} set={setAbout} />
+      </div>
       <OriginSection about={about} set={setAbout} />
       <EducationSection about={about} set={setAbout} />
       <CareerSection about={about} set={setAbout} userId={userId} />
       <LifeSection about={about} set={setAbout} />
+      <FavoritesSection about={about} set={setAbout} />
+      <CharacterSection about={about} set={setAbout} />
 
       <Section title="Privacidade" subtitle="Escolha o que será exibido no seu perfil." icon={Shield}>
         <div className="space-y-4">
@@ -573,7 +578,7 @@ export function AccountSettingsForm({ userId, initial }: { userId: string; initi
       )}
       {saved && (
         <p role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-          Alterações salvas.
+          Informações atualizadas.
         </p>
       )}
 

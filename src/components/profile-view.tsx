@@ -5,7 +5,7 @@ import { FollowButton } from "@/components/follow-button";
 import { FriendButton, FriendRequestActions } from "@/components/friend-button";
 import { BlockedProfileNotice } from "@/components/block-user";
 import { ProfileAboutButton, ProfileAboutContent, type AboutData } from "@/components/profile-about";
-import { ProfileGiftsCard, ProfileMediaShowcase } from "@/components/profile-showcase";
+import { ProfileGiftsCard } from "@/components/profile-showcase";
 import { ProfilePhotos } from "@/components/profile-photos";
 import { ProfileGiftButton } from "@/components/profile-gift-button";
 import { ProfileFamily, type FamilyMember, type FamilyRequest } from "@/components/profile-family";
@@ -60,6 +60,15 @@ import {
   UserPlus,
 } from "lucide-react";
 import { VerifiedBadge } from "@/components/verified-badge";
+import {
+  ProfileFriendsWidget,
+  ProfileOnlineWidget,
+  ProfilePhotosWidget,
+  ProfileStatsRow,
+  WidgetCard,
+  type PersonRow,
+  type ProfileStatCounts,
+} from "@/components/profile-widgets";
 
 export type ProfileInfo = {
   /** Already hidden (null) by the database when the owner chose not to show it. */
@@ -203,7 +212,11 @@ export type ProfileViewProps = {
   hiddenCommunityIds?: string[];
   /** Cargos personalizados por comunidade (crachás), keyed pelo id da comunidade. */
   roleBadges?: Record<string, { name: string; color: string; icon: string }[]>;
-  friends: ProfileFriend[];
+  friends: (ProfileFriend & { mutual?: boolean })[];
+  /** Contadores do perfil (get_profile_stats): amigos, seguidores, fotos, vídeos, posts. */
+  counts: ProfileStatCounts;
+  /** Quem visita pode abrir a lista de amigos/seguidores (Privacidade). */
+  canSeeFriends?: boolean;
   friendState?: FriendState;
   friendRequests?: ProfileFriend[];
   /** Você bloqueou esta pessoa: o perfil mostra só o aviso com "Desbloquear". */
@@ -276,6 +289,8 @@ export function ProfileView({
   hiddenCommunityIds = [],
   roleBadges = {},
   friends,
+  counts,
+  canSeeFriends = true,
   friendState = "none",
   friendRequests = [],
   blockedByMe = false,
@@ -651,122 +666,84 @@ export function ProfileView({
 
   // ---------- Coluna lateral (computador): informações complementares ----------
   const aboutFilled = visibleAbout.filter((r) => r.text);
+  const viewerId = current?.authId ?? null;
+  const personRows: PersonRow[] = friends.map((f) => ({ ...f, isVerified: !!f.isVerified }));
+  const recentPhotos = photos.slice(0, 4).map((m) => ({ id: m.id, url: m.url }));
+
+  const aboutSummary =
+    user.bio || aboutFilled.length > 0 || extra.aboutMe || isMe ? (
+      <WidgetCard
+        title="Informações"
+        action={
+          isMe ? (
+            <Link href="/configuracoes/conta#informacoes" className="text-xs font-medium text-pa hover:underline">
+              Editar
+            </Link>
+          ) : undefined
+        }
+      >
+        {(extra.aboutMe || user.bio) && (
+          <p className="mb-3 line-clamp-4 whitespace-pre-line text-[13px] leading-relaxed text-white/75">{extra.aboutMe || user.bio}</p>
+        )}
+        {aboutFilled.length > 0 ? (
+          <div className="space-y-2.5 text-[13px]">
+            {aboutFilled.slice(0, 4).map(({ icon: Icon, text, prompt }, i) => (
+              <p key={prompt || i} className="flex items-start gap-2.5 text-white/75">
+                <Icon className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
+                <span className="min-w-0 break-words">{text}</span>
+              </p>
+            ))}
+          </div>
+        ) : (
+          !user.bio && !extra.aboutMe && <p className="text-[13px] text-white/45">Nenhuma informação ainda.</p>
+        )}
+        <ProfileAboutButton
+          d={aboutData}
+          title="Informação detalhada"
+          className="mt-4 flex w-full items-center justify-center rounded-xl border border-white/12 bg-white/[0.03] py-2 text-[13px] font-medium text-white/85 transition hover:border-pa/40 hover:bg-white/[0.06]"
+        >
+          Mostrar informações completas
+        </ProfileAboutButton>
+      </WidgetCard>
+    ) : null;
+
+  const communitiesWidget =
+    sortedCommunities.length > 0 ? (
+      <SideCard title="Comunidades" count={sortedCommunities.length} action={seeAll("comunidades")}>
+        <div className="grid grid-cols-4 gap-2">
+          {sortedCommunities.slice(0, 4).map((c) => (
+            <Link key={c.id} href={`/comunidades/${c.slug}`} title={c.name} className="group flex min-w-0 flex-col items-center gap-1.5 text-center">
+              <span className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-space-card ring-1 ring-white/10 transition duration-200 group-hover:scale-105 group-hover:ring-pa">
+                {c.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={c.avatarUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
+                ) : (
+                  <OrbitIcon className="h-6 w-8" />
+                )}
+              </span>
+              <span className="max-w-full truncate text-[11px] text-white/70 group-hover:text-white">
+                {c.name}
+                {isMe && hiddenSet.has(c.id) ? " · oculta" : ""}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </SideCard>
+    ) : null;
+
   const aside = (
     <>
-      {(user.bio || aboutFilled.length > 0 || isMe) && (
-        <SideCard
-          title="Sobre mim"
-          action={
-            isMe ? (
-              <Link href="/configuracoes/conta" className="text-xs font-medium text-pa hover:underline">
-                Editar
-              </Link>
-            ) : (
-              <ProfileAboutButton d={aboutData} title="Informação detalhada" className="text-xs font-medium text-pa hover:underline">
-                Ver mais
-              </ProfileAboutButton>
-            )
-          }
-        >
-          {user.bio && <p className="mb-3 whitespace-pre-line text-[13px] leading-relaxed text-white/75">{user.bio}</p>}
-          {aboutFilled.length > 0 ? (
-            <div className="space-y-2.5 text-[13px]">
-              {aboutFilled.slice(0, 6).map(({ icon: Icon, text, prompt }) => (
-                <p key={prompt} className="flex items-start gap-2.5 text-white/75">
-                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
-                  <span className="min-w-0 break-words">{text}</span>
-                </p>
-              ))}
-            </div>
-          ) : (
-            !user.bio && <p className="text-[13px] text-white/45">Nenhuma informação ainda.</p>
-          )}
-          {isMe && (
-            <Link
-              href="/configuracoes/conta"
-              className="mt-4 flex w-full items-center justify-center rounded-xl border border-white/12 bg-white/[0.03] py-2 text-[13px] font-medium text-white/85 transition hover:bg-white/[0.06]"
-            >
-              Editar informações
-            </Link>
-          )}
+      {aboutSummary}
+      <ProfileFriendsWidget userId={user.id} isMe={isMe} viewerId={viewerId} total={counts.friends} friends={personRows} canSee={canSeeFriends} />
+      <ProfileOnlineWidget userId={user.id} isMe={isMe} viewerId={viewerId} friends={personRows} />
+      {communitiesWidget}
+      <ProfilePhotosWidget photos={recentPhotos} total={counts.photos} isMe={isMe} />
+      {music && (
+        <SideCard title="Música">
+          <ProfileMusic music={music} isMe={isMe} userId={user.id} />
         </SideCard>
       )}
-
-      {current?.authId && <ProfileMoments viewerId={current.authId} userId={user.id} isMe={isMe} frameClassName={`${cardClass} p-4`} />}
-
-      {stats.followers > 0 && (
-        <SideCard title="Seguidores" count={stats.followers}>
-          <div className="flex items-center gap-3">
-            {avatarStack(followerPreview)}
-            {!isMe && mutual.count > 0 && (
-              <span className="text-[12px] leading-snug text-white/55">
-                {mutual.preview
-                  .slice(0, 2)
-                  .map((m) => m.name.split(" ")[0])
-                  .join(", ")}
-                {mutual.count > 2 ? ` e mais ${mutual.count - 2}` : ""} {mutual.count === 1 ? "amigo em comum" : "amigos em comum"}
-              </span>
-            )}
-          </div>
-        </SideCard>
-      )}
-
-      <ProfileGiftsCard user={{ id: user.id, name: user.name, username: user.username, avatarUrl: user.avatarUrl }} isMe={isMe} viewerId={current?.authId ?? null} />
-
-      {friends.length > 0 && (
-        <SideCard title="Amigos" count={stats.friends} action={seeAll("amigos")}>
-          <div className="grid grid-cols-4 gap-x-2 gap-y-3">
-            {friends.slice(0, 8).map((f) => (
-              <Link key={f.id} href={`/perfil/${f.username}`} className="group flex min-w-0 flex-col items-center gap-1.5 text-center">
-                <span className="relative">
-                  <span className="flex h-[52px] w-[52px] items-end justify-center overflow-hidden rounded-full border-2 border-pa/50 bg-space-card p-[2px] transition group-hover:border-pa">
-                    <span className="flex h-full w-full items-end justify-center overflow-hidden rounded-full bg-space-card">
-                      {f.avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={f.avatarUrl} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <Silhouette className="h-[78%] w-[78%] text-orbit-blue/55" />
-                      )}
-                    </span>
-                  </span>
-                  <PresenceDot value={f.presence} userId={f.id} className="absolute bottom-0 right-0 h-3 w-3 border-2 border-space-surface" />
-                </span>
-                <span className="max-w-full truncate text-[11px] text-white/75">{f.name.split(" ")[0]}</span>
-              </Link>
-            ))}
-          </div>
-        </SideCard>
-      )}
-
-      {sortedCommunities.length > 0 && (
-        <SideCard title="Comunidades" count={sortedCommunities.length} action={seeAll("comunidades")}>
-          <ul className="space-y-1">
-            {sortedCommunities.slice(0, 4).map((c) => (
-              <li key={c.id}>
-                <Link href={`/comunidades/${c.slug}`} className="-mx-1.5 flex items-center gap-3 rounded-xl px-1.5 py-1.5 transition hover:bg-white/5">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-space-card">
-                    {c.avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={c.avatarUrl} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <OrbitIcon className="h-5 w-7" />
-                    )}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-medium text-white">{c.name}</span>
-                    <span className="block text-[11px] text-white/45">
-                      {(ROLE_LABEL[c.role] ?? ROLE_LABEL.member).label}
-                      {isMe && hiddenSet.has(c.id) && " · oculta"}
-                    </span>
-                  </span>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-white/30" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </SideCard>
-      )}
-
+      <ProfileGiftsCard user={{ id: user.id, name: user.name, username: user.username, avatarUrl: user.avatarUrl }} isMe={isMe} viewerId={viewerId} />
       {testimonials.length > 0 && (
         <SideCard title="Depoimentos" count={testimonials.length} action={seeAll("depoimentos", "Ver todos")}>
           <ul className="space-y-3">
@@ -790,6 +767,14 @@ export function ProfileView({
         </SideCard>
       )}
     </>
+  );
+
+  // Telas menores (sem a coluna lateral): amigos e online entram compactos antes das abas.
+  const compactWidgets = (
+    <div className="space-y-3 lg:hidden">
+      <ProfileFriendsWidget userId={user.id} isMe={isMe} viewerId={viewerId} total={counts.friends} friends={personRows} canSee={canSeeFriends} strip />
+      <ProfileOnlineWidget userId={user.id} isMe={isMe} viewerId={viewerId} friends={personRows} />
+    </div>
   );
 
   // ---------- Conteúdo das abas ----------
@@ -964,10 +949,8 @@ export function ProfileView({
   const moments = current?.authId ? <ProfileMoments viewerId={current.authId} userId={user.id} isMe={isMe} /> : null;
 
   return (
-    <div
-      className="mx-auto max-w-[1220px] md:px-5 md:py-5 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-5"
-      style={profileAccentStyle(user.profileColor)}
-    >
+    <div className="mx-auto max-w-[1200px] md:px-5 md:py-5" style={profileAccentStyle(user.profileColor)}>
+      {/* Cabeçalho (capa, foto, nome e contadores) na largura toda, acima das duas colunas. */}
       <div className="min-w-0 space-y-3 md:space-y-4">
         {/* ================= COMPUTADOR ================= */}
         {/* Sem overflow-hidden no cartão: o menu "Mais" pode passar da borda; a capa recorta os próprios cantos. */}
@@ -1048,6 +1031,7 @@ export function ProfileView({
                     <Info className="h-4 w-4" /> Mais
                   </ProfileAboutButton>
                 </div>
+                <ProfileStatsRow userId={user.id} isMe={isMe} viewerId={viewerId} stats={counts} canSeeFriends={canSeeFriends} className="mt-3" />
               </div>
 
               <div className="flex shrink-0 items-center gap-2">
@@ -1103,8 +1087,7 @@ export function ProfileView({
               </div>
             </div>
           </div>
-          {/* Telas médias (sem a coluna lateral): os Momentos ficam no cabeçalho. */}
-          <div className="lg:hidden">{moments}</div>
+          {moments}
         </section>
 
         {/* ================= CELULAR ================= */}
@@ -1153,31 +1136,13 @@ export function ProfileView({
                 <Info className="h-3.5 w-3.5" /> Saber mais
               </ProfileAboutButton>
             </div>
+            <ProfileStatsRow userId={user.id} isMe={isMe} viewerId={viewerId} stats={counts} canSeeFriends={canSeeFriends} className="mt-3 gap-x-4" />
           </div>
 
           <div className="space-y-2.5 bg-space-bg px-3 pt-2.5">
             {current?.authId && (
               <ProfileMoments viewerId={current.authId} userId={user.id} isMe={isMe} frameClassName={`${cardClass} px-4 py-2.5`} />
             )}
-
-            <div className={`${cardClass} grid grid-cols-2 divide-x divide-white/10`}>
-              <a href="#tab-amigos" className="flex items-center justify-between gap-2 px-4 py-3.5 text-left">
-                <span>
-                  <span className="block text-xl font-bold leading-none text-white">{compact.format(stats.friends)}</span>
-                  <span className="mt-1 block text-[13px] text-white/55">
-                    {!isMe && mutual.count > 0 ? `${mutual.count} em comum` : "amigos"}
-                  </span>
-                </span>
-                {avatarStack(!isMe && mutual.preview.length ? mutual.preview : friends)}
-              </a>
-              <div className="flex items-center justify-between gap-2 px-4 py-3.5">
-                <span>
-                  <span className="block text-xl font-bold leading-none text-white">{compact.format(stats.followers)}</span>
-                  <span className="mt-1 block text-[13px] text-white/55">seguidores</span>
-                </span>
-                {avatarStack(followerPreview)}
-              </div>
-            </div>
 
             {(isMe || !blockedByMe) && (
             <div className={`${cardClass} flex items-center gap-2 p-2.5`}>
@@ -1207,7 +1172,13 @@ export function ProfileView({
           </div>
         </section>
 
-        <div className="space-y-3 px-3 md:space-y-4 md:px-0">
+      </div>
+
+      <div className="mt-3 md:mt-4 lg:grid lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start lg:gap-6">
+        <aside className="hidden space-y-3 lg:sticky lg:top-20 lg:block">{!blockedByMe && aside}</aside>
+
+        <div className="min-w-0 space-y-3 px-3 md:space-y-4 md:px-0">
+          {!blockedByMe && compactWidgets}
           {friendRequestsCard}
           {onboarding}
           {archiveBanner}
@@ -1220,7 +1191,6 @@ export function ProfileView({
             slots={{
               posts: (
                 <div className="space-y-3 md:space-y-4">
-                  {!showArchive && <ProfileMediaShowcase photos={photos} videos={videos} isMe={isMe} userId={user.id} />}
                   {showArchive && feed.length === 0 ? (
                     <div className={`${cardClass} p-10 text-center text-sm text-white/50`}>Nenhuma publicação arquivada.</div>
                   ) : (
@@ -1261,8 +1231,6 @@ export function ProfileView({
           )}
         </div>
       </div>
-
-      <aside className="hidden space-y-3 lg:sticky lg:top-20 lg:block">{aside}</aside>
     </div>
   );
 }

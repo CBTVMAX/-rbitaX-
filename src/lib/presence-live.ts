@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { presenceOf, type Presence } from "@/lib/presence";
@@ -141,4 +141,26 @@ export function useOnlineCount(ids: string[]) {
     () => ids.filter((id) => (mine?.id === id ? mine.status : entries.get(id)?.status) === "online").length,
     () => 0
   );
+}
+
+/**
+ * Quem destes está online agora (widget "Amigos online"), atualizado pelo Realtime.
+ * `initial` traz o status que o servidor já mandou, para a primeira pintura não piscar.
+ */
+export function useOnlineIds(ids: string[], initial?: Record<string, string | null | undefined>): string[] {
+  const key = ids.join(",");
+  if (initial) ids.forEach((id) => seed(id, initial[id], null));
+  useEffect(() => {
+    if (!ids.length) return;
+    ensureChannel();
+    ids.forEach((id) => tracked.add(id));
+    request(ids);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  const joined = useSyncExternalStore(
+    subscribe,
+    () => ids.filter((id) => (mine?.id === id ? mine.status : entries.get(id)?.status) === "online").join(","),
+    () => ids.filter((id) => initial?.[id] === "online").join(",")
+  );
+  return useMemo(() => (joined ? joined.split(",") : []), [joined]);
 }
