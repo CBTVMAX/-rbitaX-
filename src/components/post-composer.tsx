@@ -149,6 +149,7 @@ export function PostComposer({
                 setContent(e.target.value);
                 requestAnimationFrame(scanMentions);
               }}
+              onKeyDown={mention.onKeyDown}
               onKeyUp={scanMentions}
               onClick={scanMentions}
               placeholder="O que você está pensando?"
@@ -230,6 +231,7 @@ export function PostComposer({
               setContent(e.target.value);
               requestAnimationFrame(scanMentions);
             }}
+            onKeyDown={mention.onKeyDown}
             onKeyUp={scanMentions}
             onClick={scanMentions}
             placeholder={`No que você está pensando, ${name.split(" ")[0]}?`}

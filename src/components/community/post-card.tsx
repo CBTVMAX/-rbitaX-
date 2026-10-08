@@ -41,6 +41,7 @@ import { can, communityError, compactNumber, downloadCommunityMedia, isEditorOrA
 import { useCommunity } from "./context";
 import { Confirm, Sheet } from "./ui";
 import { RichText } from "./rich-text";
+import { MentionHint, MentionPanel, useMentionPicker } from "@/components/mentions";
 import { Lightbox } from "./lightbox";
 import { ReportSheet, type ReportTarget } from "./report-sheet";
 
@@ -156,6 +157,7 @@ export function CommunityPostCard({
   const [showComments, setShowComments] = useState(highlight);
   const [comments, setComments] = useState<CommentRow[] | null>(null);
   const [commentText, setCommentText] = useState("");
+  const commentMention = useMentionPicker(commentInput, commentText, setCommentText);
   const [sending, setSending] = useState(false);
   const ref = useRef<HTMLElement>(null);
   const commentIds = useMemo(() => (comments ?? []).map((c) => c.id), [comments]);
@@ -677,6 +679,8 @@ export function CommunityPostCard({
           )}
           {canComment ? (
             <form onSubmit={sendComment} className="relative pt-1">
+              {commentMention.open && <MentionPanel items={commentMention.items} onPick={commentMention.pick} floating above />}
+              <MentionHint value={commentText} className="mb-2" />
               {replyTo && (
                 <p className="mb-1.5 flex items-center gap-2 px-2 text-[12px] text-white/50">
                   <span className="min-w-0 flex-1 truncate">
@@ -696,8 +700,14 @@ export function CommunityPostCard({
                   setCommentText(e.target.value);
                   e.target.style.height = "auto";
                   e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                  requestAnimationFrame(commentMention.scan);
                 }}
+                onKeyUp={commentMention.scan}
+                onClick={commentMention.scan}
+                onBlur={() => setTimeout(commentMention.close, 150)}
                 onKeyDown={(e) => {
+                  commentMention.onKeyDown(e);
+                  if (e.key === "Enter" && commentMention.open) return;
                   if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && window.matchMedia("(min-width: 768px)").matches) {
                     e.preventDefault();
                     e.currentTarget.form?.requestSubmit();

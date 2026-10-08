@@ -399,6 +399,7 @@ function PostEditor({
                   setContent(e.target.value);
                   requestAnimationFrame(mention.scan);
                 }}
+                onKeyDown={mention.onKeyDown}
                 onKeyUp={mention.scan}
                 onClick={mention.scan}
                 maxLength={5000}

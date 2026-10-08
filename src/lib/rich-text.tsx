@@ -3,8 +3,8 @@ import { clsx } from "clsx";
 
 // @menções (perfis e comunidades) e #hashtags viram links clicáveis.
 // "@usuario (texto)" (padrão do VK) mostra só o texto, com link para o perfil do @usuario.
-const TOKEN = /(@[a-zA-Z0-9_.]{2,30} \([^()\n]{1,60}\)|@[a-zA-Z0-9_.]{2,30}|#[\p{L}0-9_]{1,60})/gu;
-const LABELED = /^@([a-zA-Z0-9_.]{2,30}) \(([^()\n]{1,60})\)$/;
+const TOKEN = /(@[a-zA-Z0-9_.]{2,30} \([^()\n]{0,60}\)|@[a-zA-Z0-9_.]{2,30}|#[\p{L}0-9_]{1,60})/gu;
+const LABELED = /^@([a-zA-Z0-9_.]{2,30}) \(([^()\n]{0,60})\)$/;
 
 /**
  * Renderiza o texto de um post/comentário transformando @menção e #hashtag em links,
@@ -31,7 +31,7 @@ export function RichText({ text, className }: { text: string; className?: string
           className="font-medium text-orbit-cyan hover:underline"
           onClick={(e) => e.stopPropagation()}
         >
-          {labeled[2].trim()}
+          {labeled[2].trim() || `@${labeled[1]}`}
         </Link>
       );
     } else if (token[0] === "@") {
