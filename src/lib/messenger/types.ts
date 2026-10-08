@@ -137,7 +137,7 @@ export type LastMessage = {
   deleted: boolean;
 };
 
-export type SendStatus = "ok" | "not_member" | "not_friends" | "blocked" | "removed";
+export type SendStatus = "ok" | "not_member" | "not_friends" | "blocked" | "removed" | "restricted";
 
 export type Conversation = {
   id: string;

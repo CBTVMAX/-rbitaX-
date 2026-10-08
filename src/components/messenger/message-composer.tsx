@@ -81,6 +81,8 @@ export function ComposerLocked({ status, username, name }: { status: SendStatus;
       ? { icon: Ban, text: "Não é possível enviar mensagens nesta conversa porque há um bloqueio entre vocês." }
       : status === "not_member"
         ? { icon: UserMinus, text: "Você não faz mais parte desta conversa." }
+        : status === "restricted"
+        ? { icon: Lock, text: `${name?.split(" ")[0] ?? "Esta pessoa"} limitou quem pode enviar mensagens para ela. Por enquanto você não pode escrever aqui.` }
         : {
             icon: Lock,
             text: `Você e ${name?.split(" ")[0] ?? "esta pessoa"} não são amigos no momento. O chat do ÓrbitaX é só entre amigos: envie um pedido de amizade para voltar a conversar.`,
