@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 export type MentionItem = { type: "user" | "community"; handle: string; name: string; avatar: string | null };
 
 /** "@usuario (texto)" — mesmo padrão do VK. */
-export const MENTION_LABELED = /@([A-Za-z0-9_.]{2,30}) \(([^()\n]{1,60})\)/g;
+export const MENTION_LABELED = /@([A-Za-z0-9_.]{2,30}) \(([^()\n]{0,60})\)/g;
 
 export function useMentionPicker(ref: React.RefObject<HTMLTextAreaElement | null>, value: string, setValue: (v: string) => void) {
   const supabase = useMemo(() => createClient(), []);
@@ -99,11 +99,58 @@ export function useMentionPicker(ref: React.RefObject<HTMLTextAreaElement | null
     [ref, setValue, value]
   );
 
+  /**
+   * Apagar devagar, como no VK: o Backspace come o texto entre parênteses letra por letra sem quebrar a
+   * marcação. Com os parênteses vazios é só digitar a palavra nova ("amor", "mãe"…), e o link continua.
+   * Apagar dentro do @usuario remove a marcação inteira, para nunca virar link de outra pessoa.
+   */
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key !== "Backspace" || e.altKey || e.ctrlKey || e.metaKey || e.nativeEvent.isComposing) return;
+      const el = e.currentTarget;
+      const pos = el.selectionStart ?? 0;
+      if (pos !== el.selectionEnd) return;
+      for (const m of el.value.matchAll(MENTION_LABELED)) {
+        const start = m.index ?? 0;
+        const end = start + m[0].length;
+        const handleEnd = start + 1 + m[1].length;
+        const labelStart = handleEnd + 2;
+        const labelEnd = end - 1;
+        let next: string | null = null;
+        let caret = pos;
+        if (pos > start && pos <= handleEnd) {
+          next = el.value.slice(0, start) + el.value.slice(end);
+          caret = start;
+        } else if (labelStart === labelEnd && (pos === end || pos === labelStart)) {
+          next = el.value.slice(0, handleEnd) + el.value.slice(end);
+          caret = handleEnd;
+        } else if (pos === end) {
+          next = el.value.slice(0, labelEnd - 1) + el.value.slice(labelEnd);
+          caret = labelEnd - 1;
+        } else if (pos === labelStart) {
+          e.preventDefault();
+          return;
+        }
+        if (next === null) continue;
+        e.preventDefault();
+        setValue(next);
+        requestAnimationFrame(() => {
+          const t = ref.current;
+          if (!t) return;
+          t.focus();
+          t.setSelectionRange(caret, caret);
+        });
+        return;
+      }
+    },
+    [ref, setValue]
+  );
+
   useEffect(() => () => {
     if (timer.current) clearTimeout(timer.current);
   }, []);
 
-  return { items, open: open && items.length > 0, scan, pick, close: () => setOpen(false) };
+  return { items, open: open && items.length > 0, scan, pick, onKeyDown, close: () => setOpen(false) };
 }
 
 function Face({ it }: { it: MentionItem }) {
@@ -120,12 +167,12 @@ function Face({ it }: { it: MentionItem }) {
 }
 
 /** Lista de sugestões (nome à esquerda, @ à direita), como no VK. */
-export function MentionPanel({ items, onPick, floating = false }: { items: MentionItem[]; onPick: (it: MentionItem) => void; floating?: boolean }) {
+export function MentionPanel({ items, onPick, floating = false, above = false }: { items: MentionItem[]; onPick: (it: MentionItem) => void; floating?: boolean; above?: boolean }) {
   return (
     <div
       className={clsx(
         "overflow-hidden border-white/10 bg-space-surface",
-        floating ? "absolute left-0 right-0 top-full z-30 mt-1 rounded-xl border shadow-2xl" : "border-t"
+        floating ? clsx("absolute left-0 right-0 z-30 rounded-xl border shadow-2xl", above ? "bottom-full mb-1" : "top-full mt-1") : "border-t"
       )}
     >
       <div className="max-h-64 overflow-y-auto">
@@ -163,11 +210,17 @@ export function MentionHint({ value, className }: { value: string; className?: s
         <p key={i} className="flex items-center gap-1.5 truncate">
           <AtSign className="h-3.5 w-3.5 shrink-0 text-orbit-cyan" />
           <span className="truncate">
-            Vai aparecer <span className="font-semibold text-orbit-cyan">{t[2].trim()}</span> com link para @{t[1]}
+            {t[2].trim() ? (
+              <>
+                Vai aparecer <span className="font-semibold text-orbit-cyan">{t[2].trim()}</span> com link para @{t[1]}
+              </>
+            ) : (
+              <>Escreva entre os parênteses como quer chamar @{t[1]}</>
+            )}
           </span>
         </p>
       ))}
-      <p className="text-[11px] text-white/40">Para trocar, edite o texto entre parênteses (ex.: “amor”, “mãe”).</p>
+      <p className="text-[11px] text-white/40">Para trocar, apague o nome entre parênteses e escreva o que quiser (ex.: “amor”, “mãe”, “pai”).</p>
     </div>
   );
 }

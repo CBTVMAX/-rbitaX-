@@ -14,6 +14,7 @@ import { accentOf, can, categoryOf, communityError, DISCUSSION_CATEGORIES, isEdi
 import { CommunityContext, type CommunityCtx } from "./context";
 import { Confirm, OfficialBadge, RoleBadge, Sheet } from "./ui";
 import { RichText } from "./rich-text";
+import { MentionHint, MentionPanel, useMentionPicker } from "@/components/mentions";
 import { Lightbox } from "./lightbox";
 import { ReportSheet, type ReportTarget } from "./report-sheet";
 
@@ -38,6 +39,7 @@ export function DiscussionView(props: { community: Community; viewer: Viewer; ro
   const [liked, setLiked] = useState(!!props.liked);
   const [edit, setEdit] = useState<{ title: string; body: string; category: DiscussionCategory } | null>(null);
   const input = useRef<HTMLTextAreaElement>(null);
+  const mention = useMentionPicker(input, text, setText);
   const accent = accentOf(community.accentColor);
 
   const me = viewer?.id ?? null;
@@ -296,12 +298,22 @@ export function DiscussionView(props: { community: Community; viewer: Viewer; ro
 
         <div className="fixed inset-x-0 bottom-14 z-20 border-t border-white/[0.06] bg-space-bg/95 px-3 pb-4 pt-2.5 backdrop-blur-xl md:static md:mt-4 md:rounded-3xl md:border md:bg-space-card/70 md:p-3">
           {canReply ? (
-            <form onSubmit={send} className="mx-auto flex max-w-3xl items-end gap-2">
+            <form onSubmit={send} className="relative mx-auto max-w-3xl">
+              {mention.open && <MentionPanel items={mention.items} onPick={mention.pick} floating above />}
+              <MentionHint value={text} className="mb-2" />
+              <div className="flex items-end gap-2">
               <textarea
                 ref={input}
                 value={text}
-                onChange={(e) => setText(e.target.value)}
+                onChange={(e) => {
+                  setText(e.target.value);
+                  requestAnimationFrame(mention.scan);
+                }}
+                onKeyUp={mention.scan}
+                onClick={mention.scan}
+                onBlur={() => setTimeout(mention.close, 150)}
                 onKeyDown={(e) => {
+                  mention.onKeyDown(e);
                   if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send(e);
                 }}
                 rows={1}
@@ -312,6 +324,7 @@ export function DiscussionView(props: { community: Community; viewer: Viewer; ro
               <button type="submit" disabled={!text.trim() || sending} aria-label="Enviar resposta" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orbit-gradient text-snow shadow-glow disabled:opacity-40">
                 {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
               </button>
+              </div>
             </form>
           ) : (
             <p className="mx-auto flex max-w-3xl items-center justify-center gap-2 py-1.5 text-center text-sm text-white/50">

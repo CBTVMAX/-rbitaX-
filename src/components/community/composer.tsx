@@ -25,6 +25,7 @@ import {
 } from "@/lib/communities";
 import { useCommunity } from "./context";
 import { Sheet } from "./ui";
+import { MentionHint, MentionPanel, useMentionPicker } from "@/components/mentions";
 
 export type CreateKind =
   | "post"
@@ -203,6 +204,8 @@ export function Composer({
   const [progress, setProgress] = useState("");
   const [error, setError] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const mention = useMentionPicker(textRef, text, setText);
   const thumbInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -517,15 +520,27 @@ export function Composer({
               ))}
             </div>
           )}
+          <div className="relative">
           <textarea
+            ref={textRef}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value);
+              requestAnimationFrame(mention.scan);
+            }}
+            onKeyDown={mention.onKeyDown}
+            onKeyUp={mention.scan}
+            onClick={mention.scan}
+            onBlur={() => setTimeout(mention.close, 150)}
             maxLength={kind === "poll" ? 200 : kind === "article" ? 20000 : 5000}
             rows={kind === "poll" ? 2 : kind === "article" ? 12 : 4}
             autoFocus={!["discussion", "article", "video", "clip"].includes(kind)}
             placeholder={placeholder[kind] ?? `Compartilhe com ${community.name}…`}
             className={clsx(field, "resize-none leading-relaxed", kind === "article" && "resize-y")}
           />
+          {mention.open && <MentionPanel items={mention.items} onPick={mention.pick} floating />}
+          </div>
+          {kind !== "poll" && <MentionHint value={text} className="-mt-1" />}
           {kind === "article" && <p className="-mt-2 text-right text-[11px] text-white/35">{text.length.toLocaleString("pt-BR")}/20.000</p>}
 
           {subjects.length > 0 && ["post", "announcement", "article", "discussion", "photo", "video", "clip", "gif"].includes(kind) && (
