@@ -156,6 +156,14 @@ export default async function ProfilePage(props: {
       ? supabase.from("User").select(userCard).in("id", mutualIds.slice(0, 3))
       : Promise.resolve({ data: [] as ProfileFriend[] }),
   ]);
+  // Como no VK: amigos em comum com quem visita primeiro, depois os de amizade mais recente.
+  const mutualSet = new Set(mutualIds);
+  const friendOrder = new Map(friendIds.map((id, i) => [id, i]));
+  const orderedFriends = [...(friendRows ?? [])].sort(
+    (a, b) => Number(mutualSet.has(b.id)) - Number(mutualSet.has(a.id)) || (friendOrder.get(a.id) ?? 0) - (friendOrder.get(b.id) ?? 0)
+  );
+  const { data: statsRaw } = await supabase.rpc("get_profile_stats", { p_user: user.id });
+  const profileStats = (statsRaw ?? {}) as { friends?: number; followers?: number; photos?: number; videos?: number; posts?: number; canSeeFriends?: boolean };
   const requesterById = new Map((requesterRows ?? []).map((u) => [u.id, u]));
   const friendRequests = requesterIds.flatMap((id) => {
     const u = requesterById.get(id);
@@ -313,7 +321,15 @@ export default async function ProfilePage(props: {
       communities={communities}
       hiddenCommunityIds={hiddenCommunityIds}
       roleBadges={roleBadges}
-      friends={friendRows ?? []}
+      friends={orderedFriends.map((f) => ({ ...f, mutual: mutualSet.has(f.id) }))}
+      counts={{
+        friends: profileStats.friends ?? friendIds.length,
+        followers: profileStats.followers ?? followerIds.size,
+        photos: profileStats.photos ?? (photoCount.error ? 0 : photoCount.count ?? 0),
+        videos: profileStats.videos ?? (videoCount.error ? 0 : videoCount.count ?? 0),
+        posts: profileStats.posts ?? postCount ?? 0,
+      }}
+      canSeeFriends={profileStats.canSeeFriends !== false}
       friendState={parseFriendState(friendStateRaw as string | null)}
       friendRequests={friendRequests}
       blockedByMe={!!blockRow}

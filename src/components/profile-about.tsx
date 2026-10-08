@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { clsx } from "clsx";
-import { AlignLeft, AtSign, Briefcase, Cake, Check, Copy, Gem, GraduationCap, Heart, Home, Languages, MapPin, Quote, Rss, Sparkles, UserRound, Users, UsersRound, X } from "lucide-react";
-import type { ProfileAbout } from "@/lib/profile-options";
+import { AlignLeft, AtSign, BookOpen, Briefcase, Cake, Check, Clapperboard, Copy, Flag, Gamepad2, Gem, Globe2, GraduationCap, Heart, Home, Hourglass, Languages, MapPin, Music2, Quote, Rss, ScanFace, Sparkles, UserRound, Users, UsersRound, X } from "lucide-react";
+import { CHARACTER_FIELDS, FAVORITE_FIELDS, type ProfileAbout } from "@/lib/profile-options";
 import { Avatar } from "@/components/post-card";
 
 export type AboutFamilyMember = { relativeId: string; relation: string; username: string; name: string; avatarUrl: string | null };
@@ -48,6 +48,9 @@ const ROLE_LABEL: Record<string, string> = { owner: "Fundador(a)", admin: "Admin
 
 const compact = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
 
+const FAVORITE_ICON = { music: Music2, movies: Clapperboard, books: BookOpen, games: Gamepad2 } as const;
+const CHARACTER_ICON = { universe: Globe2, faceclaim: ScanFace, charAge: Hourglass, affiliation: Flag } as const;
+
 function Row({ icon: Icon, children }: { icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-4 py-2">
@@ -79,7 +82,11 @@ export function ProfileAboutContent({ d, onNavigate }: { d: AboutData; onNavigat
     </Link>
   );
   const ab = d.about ?? {};
-  const hasAbout = Boolean(ab.hometown || ab.languages?.length || ab.education?.length || ab.career?.length || ab.motto || ab.priority || ab.peopleValue || ab.inspiredBy || ab.smoking || ab.alcohol);
+  const favorites = FAVORITE_FIELDS.filter((f) => ab.favorites?.[f.key]);
+  const character = CHARACTER_FIELDS.filter((f) => ab.character?.[f.key]);
+  const hasAbout = Boolean(
+    ab.hometown || ab.languages?.length || ab.education?.length || ab.career?.length || ab.motto || ab.priority || ab.peopleValue || ab.inspiredBy || ab.smoking || ab.alcohol || ab.aboutMe || favorites.length || character.length
+  );
   const nothing = !d.bio && !d.location && !ageLine && !d.relationship && !partner && !d.interests.length && !hasAbout;
   const life: [string, string | undefined][] = [
     ["Prioridade na vida", ab.priority],
@@ -115,6 +122,12 @@ export function ProfileAboutContent({ d, onNavigate }: { d: AboutData; onNavigat
         </Row>
       </div>
 
+      {ab.aboutMe && (
+        <Section title="Sobre mim">
+          <p className="whitespace-pre-line break-words py-1 text-[15px] leading-relaxed text-white/80">{ab.aboutMe}</p>
+        </Section>
+      )}
+
       {(!nothing || d.followers > 0) && (
         <div className="border-t border-white/[0.08] pt-2">
           {ageLine && <Row icon={Cake}>{ageLine}</Row>}
@@ -136,7 +149,7 @@ export function ProfileAboutContent({ d, onNavigate }: { d: AboutData; onNavigat
 
       {nothing && d.isMe && (
         <Link href="/configuracoes/conta" onClick={onNavigate} className="flex items-center justify-center rounded-xl border border-dashed border-white/15 py-3 text-sm text-white/55 hover:text-white">
-          Adicione cidade, aniversário, relacionamento, formação e carreira
+          Adicione cidade, aniversário, relacionamento, sobre mim, favoritos, formação e carreira
         </Link>
       )}
 
@@ -220,6 +233,32 @@ export function ProfileAboutContent({ d, onNavigate }: { d: AboutData; onNavigat
                 <span className="text-white/45">{label}:</span> {v}
               </Row>
             ))}
+        </Section>
+      )}
+
+      {favorites.length > 0 && (
+        <Section title="Favoritos">
+          {favorites.map((f) => {
+            const Icon = FAVORITE_ICON[f.key];
+            return (
+              <Row key={f.key} icon={Icon}>
+                <span className="text-white/45">{f.label}:</span> {ab.favorites?.[f.key]}
+              </Row>
+            );
+          })}
+        </Section>
+      )}
+
+      {character.length > 0 && (
+        <Section title="Personagem">
+          {character.map((f) => {
+            const Icon = CHARACTER_ICON[f.key];
+            return (
+              <Row key={f.key} icon={Icon}>
+                <span className="text-white/45">{f.label}:</span> {ab.character?.[f.key]}
+              </Row>
+            );
+          })}
         </Section>
       )}
 

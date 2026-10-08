@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Briefcase, Check, GraduationCap, Home, Languages, Loader2, Plus, Quote, Sparkles, Trash2, UsersRound, X } from "lucide-react";
+import { AlignLeft, BookOpen, Briefcase, Check, Clapperboard, Eye, Flag, Gamepad2, Globe2, GraduationCap, Home, Hourglass, Languages, Loader2, Music2, Plus, Quote, ScanFace, Sparkles, Trash2, UsersRound, VenetianMask, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Sheet } from "@/components/community/ui";
 import { Field, inputClass, Section, selectClass, SelectWrap } from "@/components/profile-edit/form-ui";
 import {
+  ABOUT_VISIBILITY_OPTIONS,
+  CHARACTER_FIELDS,
+  FAVORITE_FIELDS,
+  type AboutField,
+  type AboutVisibility,
   EDUCATION_LEVELS,
   HABIT_VIEWS,
   LANGUAGE_OPTIONS,
@@ -25,6 +30,120 @@ const smallInput = inputClass.replace("px-4 py-3", "px-3 py-2.5");
 const smallSelect = selectClass.replace("px-4 py-3", "px-3 py-2.5");
 
 type Set = (patch: Partial<ProfileAbout>) => void;
+
+/** Quem vê este campo: Público · Amigos · Só eu (aplicado no servidor, em profile_about). */
+export function VisibilityPick({ field, about, set }: { field: AboutField; about: ProfileAbout; set: Set }) {
+  const value: AboutVisibility = about.visibility?.[field] ?? "all";
+  return (
+    <label className="relative inline-flex shrink-0 items-center" title="Quem vê">
+      <Eye className="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-white/45" />
+      <select
+        aria-label="Quem vê"
+        value={value}
+        onChange={(e) => {
+          const next = { ...(about.visibility ?? {}) };
+          if (e.target.value === "all") delete next[field];
+          else next[field] = e.target.value as AboutVisibility;
+          set({ visibility: next });
+        }}
+        className={`h-9 appearance-none rounded-full border bg-space-card pl-7 pr-3 text-xs font-medium outline-none transition focus:border-orbit-purple ${
+          value === "all" ? "border-white/12 text-white/70" : "border-orbit-purple/50 text-orbit-cyan"
+        }`}
+      >
+        {ABOUT_VISIBILITY_OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function WithVisibility({ field, about, set, children }: { field: AboutField; about: ProfileAbout; set: Set; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-2">
+      <div className="min-w-0 flex-1">{children}</div>
+      <div className="pt-1.5">
+        <VisibilityPick field={field} about={about} set={set} />
+      </div>
+    </div>
+  );
+}
+
+function SectionVisibility({ field, about, set }: { field: AboutField; about: ProfileAbout; set: Set }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2">
+      <span className="text-xs text-white/55">Quem vê esta seção</span>
+      <VisibilityPick field={field} about={about} set={set} />
+    </div>
+  );
+}
+
+/** Sobre mim: texto longo de apresentação. */
+export function AboutMeSection({ about, set }: { about: ProfileAbout; set: Set }) {
+  const text = about.aboutMe ?? "";
+  return (
+    <Section title="Sobre mim" subtitle="Sua apresentação completa. Aparece em “Mais informações”." icon={AlignLeft}>
+      <WithVisibility field="aboutMe" about={about} set={set}>
+        <textarea
+          value={text}
+          onChange={(e) => set({ aboutMe: e.target.value })}
+          maxLength={2000}
+          rows={6}
+          placeholder="Conte quem você é, do que gosta, o que procura aqui…"
+          className={`${inputClass} resize-y leading-relaxed`}
+        />
+        <p className="mt-1 text-right text-[11px] text-white/35">{text.length.toLocaleString("pt-BR")}/2.000</p>
+      </WithVisibility>
+    </Section>
+  );
+}
+
+const FAVORITE_ICON = { music: Music2, movies: Clapperboard, books: BookOpen, games: Gamepad2 } as const;
+const CHARACTER_ICON = { universe: Globe2, faceclaim: ScanFace, charAge: Hourglass, affiliation: Flag } as const;
+
+/** Músicas, filmes e séries, livros e jogos. */
+export function FavoritesSection({ about, set }: { about: ProfileAbout; set: Set }) {
+  return (
+    <Section title="Favoritos" subtitle="O que você ouve, assiste, lê e joga." icon={Sparkles}>
+      {FAVORITE_FIELDS.map((f) => (
+        <Field key={f.key} label={f.label} icon={FAVORITE_ICON[f.key]}>
+          <WithVisibility field={f.key} about={about} set={set}>
+            <input
+              value={about.favorites?.[f.key] ?? ""}
+              onChange={(e) => set({ favorites: { ...(about.favorites ?? {}), [f.key]: e.target.value } })}
+              maxLength={300}
+              placeholder={f.placeholder}
+              className={inputClass}
+            />
+          </WithVisibility>
+        </Field>
+      ))}
+    </Section>
+  );
+}
+
+/** Ficha do personagem, para perfis de roleplay. */
+export function CharacterSection({ about, set }: { about: ProfileAbout; set: Set }) {
+  return (
+    <Section title="Personagem" subtitle="Para perfis de roleplay. Deixe em branco se não for o seu caso." icon={VenetianMask}>
+      {CHARACTER_FIELDS.map((f) => (
+        <Field key={f.key} label={f.label} icon={CHARACTER_ICON[f.key]}>
+          <WithVisibility field={f.key} about={about} set={set}>
+            <input
+              value={about.character?.[f.key] ?? ""}
+              onChange={(e) => set({ character: { ...(about.character ?? {}), [f.key]: e.target.value } })}
+              maxLength={f.max}
+              placeholder={f.placeholder}
+              className={inputClass}
+            />
+          </WithVisibility>
+        </Field>
+      ))}
+    </Section>
+  );
+}
 
 function YearSelect({ value, onChange, placeholder }: { value?: number; onChange: (v?: number) => void; placeholder: string }) {
   return (
@@ -96,10 +215,15 @@ export function OriginSection({ about, set }: { about: ProfileAbout; set: Set })
   return (
     <Section title="Cidade natal e idiomas" subtitle="De onde você é e quais idiomas fala." icon={Home}>
       <Field label="Cidade natal" icon={Home}>
-        <input value={about.hometown ?? ""} onChange={(e) => set({ hometown: e.target.value })} maxLength={80} placeholder="Ex.: Salvador, Bahia" className={inputClass} />
+        <WithVisibility field="hometown" about={about} set={set}>
+          <input value={about.hometown ?? ""} onChange={(e) => set({ hometown: e.target.value })} maxLength={80} placeholder="Ex.: Salvador, Bahia" className={inputClass} />
+        </WithVisibility>
       </Field>
       <Field label="Idiomas" icon={Languages}>
         <div className="space-y-2">
+          <div className="flex justify-end">
+            <VisibilityPick field="languages" about={about} set={set} />
+          </div>
           {languages.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {languages.map((l) => (
@@ -159,6 +283,7 @@ export function EducationSection({ about, set }: { about: ProfileAbout; set: Set
   const update = (i: number, patch: Partial<ProfileEducation>) => set({ education: items.map((e, j) => (j === i ? { ...e, ...patch } : e)) });
   return (
     <Section title="Formação" subtitle="Escola, faculdade, cursos técnicos e livres." icon={GraduationCap}>
+      <SectionVisibility field="education" about={about} set={set} />
       {items.map((e, i) => (
         <ItemCard key={i} label="Remover formação" onRemove={() => set({ education: items.filter((_, j) => j !== i) })}>
           <SelectWrap>
@@ -226,6 +351,7 @@ export function CareerSection({ about, set, userId }: { about: ProfileAbout; set
 
   return (
     <Section title="Carreira" subtitle="Empresas, cargos e período — ou uma comunidade sua do Órbita X." icon={Briefcase}>
+      <SectionVisibility field="career" about={about} set={set} />
       {items.map((c, i) => (
         <ItemCard key={i} label="Remover emprego" onRemove={() => set({ career: items.filter((_, j) => j !== i) })}>
           {c.community ? (
@@ -291,6 +417,7 @@ export function CareerSection({ about, set, userId }: { about: ProfileAbout; set
 export function LifeSection({ about, set }: { about: ProfileAbout; set: Set }) {
   return (
     <Section title="Lema de vida" subtitle="Sua frase, o que importa pra você e o que te inspira." icon={Quote}>
+      <SectionVisibility field="life" about={about} set={set} />
       <Field label="Lema" icon={Quote}>
         <textarea
           value={about.motto ?? ""}

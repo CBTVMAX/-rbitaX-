@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { timeAgo, initials } from "@/lib/format";
-import { MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Repeat2, Pencil, Trash2, Link2, Check, X, Loader2, Archive, ArchiveRestore, Globe2, Users, Lock, ChevronRight, MapPin, CalendarClock, Flag } from "lucide-react";
+import { MessageCircle, Share2, Bookmark, MoreHorizontal, Pin, PinOff, Repeat2, Pencil, Trash2, Link2, Check, X, Loader2, Archive, ArchiveRestore, Globe2, Users, Lock, ChevronRight, MapPin, CalendarClock, Flag, UserRoundPen } from "lucide-react";
 import type { SharedEmbed } from "@/lib/shared-posts";
 import { clsx } from "clsx";
 import { VerifiedBadge } from "@/components/verified-badge";
@@ -109,6 +109,9 @@ export function PostCard({
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [archived, setArchived] = useState(!!post.isArchived);
   const [reporting, setReporting] = useState(false);
+  const [moveAsk, setMoveAsk] = useState(false);
+  const [moveBusy, setMoveBusy] = useState(false);
+  const [moveNote, setMoveNote] = useState<string | null>(null);
 
   async function changeVisibility(next: string) {
     setPrivacyOpen(false);
@@ -335,6 +338,42 @@ export function PostCard({
                     {pinned ? "Desafixar do perfil" : "Fixar no perfil"}
                   </button>
                 )}
+                {canPin && pinned && content.trim().length > 0 && (
+                  moveAsk ? (
+                    <div className="border-t border-white/10 px-4 py-2.5">
+                      <p className="text-xs text-white/60">Este texto vai substituir o seu “Sobre mim”. A publicação continua aqui.</p>
+                      <div className="mt-2 flex gap-2">
+                        <button
+                          type="button"
+                          disabled={moveBusy}
+                          onClick={async () => {
+                            setMoveBusy(true);
+                            const { error } = await supabase.rpc("profile_about_me_from_post", { p_post: post.id });
+                            setMoveBusy(false);
+                            setMoveAsk(false);
+                            setMenuOpen(false);
+                            setMoveNote(error ? "Não foi possível mover agora. Tente de novo." : "Pronto: o texto agora está no seu “Sobre mim”. Se quiser, desafixe ou apague esta publicação.");
+                            if (!error) router.refresh();
+                          }}
+                          className="flex items-center gap-1.5 rounded-full bg-orbit-gradient px-3 py-1.5 text-xs font-semibold text-snow disabled:opacity-60"
+                        >
+                          {moveBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Mover
+                        </button>
+                        <button type="button" onClick={() => setMoveAsk(false)} className="rounded-full px-3 py-1.5 text-xs font-semibold text-white/70 hover:bg-white/5">
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setMoveAsk(true)}
+                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm text-white/85 hover:bg-white/5"
+                    >
+                      <UserRoundPen className="h-4 w-4" /> Mover para Sobre mim
+                    </button>
+                  )
+                )}
                 {isAuthor && !archived && (
                   <button
                     type="button"
@@ -435,6 +474,15 @@ export function PostCard({
       )}
       </div>
 
+      {moveNote && (
+        <div className={clsx("mb-3 flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white/70", bleed && "mx-4 md:mx-0")}>
+          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+          <span className="flex-1">{moveNote}</span>
+          <button type="button" onClick={() => setMoveNote(null)} aria-label="Fechar aviso" className="text-white/40 hover:text-white">
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
       <ReportDialog target={reporting ? { type: "post", id: post.id, label: "publicação" } : null} onClose={() => setReporting(false)} />
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
