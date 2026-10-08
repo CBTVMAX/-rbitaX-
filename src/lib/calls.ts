@@ -56,6 +56,7 @@ export function callErrorMessage(err: unknown): string {
   if (name === "NotFoundError" || name === "OverconstrainedError") return "Nenhum microfone ou câmera foi encontrado neste aparelho.";
   if (name === "NotReadableError") return "O microfone ou a câmera já está em uso por outro app.";
   if (msg.includes("group_not_supported")) return "Chamadas em grupo chegam em breve.";
+  if (msg.includes("calls_restricted")) return "Esta pessoa limitou quem pode ligar para ela.";
   if (msg.includes("not_allowed")) return "Vocês precisam ser amigos para fazer chamadas.";
   return "Não foi possível iniciar a chamada. Tente novamente.";
 }

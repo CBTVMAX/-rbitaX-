@@ -88,7 +88,7 @@ export default async function SettingsPage() {
         title="Conta"
         items={[
           { href: "/configuracoes/conta", icon: UserRound, label: "Minha conta", hint: "Nome, @, bio, foto, capa e informações" },
-          { href: "/configuracoes/conta", icon: Lock, label: "Privacidade", hint: "O que aparece no seu perfil" },
+          { href: "/configuracoes/privacidade", icon: Lock, label: "Privacidade", hint: "Quem vê sua página e quem pode falar com você" },
           { href: "/configuracoes/comunidades", icon: UsersRound, label: "Comunidades no perfil", hint: "Escolha quais comunidades aparecem publicamente" },
           { href: "/configuracoes/seguranca", icon: ShieldCheck, label: "Segurança", hint: "Senha, verificação em duas etapas e aparelhos" },
           { href: "/configuracoes/notificacoes", icon: Bell, label: "Notificações", hint: "No celular e no computador, mesmo com o app fechado" },

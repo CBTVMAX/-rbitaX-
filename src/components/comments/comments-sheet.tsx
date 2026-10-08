@@ -15,6 +15,7 @@ const ERRORS: [RegExp, string][] = [
   [/rate/i, "Muitos comentários seguidos. Espere um pouco."],
   [/blocked/i, "Você não pode comentar aqui."],
   [/comments_disabled/i, "Os comentários desta publicação estão desativados."],
+  [/comments_restricted/i, "O autor limitou quem pode comentar nas publicações dele."],
   [/post_not_found/i, "Esta publicação não está mais disponível."],
 ];
 

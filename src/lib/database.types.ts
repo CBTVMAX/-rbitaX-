@@ -469,6 +469,10 @@ export type Database = {
         }[];
       };
       send_friend_request: { Args: { target_user_id: string }; Returns: string };
+      my_privacy: { Args: Record<PropertyKey, never>; Returns: Json };
+      set_privacy: { Args: { p_key: string; p_scope: string; p_allow?: string[]; p_deny?: string[] }; Returns: Json };
+      set_personal_space: { Args: { p_on: boolean }; Returns: Json };
+      privacy_can: { Args: { p_owner: string; p_keys: string[] }; Returns: Json };
       respond_friend_request: { Args: { requester_id: string; accept: boolean }; Returns: string };
       cancel_friend_request: { Args: { target_user_id: string }; Returns: string };
       remove_friend: { Args: { other_user_id: string }; Returns: string };
