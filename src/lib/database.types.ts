@@ -473,6 +473,8 @@ export type Database = {
       get_profile_friends: { Args: { p_user: string; p_filter?: string; p_query?: string; p_offset?: number; p_limit?: number }; Returns: Json };
       get_profile_followers: { Args: { p_user: string; p_query?: string; p_offset?: number; p_limit?: number }; Returns: Json };
       profile_about_me_from_post: { Args: { p_post: string }; Returns: Json };
+      my_notification_prefs: { Args: Record<PropertyKey, never>; Returns: Json };
+      set_notification_pref: { Args: { p_key: string; p_level: string }; Returns: Json };
       my_privacy: { Args: Record<PropertyKey, never>; Returns: Json };
       set_privacy: { Args: { p_key: string; p_scope: string; p_allow?: string[]; p_deny?: string[] }; Returns: Json };
       set_personal_space: { Args: { p_on: boolean }; Returns: Json };
