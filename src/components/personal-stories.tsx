@@ -842,37 +842,56 @@ export function FeedStories({ me }: { me: { id: string; name: string; avatarUrl:
         ))}
       </div>
 
-      {/* ---------- Computador: cartões ---------- */}
-      <div className="ox-card hidden rounded-2xl border border-white/10 bg-space-surface p-2.5 md:block">
-        <div className="no-scrollbar flex gap-2 overflow-x-auto">
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            disabled={busy}
-            className="flex h-[124px] w-[92px] shrink-0 flex-col items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.02] text-white/60 transition hover:border-pa/50 hover:text-white disabled:opacity-60"
-          >
-            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15">
-              {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" />}
+      {/* ---------- Computador: cartões altos, como no VK ---------- */}
+      <div className="no-scrollbar hidden gap-2 overflow-x-auto md:flex">
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={busy}
+          aria-label="Criar história"
+          className="group relative h-[167px] w-[94px] shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-space-card text-left disabled:opacity-70"
+        >
+          {me.avatarUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={me.avatarUrl} alt="" className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+          )}
+          <span className="absolute inset-0 bg-gradient-to-b from-black/5 via-black/20 to-black/75" />
+          <span className="absolute inset-x-0 bottom-3 flex flex-col items-center gap-2">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-snow text-orbit-blue shadow-lg transition group-hover:scale-105">
+              {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-5 w-5" strokeWidth={2.5} />}
             </span>
-            <span className="text-[11px]">Criar história</span>
-          </button>
-          {[...(mine ? [mine] : []), ...others].map((g) => (
+            <span className="text-[13px] font-semibold text-snow drop-shadow">História</span>
+          </span>
+        </button>
+        {[...(mine ? [mine] : []), ...others].map((g) => {
+          const seenAll = isSeen(g);
+          const bg = cover(g);
+          return (
             <button
               key={g.key}
               type="button"
               onClick={() => setStart({ g: indexOf(g), i: 0 })}
-              className="group relative flex h-[124px] w-[92px] shrink-0 flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border border-white/10 bg-gradient-to-b from-white/[0.04] to-transparent transition hover:border-pa/50"
+              className="group relative h-[167px] w-[94px] shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-space-card"
             >
-              <span className={clsx("block h-[60px] w-[60px] rounded-full p-[2.5px]", ring(g))}>
-                <span className="block h-full w-full overflow-hidden rounded-full border-2 border-space-surface">{avatarInner(cover(g), g.name)}</span>
+              {bg && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={bg} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+              )}
+              <span className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/25 to-black/80" />
+              <span className="absolute inset-x-0 bottom-2.5 flex flex-col items-center gap-1.5">
+                <span className={clsx("block h-11 w-11 rounded-full p-[2.5px]", ring(g))}>
+                  <span className="block h-full w-full overflow-hidden rounded-full border-2 border-space-surface">{avatarInner(g.avatarUrl, g.name)}</span>
+                </span>
+                <span className={clsx("max-w-[88px] truncate px-1 text-[12px] font-medium drop-shadow", seenAll ? "text-snow/80" : "text-orbit-cyan")}>
+                  {g.key === me.id ? "Sua história" : g.name.split(" ")[0]}
+                </span>
               </span>
-              <span className="max-w-[84px] truncate px-1 text-[11px] text-white/85">{g.key === me.id ? "Seu story" : g.name.split(" ")[0]}</span>
             </button>
-          ))}
-          {groups !== null && list.length === 0 && (
-            <p className="flex items-center px-3 text-xs text-white/45">Nenhuma história agora. Que tal criar a primeira?</p>
-          )}
-        </div>
+          );
+        })}
+        {groups !== null && list.length === 0 && (
+          <p className="flex items-center px-3 text-xs text-white/45">Nenhuma história agora. Que tal criar a primeira?</p>
+        )}
       </div>
 
       <input ref={inputRef} type="file" accept="image/*,video/*" hidden onChange={create} />

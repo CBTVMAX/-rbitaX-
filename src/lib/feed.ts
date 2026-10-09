@@ -1,8 +1,10 @@
 /** Abas e filtros do feed (usados na página, no topo do celular e nos links da navegação). */
 export const FEED_TABS = [
   { id: "para-voce", label: "Para você" },
+  { id: "amigos", label: "Amigos" },
   { id: "seguindo", label: "Seguindo" },
   { id: "recentes", label: "Recentes" },
+  { id: "reacoes", label: "Reações" },
   { id: "salvos", label: "Salvos" },
 ] as const;
 export type FeedTab = (typeof FEED_TABS)[number]["id"];
