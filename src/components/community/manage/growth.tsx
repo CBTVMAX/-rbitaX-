@@ -4,12 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { clsx } from "clsx";
 import {
+  CalendarDays,
   Check,
   ChevronRight,
-  Globe2,
-  Mail,
   MessageCircle,
-  Phone,
+  MessagesSquare,
   ShieldAlert,
 } from "lucide-react";
 import {
@@ -20,56 +19,34 @@ import {
 import { useCommunity } from "../context";
 import { Card, Field, inputCls, SaveButton, Toggle } from "./fields";
 
+// Só destinos dentro do Órbita X: ninguém é levado para fora da plataforma.
 const TYPES: {
   id: CommunityCtaType;
   label: string;
+  defaultLabel: string;
   icon: React.ComponentType<{ className?: string }>;
-  field?: {
-    label: string;
-    placeholder: string;
-    inputMode?: "url" | "tel" | "email";
-  };
+  hint: string;
 }[] = [
-  { id: "message", label: "Escrever mensagem", icon: MessageCircle },
   {
-    id: "site",
-    label: "Abrir site",
-    icon: Globe2,
-    field: {
-      label: "Endereço do site",
-      placeholder: "https://seusite.com.br",
-      inputMode: "url",
-    },
-  },
-  {
-    id: "whatsapp",
-    label: "Abrir WhatsApp",
+    id: "message",
+    label: "Escrever mensagem",
+    defaultLabel: "Enviar mensagem",
     icon: MessageCircle,
-    field: {
-      label: "Número do WhatsApp (com DDD)",
-      placeholder: "(71) 99999-0000",
-      inputMode: "tel",
-    },
+    hint: "Abre a conversa com a comunidade no Messenger.",
   },
   {
-    id: "phone",
-    label: "Ligar",
-    icon: Phone,
-    field: {
-      label: "Telefone (com DDD)",
-      placeholder: "(71) 3333-0000",
-      inputMode: "tel",
-    },
+    id: "event",
+    label: "Ver evento",
+    defaultLabel: "Ver evento",
+    icon: CalendarDays,
+    hint: "Leva direto para um evento da comunidade.",
   },
   {
-    id: "email",
-    label: "Enviar e-mail",
-    icon: Mail,
-    field: {
-      label: "E-mail",
-      placeholder: "contato@seudominio.com.br",
-      inputMode: "email",
-    },
+    id: "discussion",
+    label: "Abrir discussão",
+    defaultLabel: "Abrir discussão",
+    icon: MessagesSquare,
+    hint: "Leva para uma discussão, como Regras ou Inscrição de membros.",
   },
 ];
 
@@ -92,7 +69,26 @@ export function ActionButtonSection({
     clicks: number;
     people: number;
   } | null>(null);
-  const def = TYPES.find((t) => t.id === type)!;
+  const def = TYPES.find((t) => t.id === type) ?? TYPES[0];
+  const [options, setOptions] = useState<
+    { id: string; title: string }[] | null
+  >(null);
+
+  // Eventos ou discussões da comunidade para escolher o destino.
+  useEffect(() => {
+    if (type === "message") return setOptions(null);
+    setOptions(null);
+    const table = type === "event" ? "CommunityEvent" : "CommunityDiscussion";
+    supabase
+      .from(table)
+      .select("id, title")
+      .eq("communityId", community.id)
+      .order("createdAt", { ascending: false })
+      .limit(50)
+      .then(({ data }) =>
+        setOptions((data ?? []) as { id: string; title: string }[]),
+      );
+  }, [type, supabase, community.id]);
 
   useEffect(() => {
     supabase
@@ -116,11 +112,9 @@ export function ActionButtonSection({
     if (error) {
       if (/invalid_target/.test(error.message))
         return toast(
-          type === "site"
-            ? "Use um endereço completo começando com https://"
-            : type === "email"
-              ? "Confira o e-mail."
-              : "Confira o número: DDD + telefone.",
+          type === "event"
+            ? "Escolha um evento da comunidade."
+            : "Escolha uma discussão da comunidade.",
           true,
         );
       return toast(communityError(error.message), true);
@@ -132,14 +126,13 @@ export function ActionButtonSection({
     toast("Botão de ação salvo.");
   }
 
-  const preview =
-    label.trim() || (type === "message" ? "Enviar mensagem" : def.label);
+  const preview = label.trim() || def.defaultLabel;
 
   return (
     <div className="space-y-4">
       <Card
         title="Botão de ação"
-        desc="Um botão em destaque no topo da comunidade, ao lado de Seguir: para conversar, visitar seu site, chamar no WhatsApp, ligar ou mandar e-mail."
+        desc="Um botão em destaque no topo da comunidade, ao lado de Seguir: para conversar com a comunidade, ver um evento ou abrir uma discussão. Sempre dentro do Órbita X."
       >
         <Toggle
           checked={enabled}
@@ -152,14 +145,17 @@ export function ActionButtonSection({
               <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/50">
                 Tipo de ação
               </span>
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2 sm:grid-cols-3">
                 {TYPES.map((t) => {
                   const Icon = t.icon;
                   return (
                     <button
                       key={t.id}
                       type="button"
-                      onClick={() => setType(t.id)}
+                      onClick={() => {
+                        setType(t.id);
+                        setTarget("");
+                      }}
                       aria-pressed={type === t.id}
                       className={clsx(
                         "flex items-center gap-2.5 rounded-2xl border px-3.5 py-3 text-left text-sm transition",
@@ -175,22 +171,32 @@ export function ActionButtonSection({
                 })}
               </div>
             </div>
-            {def.field && (
-              <Field label={def.field.label}>
-                <input
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  inputMode={def.field.inputMode}
-                  placeholder={def.field.placeholder}
-                  maxLength={300}
-                  className={inputCls}
-                />
+            <p className="text-xs text-white/50">{def.hint}</p>
+            {type !== "message" && (
+              <Field label={type === "event" ? "Evento" : "Discussão"}>
+                {options === null ? (
+                  <p className="text-sm text-white/45">Carregando…</p>
+                ) : options.length === 0 ? (
+                  <p className="text-sm text-white/55">
+                    {type === "event"
+                      ? "A comunidade ainda não tem eventos. Crie um em Gerenciar → Eventos."
+                      : "A comunidade ainda não tem discussões. Abra uma na aba Discussões."}
+                  </p>
+                ) : (
+                  <select
+                    value={target}
+                    onChange={(e) => setTarget(e.target.value)}
+                    className={clsx(inputCls, "appearance-none")}
+                  >
+                    <option value="">Escolha…</option>
+                    {options.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.title}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </Field>
-            )}
-            {type === "message" && (
-              <p className="text-xs text-white/50">
-                Abre a conversa com a comunidade no Messenger.
-              </p>
             )}
             <Field
               label="Texto do botão"
@@ -200,7 +206,7 @@ export function ActionButtonSection({
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
                 maxLength={30}
-                placeholder={type === "message" ? "Enviar mensagem" : def.label}
+                placeholder={def.defaultLabel}
                 className={inputCls}
               />
             </Field>
