@@ -47,13 +47,13 @@ export default async function ComunidadesPage(
 
   let listQuery = supabase
     .from("Community")
-    .select("id, name, slug, description, category, avatarUrl, coverUrl, isPrivate, isOfficial, memberCount")
+    .select("id, name, slug, description, category, avatarUrl, coverUrl, isPrivate, isOfficial, memberCount, ageLimit")
     .order("createdAt", { ascending: false });
   if (q) listQuery = listQuery.ilike("name", `%${q}%`);
   if (categoria) listQuery = listQuery.eq("category", categoria);
 
   const [{ data: allCommunities }, { data: filtered }, { data: members }, { data: myRequests }, { data: favoriteRows }] = await Promise.all([
-    supabase.from("Community").select("id, name, slug, description, category, avatarUrl, coverUrl, isPrivate, isOfficial, memberCount"),
+    supabase.from("Community").select("id, name, slug, description, category, avatarUrl, coverUrl, isPrivate, isOfficial, memberCount, ageLimit"),
     listQuery,
     current ? supabase.from("CommunityMember").select("communityId, userId, role").eq("userId", current.authId) : Promise.resolve({ data: [] as { communityId: string; userId: string; role: string }[] }),
     current
@@ -73,11 +73,15 @@ export default async function ComunidadesPage(
   const myCommunityIds = new Set(myMemberships.map((m) => m.communityId));
   const myOwnedIds = new Set(myMemberships.filter((m) => m.role === "owner").map((m) => m.communityId));
 
-  let list: CommunityRow[] = filtered ?? [];
+  // Restrição por idade: comunidades 16+/18+ não aparecem na busca nem nas recomendações
+  // (quem já participa continua vendo em "Minhas comunidades").
+  const ageHidden = (c: { id: string; ageLimit?: number | null }) => (c.ageLimit ?? 0) > 0 && !myCommunityIds.has(c.id);
+
+  let list: CommunityRow[] = (filtered ?? []).filter((c) => !ageHidden(c));
   if (view === "minhas") list = list.filter((c) => myCommunityIds.has(c.id));
   if (view === "criadas") list = list.filter((c) => myOwnedIds.has(c.id));
 
-  const featured = [...(allCommunities ?? [])]
+  const featured = [...(allCommunities ?? []).filter((c) => !ageHidden(c))]
     .sort((a, b) => (countByCommunity.get(b.id) ?? 0) - (countByCommunity.get(a.id) ?? 0))
     .slice(0, 4);
 
@@ -297,10 +301,10 @@ export default async function ComunidadesPage(
           friendsByCommunity.set(m.communityId, [...(friendsByCommunity.get(m.communityId) ?? []), m.userId]);
         }
       }
-      const notMine = (allCommunities ?? []).filter((c) => !myCommunityIds.has(c.id));
+      const notMine = (allCommunities ?? []).filter((c) => !myCommunityIds.has(c.id) && !ageHidden(c));
       const fromFriends: Suggestion[] = [...friendsByCommunity.entries()]
         .map(([id, users]) => ({ c: byId.get(id), users }))
-        .filter((x): x is { c: NonNullable<typeof x.c>; users: string[] } => !!x.c)
+        .filter((x): x is { c: NonNullable<typeof x.c>; users: string[] } => !!x.c && !ageHidden(x.c))
         .sort((a, b) => b.users.length - a.users.length || (b.c.memberCount ?? 0) - (a.c.memberCount ?? 0))
         .map(({ c, users }) => ({
           ...c,
