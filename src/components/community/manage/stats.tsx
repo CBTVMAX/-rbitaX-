@@ -306,6 +306,13 @@ export function StatsSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [days, community.id, supabase]);
 
+  // Cliques no botão de ação (Gerenciar → Botão de ação), no mesmo período.
+  const [ctaClicks, setCtaClicks] = useState<number | null>(null);
+  useEffect(() => {
+    if (!community.cta?.enabled) return setCtaClicks(null);
+    supabase.rpc("community_cta_stats", { p_community: community.id, p_days: days }).then(({ data }) => setCtaClicks(data ? (data as unknown as { clicks: number }).clicks : null));
+  }, [days, community.id, community.cta?.enabled, supabase]);
+
   const daily = stats?.daily ?? [];
   const dayKeys = daily.map((d) => d.day);
   const net = stats ? stats.newMembers - stats.lostMembers : 0;
@@ -369,6 +376,7 @@ export function StatsSection() {
             <Tile label="Views de vídeos" value={stats.videoViews} />
             <Tile label="Views de clipes" value={stats.clipViews} />
             <Tile label="Denúncias abertas" value={stats.openReports} sub={stats.pending ? `${stats.pending} aguardando aprovação` : undefined} />
+            {ctaClicks !== null && <Tile label="Cliques no botão de ação" value={ctaClicks} sub="uma vez por pessoa ao dia" />}
           </div>
 
           <div className="grid gap-4 xl:grid-cols-2">

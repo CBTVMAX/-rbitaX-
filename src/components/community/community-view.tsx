@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import {
   AlignLeft,
+  ExternalLink,
   ArrowLeft,
   AtSign,
   FileText,
@@ -35,7 +36,7 @@ import { Avatar } from "@/components/post-card";
 import { CommunityJoinButton } from "@/components/community-join-button";
 import { useStoreToast } from "@/components/store/store-view";
 import { categoryLabel } from "@/lib/community-categories";
-import { accentOf, ago, can, categoryOf, compactNumber, rank, type Album, type Community, type CommunityPost, type Discussion, type Membership, type Role, type Viewer } from "@/lib/communities";
+import { accentOf, ago, can, ctaHref, categoryOf, compactNumber, rank, type Album, type Community, type CommunityPost, type Discussion, type Membership, type Role, type Viewer } from "@/lib/communities";
 import { CommunityContext, useCommunity, type CommunityCtx } from "./context";
 import { CommunityPostCard } from "./post-card";
 import { useCreateOptions } from "./composer";
@@ -312,7 +313,7 @@ type HubProps = Parameters<typeof CommunityView>[0] & {
 function Hub(p: HubProps) {
   const { community, viewer, membership, canSee, staff, base } = p;
   const router = useRouter();
-  const { role, setRole, toast } = useCommunity();
+  const { role, setRole, toast, supabase } = useCommunity();
   const share = useShareCommunity();
   const chat = useCommunityChat();
   const options = useCreateOptions();
@@ -334,6 +335,13 @@ function Hub(p: HubProps) {
   const [infoOpen, setInfoOpen] = useState(false);
   const canDiscuss = !!viewer && canSee && can(community, role, "discussion") && !membership.muted;
 
+  // Botão de ação (Gerenciar → Botão de ação): cada clique conta nas estatísticas.
+  const cta = community.cta?.enabled ? community.cta : null;
+  const ctaLink = ctaHref(cta);
+  const ctaClick = () => {
+    if (viewer) void supabase.rpc("community_cta_click", { p_community: community.id });
+  };
+  const ctaCls = "flex h-10 items-center gap-1.5 rounded-full bg-orbit-gradient px-4 text-sm font-semibold text-snow shadow-glow transition hover:opacity-90";
   const iconBtn = "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-white transition hover:bg-white/[0.08]";
   const actions = (
     <>
@@ -354,9 +362,22 @@ function Hub(p: HubProps) {
           Entrar para participar
         </Link>
       )}
+      {cta && ctaLink && (
+        <a href={ctaLink} target={cta.type === "site" || cta.type === "whatsapp" ? "_blank" : undefined} rel="noopener noreferrer nofollow" onClick={ctaClick} className={ctaCls}>
+          <ExternalLink className="h-4 w-4" /> {cta.label}
+        </a>
+      )}
       {viewer && rank(role) < 3 && !membership.banned && (
-        <button type="button" onClick={chat.open} disabled={chat.busy} className="flex h-10 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.08]">
-          {chat.busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquareText className="h-4 w-4" />} Mensagem
+        <button
+          type="button"
+          onClick={() => {
+            if (cta?.type === "message") ctaClick();
+            chat.open();
+          }}
+          disabled={chat.busy}
+          className={cta?.type === "message" ? ctaCls : "flex h-10 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.08]"}
+        >
+          {chat.busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquareText className="h-4 w-4" />} {cta?.type === "message" ? cta.label : "Mensagem"}
         </button>
       )}
       {staff && (

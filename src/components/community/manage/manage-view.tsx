@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
-import { Activity, AlertTriangle, ArrowLeft, BarChart3, Bell, CalendarDays, ChevronRight, Contact, Download, Drama, FileStack, FileText, Hash, KeyRound, LayoutGrid, Lock, Palette, ScrollText, Settings2, ShieldAlert, Sparkles, UserCog, Users } from "lucide-react";
+import { Activity, AlertTriangle, ArrowLeft, ListChecks, MousePointerClick, BarChart3, Bell, CalendarDays, ChevronRight, Contact, Download, Drama, FileStack, FileText, Hash, KeyRound, LayoutGrid, Lock, Palette, ScrollText, Settings2, ShieldAlert, Sparkles, UserCog, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useStoreToast } from "@/components/store/store-view";
 import { accentOf, rank, type Community, type Role, type Viewer } from "@/lib/communities";
@@ -29,12 +29,13 @@ import { DownloadsSection } from "./downloads";
 import { ActivitySection } from "./activity";
 import { WelcomeSection } from "./welcome";
 import { ContactsSection } from "./contacts";
+import { ActionButtonSection, AgeLimitCard, ChecklistSection } from "./growth";
 
-type Section = "geral" | "contatos" | "fichas" | "personalizacao" | "privacidade" | "conteudo" | "abas" | "assuntos" | "rpg" | "boasvindas" | "eventos" | "membros" | "equipe" | "permissoes" | "moderacao" | "notificacoes" | "atividade" | "estatisticas" | "downloads" | "registro" | "perigo";
+type Section = "recomendacoes" | "botao" | "geral" | "contatos" | "fichas" | "personalizacao" | "privacidade" | "conteudo" | "abas" | "assuntos" | "rpg" | "boasvindas" | "eventos" | "membros" | "equipe" | "permissoes" | "moderacao" | "notificacoes" | "atividade" | "estatisticas" | "downloads" | "registro" | "perigo";
 
 // Grupos como no "Gerenciar" do VK (Principal, Conteúdo, Comunicação, Membros, Avançado).
 const GROUP_OF: Record<Section, string> = {
-  geral: "Principal", personalizacao: "Principal", privacidade: "Principal", abas: "Principal", assuntos: "Principal", boasvindas: "Principal", estatisticas: "Principal", atividade: "Principal",
+  recomendacoes: "Principal", botao: "Principal", geral: "Principal", personalizacao: "Principal", privacidade: "Principal", abas: "Principal", assuntos: "Principal", boasvindas: "Principal", estatisticas: "Principal", atividade: "Principal",
   conteudo: "Conteúdo", eventos: "Conteúdo", rpg: "Conteúdo", downloads: "Conteúdo", fichas: "Conteúdo",
   notificacoes: "Comunicação", moderacao: "Comunicação",
   membros: "Membros", equipe: "Membros", permissoes: "Membros", contatos: "Membros",
@@ -43,6 +44,8 @@ const GROUP_OF: Record<Section, string> = {
 const GROUP_ORDER = ["Principal", "Conteúdo", "Comunicação", "Membros", "Avançado"];
 
 const SECTIONS: { id: Section; label: string; desc: string; icon: React.ComponentType<{ className?: string }>; min: number }[] = [
+  { id: "recomendacoes", label: "Lista de verificação", desc: "Missões para deixar a comunidade completa e crescer", icon: ListChecks, min: 3 },
+  { id: "botao", label: "Botão de ação", desc: "Mensagem, site, WhatsApp, ligar ou e-mail, com cliques", icon: MousePointerClick, min: 3 },
   { id: "geral", label: "Editar informações", desc: "Nome, @, categoria, descrição, regras e links", icon: Settings2, min: 3 },
   { id: "personalizacao", label: "Personalização", desc: "Foto, capa e tema da comunidade", icon: Palette, min: 3 },
   { id: "privacidade", label: "Privacidade", desc: "Pública ou privada", icon: Lock, min: 3 },
@@ -119,6 +122,19 @@ export function ManageView(props: {
           onSaved={(p) => setCommunity((c) => ({ ...c, ...p, category: p.category ?? c.category }))}
         />
       );
+      if (active === "privacidade")
+        content = (
+          <div className="space-y-4">
+            {content}
+            <AgeLimitCard onSaved={(ageLimit) => setCommunity((c) => ({ ...c, ageLimit }))} />
+          </div>
+        );
+      break;
+    case "recomendacoes":
+      content = <ChecklistSection base={base} />;
+      break;
+    case "botao":
+      content = <ActionButtonSection onSaved={(cta) => setCommunity((c) => ({ ...c, cta }))} />;
       break;
     case "contatos":
       content = <ContactsSection />;

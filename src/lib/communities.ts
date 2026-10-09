@@ -43,10 +43,35 @@ export type Community = {
   hashtagSuffix: string | null;
   /** Comunidade marcada como RPG (habilita Personagens/Fichas). */
   isRpg: boolean;
+  /** Botão de ação no topo da comunidade (Mensagem, Site, WhatsApp, Ligar, E-mail). */
+  cta?: CommunityCta | null;
+  /** Restrição por idade: 0 (sem limite), 16 ou 18. */
+  ageLimit?: number;
 };
 
+export type CommunityCtaType = "message" | "site" | "whatsapp" | "phone" | "email";
+export type CommunityCta = { enabled: boolean; type?: CommunityCtaType; target?: string; label?: string };
+
+/** Endereço do botão de ação (null = "Enviar mensagem", que abre o chat da comunidade). */
+export function ctaHref(cta: CommunityCta | null | undefined): string | null {
+  if (!cta?.enabled || !cta.type) return null;
+  const t = cta.target ?? "";
+  switch (cta.type) {
+    case "site":
+      return /^https:\/\//.test(t) ? t : null;
+    case "whatsapp":
+      return `https://wa.me/${t.replace(/[^0-9]/g, "")}`;
+    case "phone":
+      return `tel:${t}`;
+    case "email":
+      return `mailto:${t}`;
+    default:
+      return null;
+  }
+}
+
 export const COMMUNITY_COLUMNS =
-  "id, name, slug, username, description, category, avatarUrl, coverUrl, isPrivate, isOfficial, accentColor, rules, links, permissions, moderation, notifyPrefs, memberCount, createdAt, ownerId, status, hashtagSuffix, isRpg";
+  "id, name, slug, username, description, category, avatarUrl, coverUrl, isPrivate, isOfficial, accentColor, rules, links, permissions, moderation, notifyPrefs, memberCount, createdAt, ownerId, status, hashtagSuffix, isRpg, cta, ageLimit";
 
 /** Um assunto (ator/personagem) do catálogo da comunidade e sua hashtag final. */
 export type CommunitySubject = { id: string; label: string; slug: string; tag: string; sortOrder: number; count: number };

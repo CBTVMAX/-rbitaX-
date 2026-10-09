@@ -22,7 +22,7 @@ type CommentRow = { content: string; createdAt: string; id: string; postId: stri
 type CommentInsert = { content: string; createdAt?: string; id: string; postId: string; updatedAt: string; userId: string; parentId?: string | null };
 type CommentUpdate = Partial<CommentInsert>;
 
-type CommunityRow = { avatarUrl: string | null; category: string | null; coverUrl: string | null; createdAt: string; description: string | null; id: string; isPrivate: boolean; name: string; slug: string; username: string; isOfficial: boolean; accentColor: string | null; rules: string | null; links: Json; permissions: Json; moderation: Json; notifyPrefs: Json; memberCount: number; createdById: string | null; updatedAt: string; ownerId: string | null; status: string; tags: Json; welcome: Json; rulesList: Json; hashtagSuffix: string | null; isRpg: boolean };
+type CommunityRow = { cta: Json | null; ageLimit: number; avatarUrl: string | null; category: string | null; coverUrl: string | null; createdAt: string; description: string | null; id: string; isPrivate: boolean; name: string; slug: string; username: string; isOfficial: boolean; accentColor: string | null; rules: string | null; links: Json; permissions: Json; moderation: Json; notifyPrefs: Json; memberCount: number; createdById: string | null; updatedAt: string; ownerId: string | null; status: string; tags: Json; welcome: Json; rulesList: Json; hashtagSuffix: string | null; isRpg: boolean };
 type CommunityRoleRow = { id: string; communityId: string; name: string; description: string | null; color: string; icon: string; rank: number; permissions: Json; sortOrder: number; createdAt: string };
 type CommunityMemberRoleRow = { id: string; communityId: string; userId: string; roleId: string; assignedById: string | null; createdAt: string };
 type CommunityTabRow = { id: string; communityId: string; name: string; hashtags: Json; sortOrder: number; createdAt: string };
@@ -477,6 +477,11 @@ export type Database = {
       set_notification_pref: { Args: { p_key: string; p_level: string }; Returns: Json };
       my_preferences: { Args: Record<PropertyKey, never>; Returns: Json };
       set_preference: { Args: { p_key: string; p_value: Json }; Returns: Json };
+      community_set_cta: { Args: { p_community: string; p_cta: Json }; Returns: Json };
+      community_cta_click: { Args: { p_community: string }; Returns: undefined };
+      community_cta_stats: { Args: { p_community: string; p_days?: number }; Returns: Json };
+      community_set_age_limit: { Args: { p_community: string; p_limit: number }; Returns: number };
+      community_age_ok: { Args: { p_community: string }; Returns: boolean };
       my_privacy: { Args: Record<PropertyKey, never>; Returns: Json };
       set_privacy: { Args: { p_key: string; p_scope: string; p_allow?: string[]; p_deny?: string[] }; Returns: Json };
       set_personal_space: { Args: { p_on: boolean }; Returns: Json };
