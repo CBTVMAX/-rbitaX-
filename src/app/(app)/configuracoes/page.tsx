@@ -99,7 +99,7 @@ export default async function SettingsPage() {
       <Group
         title="Visual"
         items={[
-          { href: "/configuracoes/aparencia", icon: SunMoon, label: "Aparência", hint: `Modo ${THEME_LABEL[theme].toLowerCase()}` },
+          { href: "/configuracoes/aparencia", icon: SunMoon, label: "Conta e aparência", hint: `Modo ${THEME_LABEL[theme].toLowerCase()} · feed, comentários e mídia` },
           {
             href: "/configuracoes/personalizar",
             icon: Palette,

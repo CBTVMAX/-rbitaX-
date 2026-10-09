@@ -1,21 +1,27 @@
+"use client";
+
 import Link from "next/link";
 import { Fragment } from "react";
+import { useUserPrefs } from "@/components/user-prefs";
+import { maskProfanity } from "@/lib/user-prefs";
 
 const TOKEN = /(https?:\/\/[^\s<]{3,300}|www\.[^\s<]{3,300}|@[A-Za-z0-9_.]{3,30} \([^()\n]{0,60}\)|@[A-Za-z0-9_.]{3,30})/g;
 const LABELED = /^@([A-Za-z0-9_.]{3,30}) \(([^()\n]{0,60})\)$/;
 
 /** Text with clickable links and @mentions. Plain React text nodes only — nothing is injected as HTML. */
 export function RichText({ text, className }: { text: string; className?: string }) {
+  const { prefs } = useUserPrefs();
+  const clean = (t: string) => (prefs.profanityFilter ? maskProfanity(t) : t);
   const parts = text.split(TOKEN);
   return (
     <p className={className}>
       {parts.map((p, i) => {
-        if (i % 2 === 0) return <Fragment key={i}>{p}</Fragment>;
+        if (i % 2 === 0) return <Fragment key={i}>{clean(p)}</Fragment>;
         const labeled = p.match(LABELED);
         if (labeled)
           return (
             <Link key={i} href={`/perfil/${labeled[1]}`} title={`@${labeled[1]}`} className="font-medium text-orbit-cyan hover:underline">
-              {labeled[2].trim() || `@${labeled[1]}`}
+              {clean(labeled[2].trim()) || `@${labeled[1]}`}
             </Link>
           );
         if (p.startsWith("@"))

@@ -12,6 +12,8 @@ import { AccountSync } from "@/components/account-sync";
 import { ChatDock } from "@/components/chat-dock";
 import { PublishProvider } from "@/components/publish/publish-provider";
 import { RestoreAccountScreen } from "@/components/account-deactivated";
+import { UserPrefsProvider } from "@/components/user-prefs";
+import { parsePrefs } from "@/lib/user-prefs";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +24,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { profile } = current;
   const supabase = await createClient();
   // Página desativada (exclusão pedida): só a tela de restaurar, como no VK.
-  const [{ data: deleteAfter }, { data: badgeRows }] = await Promise.all([supabase.rpc("my_deactivation"), supabase.rpc("my_badge_counts")]);
+  const [{ data: deleteAfter }, { data: badgeRows }, { data: prefsRaw }] = await Promise.all([
+    supabase.rpc("my_deactivation"),
+    supabase.rpc("my_badge_counts"),
+    supabase.rpc("my_preferences"),
+  ]);
   if (typeof deleteAfter === "string") return <RestoreAccountScreen until={deleteAfter} name={profile.name} />;
 
   const theme = parseAppTheme((await cookies()).get(APP_THEME_COOKIE)?.value);
@@ -32,6 +38,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const accent = appAccentVars(profile.profileColor);
 
   return (
+    <UserPrefsProvider initial={parsePrefs(prefsRaw)}>
     <LiveActivityProvider userId={current.authId} initialCounts={initialCounts}>
       <PublishProvider me={{ id: current.authId, name: profile.name, avatarUrl: profile.avatarUrl }}>
       <div data-app-theme={theme} data-visual={visual} className="min-h-screen bg-space-bg bg-stars" style={accent as React.CSSProperties | undefined}>
@@ -61,5 +68,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </div>
       </PublishProvider>
     </LiveActivityProvider>
+    </UserPrefsProvider>
   );
 }

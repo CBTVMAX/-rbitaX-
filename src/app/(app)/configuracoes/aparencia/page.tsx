@@ -4,12 +4,16 @@ import { ArrowLeft, Palette } from "lucide-react";
 import { APP_THEME_COOKIE, APP_VISUAL_COOKIE, parseAppTheme, parseAppVisual } from "@/lib/app-theme";
 import { AppearancePicker } from "@/components/appearance-picker";
 import { VisualPicker } from "@/components/visual-picker";
+import { ContentSettings } from "@/components/content-settings";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AppearancePage() {
   const theme = parseAppTheme((await cookies()).get(APP_THEME_COOKIE)?.value);
   const visual = parseAppVisual((await cookies()).get(APP_VISUAL_COOKIE)?.value);
+  const { data: privacy } = await (await createClient()).rpc("my_privacy");
+  const commentScope = (privacy as { settings?: { comment?: { scope?: string } } } | null)?.settings?.comment?.scope;
 
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-3 py-4 md:px-4 md:py-6">
@@ -22,8 +26,8 @@ export default async function AppearancePage() {
           <ArrowLeft className="h-6 w-6" />
         </Link>
         <div>
-          <h1 className="font-display text-xl font-bold text-white md:text-2xl">Aparência</h1>
-          <p className="text-sm text-white/60">Escolha como o Órbita X aparece para você neste aparelho.</p>
+          <h1 className="font-display text-xl font-bold text-white md:text-2xl">Conta e aparência</h1>
+          <p className="text-sm text-white/60">Tema, visual, feed, comentários e reprodução de mídia.</p>
         </div>
       </div>
 
@@ -43,6 +47,8 @@ export default async function AppearancePage() {
         </p>
         <VisualPicker initial={visual} />
       </section>
+
+      <ContentSettings commentsOpen={commentScope !== "only_me"} />
 
       <Link
         href="/configuracoes/personalizar"

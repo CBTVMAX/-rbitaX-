@@ -10,6 +10,7 @@ import { sortMedia } from "@/lib/post-media";
 import { FeedStories } from "@/components/personal-stories";
 import { FEED_TABS, FEED_TYPES, type FeedTab, type FeedType } from "@/lib/feed";
 import { summarizeReactions } from "@/lib/post-reactions";
+import { parsePrefs } from "@/lib/user-prefs";
 import { ChevronDown, Check, Plus, SlidersHorizontal } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -115,8 +116,14 @@ export default async function FeedPage(props: { searchParams: Promise<{ aba?: st
     ...(p.sharedPostId ? { shared: shared.get(p.sharedPostId) ?? null } : {}),
   }));
 
+  // Conta e aparência → Ordem do feed: "Interessantes primeiro" (padrão) ou "Mais recentes primeiro".
+  const { data: prefsRaw } = await supabase.rpc("my_preferences");
+  const feedOrder = parsePrefs(prefsRaw).feedOrder;
+
   // "Para você": interação recente pesa mais, e quem você segue ou é amigo ganha destaque.
-  if (tab === "para-voce") {
+  if (tab === "para-voce" && feedOrder === "recent") {
+    feed = feed.slice(0, 30);
+  } else if (tab === "para-voce") {
     const now = Date.now();
     const score = (p: FeedPost) => {
       const hours = Math.max(0, (now - new Date(p.createdAt).getTime()) / 3_600_000);

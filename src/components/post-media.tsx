@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { clsx } from "clsx";
-import { ChevronLeft, ChevronRight, Music2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Music2, Play, X } from "lucide-react";
+import { useUserPrefs } from "@/components/user-prefs";
 
 export type PostMediaItem = { id: string; type: string; url: string };
 
@@ -48,6 +49,82 @@ export function PostMedia({ media }: { media: PostMediaItem[] }) {
   );
 }
 
+/**
+ * Vídeo no feed. Com "Reproduzir vídeos automaticamente" ligado (Conta e aparência), toca sem som
+ * quando aparece na tela e pausa ao sair; desligado, só toca quando a pessoa dá play.
+ */
+function FeedVideo({ src, className }: { src: string; className?: string }) {
+  const { prefs } = useUserPrefs();
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !prefs.autoplayVideo || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
+          el.muted = true;
+          el.play().catch(() => {});
+        } else if (!el.paused) {
+          el.pause();
+        }
+      },
+      { threshold: [0, 0.6] }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [prefs.autoplayVideo]);
+  // eslint-disable-next-line jsx-a11y/media-has-caption
+  return <video ref={ref} src={src} controls playsInline preload="metadata" className={className} />;
+}
+
+const isGif = (url: string) => /\.gif(\?|#|$)/i.test(url);
+
+/**
+ * Imagem no feed. Com "Reproduzir GIFs automaticamente" desligado, o GIF aparece parado (primeiro
+ * quadro) com o selo GIF; tocar nele faz começar.
+ */
+function FeedImage({ src, className }: { src: string; className?: string }) {
+  const { prefs } = useUserPrefs();
+  const [playing, setPlaying] = useState(false);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const still = isGif(src) && !prefs.autoplayGif && !playing;
+  useEffect(() => {
+    if (!still) return;
+    const img = new Image();
+    img.onload = () => {
+      const c = canvas.current;
+      if (!c) return;
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      c.getContext("2d")?.drawImage(img, 0, 0);
+    };
+    img.src = src;
+  }, [still, src]);
+  if (!still) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={src} alt="" className={className} />;
+  }
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      aria-label="Reproduzir GIF"
+      onClick={(e) => {
+        e.stopPropagation();
+        setPlaying(true);
+      }}
+      onKeyDown={(e) => e.key === "Enter" && setPlaying(true)}
+      className="relative flex h-full w-full items-center justify-center"
+    >
+      <canvas ref={canvas} className={className} />
+      <span className="absolute flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-snow backdrop-blur">
+        <Play className="h-5 w-5" />
+      </span>
+      <span className="absolute left-2 top-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-snow">GIF</span>
+    </span>
+  );
+}
+
 /** Player de música numa publicação. */
 function AudioPlayer({ item }: { item: PostMediaItem }) {
   return (
@@ -65,13 +142,13 @@ function Single({ item, onOpen }: { item: PostMediaItem; onOpen: () => void }) {
   if (item.type === "video") {
     return (
       // eslint-disable-next-line jsx-a11y/media-has-caption
-      <video src={item.url} controls className="max-h-[600px] w-full rounded-xl bg-black object-contain" />
+      <FeedVideo src={item.url} className="max-h-[600px] w-full rounded-xl bg-black object-contain" />
     );
   }
   return (
     <button type="button" onClick={onOpen} className="flex w-full justify-center overflow-hidden rounded-xl bg-space-card" aria-label="Abrir foto">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={item.url} alt="" className="max-h-[600px] w-full object-contain transition hover:opacity-95" />
+      <FeedImage src={item.url} className="max-h-[600px] w-full object-contain transition hover:opacity-95" />
     </button>
   );
 }
@@ -116,7 +193,7 @@ function Carousel({ items, onOpen }: { items: PostMediaItem[]; onOpen: (i: numbe
           <div key={m.id} className="flex h-full w-full shrink-0 snap-center items-center justify-center">
             {m.type === "video" ? (
               // eslint-disable-next-line jsx-a11y/media-has-caption
-              <video src={m.url} controls className="max-h-full w-full bg-black object-contain" />
+              <FeedVideo src={m.url} className="max-h-full w-full bg-black object-contain" />
             ) : (
               <button type="button" onClick={() => onOpen(i)} className="flex h-full w-full items-center justify-center" aria-label={`Abrir foto ${i + 1}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -243,7 +320,7 @@ function Grid({ items, onOpen }: { items: PostMediaItem[]; onOpen: (i: number) =
     return (
       <button key={m.id} type="button" onClick={() => onOpen(i)} aria-label={`Abrir foto ${i + 1}`} className={clsx("relative block overflow-hidden rounded-lg bg-space-card", className)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={m.url} alt="" className="h-full w-full object-cover transition duration-300 hover:scale-[1.03]" />
+        <FeedImage src={m.url} className="h-full w-full object-cover transition duration-300 hover:scale-[1.03]" />
         {more > 0 && (
           <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-2xl font-bold text-snow">+{more}</span>
         )}
