@@ -43,31 +43,21 @@ export type Community = {
   hashtagSuffix: string | null;
   /** Comunidade marcada como RPG (habilita Personagens/Fichas). */
   isRpg: boolean;
-  /** Botão de ação no topo da comunidade (Mensagem, Site, WhatsApp, Ligar, E-mail). */
+  /** Botão de ação no topo da comunidade (Mensagem, Evento ou Discussão — sempre dentro do Órbita X). */
   cta?: CommunityCta | null;
   /** Restrição por idade: 0 (sem limite), 16 ou 18. */
   ageLimit?: number;
 };
 
-export type CommunityCtaType = "message" | "site" | "whatsapp" | "phone" | "email";
+export type CommunityCtaType = "message" | "event" | "discussion";
 export type CommunityCta = { enabled: boolean; type?: CommunityCtaType; target?: string; label?: string };
 
-/** Endereço do botão de ação (null = "Enviar mensagem", que abre o chat da comunidade). */
-export function ctaHref(cta: CommunityCta | null | undefined): string | null {
-  if (!cta?.enabled || !cta.type) return null;
-  const t = cta.target ?? "";
-  switch (cta.type) {
-    case "site":
-      return /^https:\/\//.test(t) ? t : null;
-    case "whatsapp":
-      return `https://wa.me/${t.replace(/[^0-9]/g, "")}`;
-    case "phone":
-      return `tel:${t}`;
-    case "email":
-      return `mailto:${t}`;
-    default:
-      return null;
-  }
+/** Página interna do botão de ação (null = "Enviar mensagem", que abre o chat da comunidade). */
+export function ctaHref(cta: CommunityCta | null | undefined, base: string): string | null {
+  if (!cta?.enabled || !cta.type || !cta.target) return null;
+  if (cta.type === "event") return `${base}/eventos/${encodeURIComponent(cta.target)}`;
+  if (cta.type === "discussion") return `${base}/discussoes/${encodeURIComponent(cta.target)}`;
+  return null;
 }
 
 export const COMMUNITY_COLUMNS =

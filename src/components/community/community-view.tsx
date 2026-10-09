@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import {
   AlignLeft,
-  ExternalLink,
   ArrowLeft,
   AtSign,
   FileText,
@@ -337,7 +336,7 @@ function Hub(p: HubProps) {
 
   // Botão de ação (Gerenciar → Botão de ação): cada clique conta nas estatísticas.
   const cta = community.cta?.enabled ? community.cta : null;
-  const ctaLink = ctaHref(cta);
+  const ctaLink = ctaHref(cta, base);
   const ctaClick = () => {
     if (viewer) void supabase.rpc("community_cta_click", { p_community: community.id });
   };
@@ -363,9 +362,9 @@ function Hub(p: HubProps) {
         </Link>
       )}
       {cta && ctaLink && (
-        <a href={ctaLink} target={cta.type === "site" || cta.type === "whatsapp" ? "_blank" : undefined} rel="noopener noreferrer nofollow" onClick={ctaClick} className={ctaCls}>
-          <ExternalLink className="h-4 w-4" /> {cta.label}
-        </a>
+        <Link href={ctaLink} onClick={ctaClick} className={ctaCls}>
+          {cta.type === "event" ? <CalendarDays className="h-4 w-4" /> : <MessagesSquare className="h-4 w-4" />} {cta.label}
+        </Link>
       )}
       {viewer && rank(role) < 3 && !membership.banned && (
         <button
