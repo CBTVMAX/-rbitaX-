@@ -42,6 +42,7 @@ import { useCommunity } from "./context";
 import { Confirm, Sheet } from "./ui";
 import { RichText } from "./rich-text";
 import { MentionHint, MentionPanel, useMentionPicker } from "@/components/mentions";
+import { useUserPrefs } from "@/components/user-prefs";
 import { Lightbox } from "./lightbox";
 import { ReportSheet, type ReportTarget } from "./report-sheet";
 
@@ -158,6 +159,7 @@ export function CommunityPostCard({
   const [comments, setComments] = useState<CommentRow[] | null>(null);
   const [commentText, setCommentText] = useState("");
   const commentMention = useMentionPicker(commentInput, commentText, setCommentText);
+  const { prefs } = useUserPrefs();
   const [sending, setSending] = useState(false);
   const ref = useRef<HTMLElement>(null);
   const commentIds = useMemo(() => (comments ?? []).map((c) => c.id), [comments]);
@@ -669,7 +671,7 @@ export function CommunityPostCard({
             <p className="px-1 text-xs text-white/40">{post.commentsEnabled ? "Seja a primeira pessoa a comentar." : "Comentários desativados."}</p>
           ) : (
             <div className="-mx-2">
-              {threadComments(comments, "old", (id) => commentLikes[id]?.count ?? 0).map(({ root, replies }) => (
+              {threadComments(comments, prefs.commentOrder, (id) => commentLikes[id]?.count ?? 0).map(({ root, replies }) => (
                 <div key={root.id}>
                   {renderComment(root, false)}
                   {replies.map((r) => renderComment(r, true))}

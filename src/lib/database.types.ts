@@ -475,6 +475,8 @@ export type Database = {
       profile_about_me_from_post: { Args: { p_post: string }; Returns: Json };
       my_notification_prefs: { Args: Record<PropertyKey, never>; Returns: Json };
       set_notification_pref: { Args: { p_key: string; p_level: string }; Returns: Json };
+      my_preferences: { Args: Record<PropertyKey, never>; Returns: Json };
+      set_preference: { Args: { p_key: string; p_value: Json }; Returns: Json };
       my_privacy: { Args: Record<PropertyKey, never>; Returns: Json };
       set_privacy: { Args: { p_key: string; p_scope: string; p_allow?: string[]; p_deny?: string[] }; Returns: Json };
       set_personal_space: { Args: { p_on: boolean }; Returns: Json };

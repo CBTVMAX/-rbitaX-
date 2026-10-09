@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { clsx } from "clsx";
+import { useUserPrefs } from "@/components/user-prefs";
+import { maskProfanity } from "@/lib/user-prefs";
 
 // @menções (perfis e comunidades) e #hashtags viram links clicáveis.
 // "@usuario (texto)" (padrão do VK) mostra só o texto, com link para o perfil do @usuario.
@@ -12,14 +16,17 @@ const LABELED = /^@([a-zA-Z0-9_.]{2,30}) \(([^()\n]{0,60})\)$/;
  * tanto perfis quanto comunidades (o handle pode ser de qualquer um dos dois).
  */
 export function RichText({ text, className }: { text: string; className?: string }) {
+  // Filtro de linguagem ofensiva (Conta e aparência): só muda o que esta pessoa vê.
+  const { prefs } = useUserPrefs();
   if (!text) return null;
+  const clean = (t: string) => (prefs.profanityFilter ? maskProfanity(t) : t);
   const nodes: React.ReactNode[] = [];
   let last = 0;
   let key = 0;
   for (const m of text.matchAll(TOKEN)) {
     const token = m[0];
     const start = m.index ?? 0;
-    if (start > last) nodes.push(text.slice(last, start));
+    if (start > last) nodes.push(clean(text.slice(last, start)));
     const handle = token.slice(1);
     const labeled = token.match(LABELED);
     if (labeled) {
@@ -31,7 +38,7 @@ export function RichText({ text, className }: { text: string; className?: string
           className="font-medium text-orbit-cyan hover:underline"
           onClick={(e) => e.stopPropagation()}
         >
-          {labeled[2].trim() || `@${labeled[1]}`}
+          {clean(labeled[2].trim()) || `@${labeled[1]}`}
         </Link>
       );
     } else if (token[0] === "@") {
@@ -49,6 +56,6 @@ export function RichText({ text, className }: { text: string; className?: string
     }
     last = start + token.length;
   }
-  if (last < text.length) nodes.push(text.slice(last));
+  if (last < text.length) nodes.push(clean(text.slice(last)));
   return <span className={clsx("whitespace-pre-wrap", className)}>{nodes}</span>;
 }

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { clsx } from "clsx";
 import { Check, ChevronDown, Loader2, Send, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useUserPrefs } from "@/components/user-prefs";
 import { CommentStickerButton } from "./comment-sticker-picker";
 import type { StickerInfo } from "@/lib/messenger/types";
 import { CommentItem, encodeStickerComment, firstName, SORT_LABEL, threadComments, useCommentLikes, type CommentSort, type CommentUser, type ThreadComment } from "./comment-kit";
@@ -48,7 +49,8 @@ export function CommentsSheet({
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [comments, setComments] = useState<ThreadComment[] | null>(null);
-  const [sort, setSort] = useState<CommentSort>("top");
+  const { prefs } = useUserPrefs();
+  const [sort, setSort] = useState<CommentSort>(prefs.commentOrder);
   const [sortOpen, setSortOpen] = useState(false);
   const [text, setText] = useState("");
   const [replyTo, setReplyTo] = useState<ThreadComment | null>(null);
