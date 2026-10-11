@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { storageUrl } from "@/lib/storage-url";
 
 /** Chat wallpapers (Messenger → Tema da conversa → Papel de parede), in public/wallpapers. */
 export const WALLPAPERS = [
@@ -28,7 +29,6 @@ export function isPlainWallpaper(id: string | null | undefined) {
  * "media". Só quem escolheu vê (a escolha fica na configuração da conversa de cada um).
  */
 const CUSTOM = /^custom:([0-9a-f-]{36}\/wallpapers\/[0-9a-f-]{36}\.(?:webp|jpg))$/;
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 
 export function isCustomWallpaper(id: string | null | undefined): id is string {
   return !!id && CUSTOM.test(id);
@@ -49,7 +49,7 @@ export function defaultWallpaper(light: boolean, simple = false) {
 
 export function wallpaperSrc(id: string, thumb = false) {
   const custom = id.match(CUSTOM);
-  if (custom) return `${SUPABASE_URL}/storage/v1/object/public/media/${custom[1]}`;
+  if (custom) return storageUrl("media", custom[1]);
   return `/wallpapers/${id}${thumb ? "-s" : ""}.webp`;
 }
 

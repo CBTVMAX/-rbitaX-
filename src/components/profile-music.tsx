@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { Loader2, Music2, Pause, Pencil, Play, Plus, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { storageUrl } from "@/lib/storage-url";
 
 export type ProfileMusicData = { title: string; artist?: string | null; url: string; coverUrl?: string | null };
 
@@ -133,7 +134,7 @@ function MusicEditor({ userId, current, onClose }: { userId: string; current: Pr
       setUploading(false);
       return setError("Não foi possível enviar o áudio.");
     }
-    const { data } = supabase.storage.from("media").getPublicUrl(path);
+    const data = { publicUrl: storageUrl("media", path) };
     setUrl(data.publicUrl);
     if (!title) setTitle(file.name.replace(/\.[^.]+$/, "").slice(0, 80));
     setUploading(false);

@@ -46,6 +46,7 @@ import {
   type AlbumDraft,
   type TrackDraft,
 } from "./dialogs";
+import { storagePathOf, storageUrl } from "@/lib/storage-url";
 
 type Tab = "catalogo" | "minhas" | "albuns";
 type ActionContext = { track: MusicTrack; albumId?: string };
@@ -54,9 +55,8 @@ const MAX_AUDIO = 25 * 1024 * 1024;
 const AUDIO_EXT: Record<string, string> = { "audio/mpeg": "mp3", "audio/ogg": "ogg", "audio/wav": "wav", "audio/flac": "flac" };
 
 function storagePath(url: string | null | undefined) {
-  const marker = "/storage/v1/object/public/media/";
-  const at = url ? url.indexOf(marker) : -1;
-  return at >= 0 ? decodeURIComponent(url!.slice(at + marker.length)) : null;
+  const ref = storagePathOf(url);
+  return ref?.bucket === "media" ? ref.path : null;
 }
 
 function readDuration(file: File): Promise<number | null> {
@@ -179,7 +179,7 @@ export function MusicApp({
     const path = `${me}/playlists/${albumId}-${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("media").upload(path, blob, { contentType: mime });
     if (error) throw error;
-    return supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+    return storageUrl("media", path);
   }
 
   async function saveAlbum(draft: AlbumDraft): Promise<string | null> {
@@ -267,7 +267,7 @@ export function MusicApp({
       const path = `${me}/tracks/${crypto.randomUUID()}.${AUDIO_EXT[contentType] ?? "mp3"}`;
       const { error } = await supabase.storage.from("media").upload(path, draft.file, { contentType });
       if (error) return "Não foi possível enviar o arquivo agora.";
-      audioUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+      audioUrl = storageUrl("media", path);
       duration = await readDuration(draft.file);
     }
     if (!editing) {

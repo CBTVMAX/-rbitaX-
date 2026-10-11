@@ -2,6 +2,7 @@
  * Fichas da comunidade (Construtor de Ficha). O modelo é 100% definido pela administração de cada
  * comunidade: nada aqui é pergunta fixa — só os tipos de bloco que o construtor oferece.
  */
+import { OWN_MEDIA } from "@/lib/storage-url";
 
 export type FieldType =
   | "short"
@@ -247,7 +248,7 @@ export function sheetError(message?: string, detail?: string): string {
 
 export const STATUS_LABEL: Record<SheetStatus, string> = { draft: "Rascunho", pending: "Pendente", approved: "Aprovada", rejected: "Recusada" };
 
-export const SAFE_MEDIA = /^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\//;
+export const SAFE_MEDIA = OWN_MEDIA;
 export const safeMedia = (u: unknown) => (typeof u === "string" && SAFE_MEDIA.test(u) ? u : null);
 
 export const SHAPE_RATIO: Record<ImageShape, number | null> = { square: 1, portrait: 3 / 4, landscape: 16 / 9, free: null };

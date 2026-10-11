@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { verifyUpload } from "@/lib/upload-guard";
+import { storageUrl } from "@/lib/storage-url";
 
 export type PostVisibility = "public" | "followers" | "private";
 
@@ -54,7 +55,7 @@ export async function publishPost({
     const path = `${userId}/posts/${postId}-${i}.${ext}`;
     const { error: uploadError } = await supabase.storage.from("media").upload(path, file, { upsert: true, contentType: mime });
     if (uploadError) throw uploadError;
-    const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
+    const pub = { publicUrl: storageUrl("media", path) };
     const { error: mediaError } = await supabase.from("Media").insert({
       id: crypto.randomUUID(),
       postId,

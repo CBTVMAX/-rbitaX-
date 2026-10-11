@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { storageUrl } from "@/lib/storage-url";
 
 /** Uploads an already-cropped cover (see CoverCropDialog) and saves it on the user. */
 export async function saveCover(userId: string, blob: Blob): Promise<string> {
@@ -9,7 +10,7 @@ export async function saveCover(userId: string, blob: Blob): Promise<string> {
     .from("media")
     .upload(path, blob, { upsert: true, contentType: blob.type });
   if (uploadError) throw uploadError;
-  const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
+  const pub = { publicUrl: storageUrl("media", path) };
   const { error: updateError } = await supabase.from("User").update({ coverUrl: pub.publicUrl }).eq("id", userId);
   if (updateError) throw updateError;
   return pub.publicUrl;

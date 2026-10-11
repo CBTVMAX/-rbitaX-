@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sniffFile } from "@/lib/upload-guard";
 import { timeAgo } from "@/lib/format";
 import type { Database } from "@/lib/database.types";
+import { storageUrl } from "@/lib/storage-url";
 
 /**
  * Communities: every permission is decided in the database (community_can / community_staff and the
@@ -419,7 +420,7 @@ export async function uploadCommunityFile(supabase: SupabaseClient<Database>, us
   const path = `${userId}/communities/${communityId}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from("media").upload(path, file, { contentType, cacheControl: "31536000", upsert: false });
   if (error) throw new Error("Falha no envio do arquivo. Tente de novo.");
-  const { data } = supabase.storage.from("media").getPublicUrl(path);
+  const data = { publicUrl: storageUrl("media", path) };
   const dims = await dimensions(file, kind);
   return { type: kind, url: data.publicUrl, mimeType: file.type, sizeBytes: file.size, name: file.name, ...dims };
 }

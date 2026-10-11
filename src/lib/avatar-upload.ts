@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { aspectMarker } from "@/lib/avatar-aspect";
+import { storageUrl } from "@/lib/storage-url";
 
 const AVATAR_BUCKET = "media";
 
@@ -26,7 +27,7 @@ export async function uploadAvatarFile(
     });
 
   if (error) throw error;
-  return supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path).data.publicUrl;
+  return storageUrl(AVATAR_BUCKET, path);
 }
 
 /** Points the user's avatar at an already-uploaded file. */
