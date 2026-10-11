@@ -10,6 +10,7 @@ import type { ChatUser } from "@/lib/messenger/types";
 import { useMessenger } from "./context";
 import { FriendPicker, useFriends } from "./dialogs";
 import { ChatAvatar, Modal, PrimaryButton } from "./ui";
+import { storageUrl } from "@/lib/storage-url";
 
 type Result = ChatUser & { friendState: string };
 
@@ -23,7 +24,7 @@ export async function uploadGroupPhoto(
   const path = `${meId}/grupo-${crypto.randomUUID()}.${mime === "image/webp" ? "webp" : mime === "image/gif" ? "gif" : "jpg"}`;
   const { error } = await supabase.storage.from("media").upload(path, blob, { contentType: mime, cacheControl: "31536000" });
   if (error) return null;
-  return supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+  return storageUrl("media", path);
 }
 
 function PersonRow({ u, onChat }: { u: Result; onChat: (u: ChatUser) => void }) {

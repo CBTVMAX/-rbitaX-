@@ -21,6 +21,7 @@ import { saveAvatarUrl, uploadAvatarFile } from "@/lib/avatar-upload";
 import { aspectMarker } from "@/lib/avatar-aspect";
 import { AvatarEditor } from "@/components/avatar-editor";
 import { clsx } from "clsx";
+import { storageUrl } from "@/lib/storage-url";
 
 type Step = "menu" | "source" | "edit" | "publish" | null;
 
@@ -129,7 +130,7 @@ export function AvatarFlow({
         const path = `${userId}/posts/avatar-${crypto.randomUUID()}.${ext}`;
         const { error: upErr } = await supabase.storage.from("media").upload(path, full, { contentType: full.type, cacheControl: "31536000" });
         if (!upErr) {
-          wholeUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+          wholeUrl = storageUrl("media", path);
           wholeType = full.type;
           try {
             const bmp = await createImageBitmap(full);

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { sniffFile } from "@/lib/upload-guard";
+import { storageUrl } from "@/lib/storage-url";
 
 /**
  * "Meus adesivos": GIFs e fotos que a própria pessoa transformou em adesivo. Ficam guardados na
@@ -19,7 +20,7 @@ const MAX_STICKERS = 120;
 const folder = (userId: string) => `${userId}/stickers`;
 
 function publicUrl(supabase: Client, path: string) {
-  return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+  return storageUrl(BUCKET, path);
 }
 
 let cache: { userId: string; list: Promise<PersonalSticker[]> } | null = null;

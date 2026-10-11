@@ -24,6 +24,7 @@ import { verifyUpload } from "@/lib/upload-guard";
 import { compressImage } from "@/lib/messenger/media";
 import { formatDuration, genreLabel, GENRES, normalize } from "@/lib/music";
 import { categoryFor, fromFileName, identifyOnline, readTags } from "@/lib/music-recognize";
+import { storagePathOf, storageUrl } from "@/lib/storage-url";
 
 // ---------------------------------------------------------------- utilidades
 const card = "rounded-2xl border border-white/10 bg-space-card/70";
@@ -54,9 +55,8 @@ function adminError(msg: string) {
 }
 
 function storagePath(url: string | null | undefined) {
-  const marker = "/storage/v1/object/public/media/";
-  const at = url ? url.indexOf(marker) : -1;
-  return at >= 0 ? decodeURIComponent(url!.slice(at + marker.length)) : null;
+  const ref = storagePathOf(url);
+  return ref?.bucket === "media" ? ref.path : null;
 }
 
 function readDuration(file: File): Promise<number | null> {
@@ -299,7 +299,7 @@ function UploadFiles({ supabase, say }: { supabase: Supa; say: Say }) {
     const path = `${uid}/catalogo/capas/${crypto.randomUUID()}.${mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg"}`;
     const { error } = await supabase.storage.from("media").upload(path, blob, { contentType: mime });
     if (error) throw error;
-    return supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+    return storageUrl("media", path);
   }
 
   const recognizing = queue.some((q) => q.recognition === "reading" || q.recognition === "searching");
@@ -359,7 +359,7 @@ function UploadFiles({ supabase, say }: { supabase: Supa; say: Say }) {
         const path = `${uid}/catalogo/${crypto.randomUUID()}.${AUDIO_EXT[contentType] ?? "mp3"}`;
         const { error: upErr } = await supabase.storage.from("media").upload(path, q.file, { contentType });
         if (upErr) throw new Error("Falha no envio do arquivo.");
-        const audioUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+        const audioUrl = storageUrl("media", path);
         const duration = q.duration ?? (await readDuration(q.file));
         const { error } = await supabase.rpc("admin_save_track", {
           p_id: null,
@@ -738,7 +738,7 @@ function EditTrack({ row, supabase, onClose, onSaved, say }: { row: Row; supabas
         const path = `${auth.user?.id}/catalogo/capas/${crypto.randomUUID()}.${mime === "image/png" ? "png" : mime === "image/webp" ? "webp" : "jpg"}`;
         const { error } = await supabase.storage.from("media").upload(path, blob, { contentType: mime });
         if (error) throw error;
-        coverUrl = supabase.storage.from("media").getPublicUrl(path).data.publicUrl;
+        coverUrl = storageUrl("media", path);
       } catch {
         setBusy(false);
         return say("Não foi possível enviar a capa.", true);

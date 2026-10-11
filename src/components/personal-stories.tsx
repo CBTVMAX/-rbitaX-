@@ -25,6 +25,7 @@ import { ago } from "@/lib/communities";
 import { Sheet } from "@/components/community/ui";
 import { avatarAspect } from "@/lib/avatar-aspect";
 import { clsx } from "clsx";
+import { storageUrl } from "@/lib/storage-url";
 
 const IMAGE_MS = 6000;
 const GAP_MS = 400;
@@ -740,7 +741,7 @@ export async function createMomentFromFile(userId: string, file: File) {
   const path = `${userId}/moments/${crypto.randomUUID()}.${ext}`;
   const { error: upErr } = await supabase.storage.from("media").upload(path, file, { contentType: mime });
   if (upErr) throw upErr;
-  const { data: pub } = supabase.storage.from("media").getPublicUrl(path);
+  const pub = { publicUrl: storageUrl("media", path) };
   const { error: rpcErr } = await supabase.rpc("story_create", { p: { type, mediaUrl: pub.publicUrl, hours: 24 } });
   if (rpcErr) throw rpcErr;
 }

@@ -33,6 +33,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/post-card";
 import { CommunityJoinButton } from "@/components/community-join-button";
+import { OWN_MEDIA } from "@/lib/storage-url";
 import { useStoreToast } from "@/components/store/store-view";
 import { categoryLabel } from "@/lib/community-categories";
 import { accentOf, ago, can, ctaHref, categoryOf, compactNumber, rank, type Album, type Community, type CommunityPost, type Discussion, type Membership, type Role, type Viewer } from "@/lib/communities";
@@ -120,7 +121,7 @@ function MenuTiles({ community, staff, base, discussions }: { community: Communi
     }
   };
   // Só mostramos imagens do próprio armazenamento do ÓrbitaX.
-  const safeImage = (src?: string | null) => (src && /^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\//.test(src) ? src : null);
+  const safeImage = (src?: string | null) => (src && OWN_MEDIA.test(src) ? src : null);
   const tile = "w-[168px] shrink-0 md:w-[188px]";
   // Ainda sem atalhos nem discussões: só uma linha para a equipe criar (sem um quadro vazio enorme).
   if (!items.length)
